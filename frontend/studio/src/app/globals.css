@@ -1,0 +1,106 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 216 33% 95%; /* #F0F2F5 Light Gray */
+    --foreground: 222 84% 4.9%; /* Default dark foreground for readability */
+
+    --card: 216 33% 100%; /* White for cards */
+    --card-foreground: 222 84% 4.9%;
+
+    --popover: 216 33% 100%; /* White for popovers */
+    --popover-foreground: 222 84% 4.9%;
+
+    --primary: 207 88% 68%; /* #64B5F6 Soft Blue */
+    --primary-foreground: 207 50% 15%; /* Dark blue for text on primary */
+
+    --secondary: 210 40% 90%; /* Slightly darker secondary */
+    --secondary-foreground: 222 47.4% 11.2%;
+
+    --muted: 210 40% 92%; /* Slightly darker muted */
+    --muted-foreground: 215.4 16.3% 46.9%;
+
+    --accent: 261 46% 63%; /* #9575CD Pale Purple */
+    --accent-foreground: 261 50% 15%; /* Dark purple for text on accent */
+
+    --destructive: 0 72.2% 50.6%; /* Adjusted destructive for better harmony */
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 214.3 31.8% 88%; /* Slightly darker border */
+    --input: 214.3 31.8% 88%; /* Slightly darker input */
+    --ring: 207 88% 68%; /* Primary color for ring */
+
+    --radius: 0.5rem;
+
+    /* Sidebar specific colors, can inherit or be distinct */
+    --sidebar-background: 220 25% 97%; /* Slightly off-white for sidebar */
+    --sidebar-foreground: 222 84% 4.9%;
+    --sidebar-primary: 207 88% 68%; /* Match app primary */
+    --sidebar-primary-foreground: 207 50% 15%; /* Match app primary foreground */
+    --sidebar-accent: 207 88% 75%; /* Lighter shade of primary for hover/active */
+    --sidebar-accent-foreground: 207 50% 15%;
+    --sidebar-border: 214.3 31.8% 85%;
+    --sidebar-ring: 207 88% 68%;
+
+    --chart-1: 207 88% 68%; /* primary */
+    --chart-2: 261 46% 63%; /* accent */
+    --chart-3: 173 58% 39%;
+    --chart-4: 43 74% 66%;
+    --chart-5: 27 87% 67%;
+  }
+
+  .dark {
+    /* Basic dark theme, can be expanded later */
+    --background: 222 84% 4.9%;
+    --foreground: 210 40% 98%;
+
+    --card: 222 84% 6.9%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 222 84% 6.9%;
+    --popover-foreground: 210 40% 98%;
+
+    --primary: 207 88% 68%; /* Soft Blue remains prominent */
+    --primary-foreground: 207 50% 15%; /* Dark blue for contrast */
+
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+
+    --accent: 261 46% 63%; /* Pale Purple remains prominent */
+    --accent-foreground: 261 50% 15%; /* Dark purple for contrast */
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 207 88% 58%; /* Slightly darker primary for ring in dark mode */
+    
+    --sidebar-background: 222 84% 5.9%;
+    --sidebar-foreground: 210 40% 98%;
+    --sidebar-primary: 207 88% 68%;
+    --sidebar-primary-foreground: 207 50% 15%;
+    --sidebar-accent: 207 88% 60%;
+    --sidebar-accent-foreground: 207 50% 15%;
+    --sidebar-border: 217.2 32.6% 17.5%;
+    --sidebar-ring: 207 88% 58%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: var(--font-pt-sans);
+  }
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-headline;
+  }
+}
