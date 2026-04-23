@@ -5,16 +5,9 @@ import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  // CORS altamente permisivo para desarrollo en Cloud Workstations
+  // CORS configurado para permitir peticiones desde el frontend en Cloud Workstations
   app.enableCors({
-    origin: (origin, callback) => {
-      // Permitir cualquier origen que venga de cloudworkstations.dev o localhost
-      if (!origin || origin.includes('cloudworkstations.dev') || origin.includes('localhost')) {
-        callback(null, true);
-      } else {
-        callback(null, true); // En desarrollo permitimos todo por ahora
-      }
-    },
+    origin: true, // Permitir cualquier origen en desarrollo para evitar bloqueos
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     credentials: true,
     allowedHeaders: 'Content-Type, Accept, Authorization',
@@ -30,7 +23,7 @@ async function bootstrap() {
   SwaggerModule.setup('api', app, documentFactory);
 
   const port = process.env.PORT || 3001;
-  // Escuchamos en todas las interfaces
+  // Escuchamos en todas las interfaces (0.0.0.0) para que sea accesible externamente
   await app.listen(port, '0.0.0.0');
   console.log(`Backend de DataNexus corriendo en el puerto: ${port}`);
 }

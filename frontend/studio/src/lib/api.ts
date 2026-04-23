@@ -1,25 +1,28 @@
 import axios from 'axios';
 
-// Función para determinar la URL del backend dinámicamente
+// Función para determinar la URL del backend dinámicamente en el entorno de Cloud Workstations
 const getBackendUrl = () => {
   if (typeof window !== 'undefined') {
     const hostname = window.location.hostname;
     const protocol = window.location.protocol;
     
-    // Si estamos en una Cloud Workstation de Firebase Studio
+    // Si estamos en una Cloud Workstation (Firebase Studio)
     if (hostname.includes('cloudworkstations.dev')) {
-      // Las workstations mapean puertos en el subdominio: puerto-nombre-id...
-      // Ejemplo: 9002-studio-xxx.cloudworkstations.dev -> 3001-studio-xxx.cloudworkstations.dev
-      const portPattern = /^(\d+)-(.*)/;
-      if (portPattern.test(hostname)) {
-        const newHostname = hostname.replace(portPattern, '3001-$2');
-        return `${protocol}//${newHostname}`;
+      // El patrón habitual es puerto-nombre-id.cluster...
+      // Queremos cambiar el puerto 9002 (frontend) por el 3001 (backend)
+      if (hostname.startsWith('9002-')) {
+        return `${protocol}//${hostname.replace('9002-', '3001-')}`;
       }
       
-      // Si no tiene el puerto en el subdominio, intentamos localhost (aunque puede fallar por Mixed Content)
-      return `http://localhost:3001`; 
+      // Fallback: si el puerto no está al inicio, intentamos reemplazarlo en cualquier parte
+      // (algunas configuraciones de red pueden variar)
+      const newHostname = hostname.replace('9002', '3001');
+      if (newHostname !== hostname) {
+        return `${protocol}//${newHostname}`;
+      }
     }
   }
+  // Localhost por defecto
   return 'http://localhost:3001';
 };
 
