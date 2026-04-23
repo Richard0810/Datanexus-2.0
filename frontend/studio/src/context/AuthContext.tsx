@@ -16,14 +16,12 @@ import { auth } from '@/lib/firebase';
 import api from '@/lib/api';
 import { useRouter, usePathname } from 'next/navigation';
 
-// Tipado para el usuario de la aplicación
 interface AppUser {
   uid: string;
   email: string | null;
   name: string | null;
 }
 
-// Tipado para el valor del contexto
 interface AuthContextType {
   user: AppUser | null;
   loading: boolean;
@@ -51,28 +49,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
+      setLoading(true);
       if (firebaseUser) {
-        // CORRECCIÓN LÓGICA: Redirigir PRIMERO.
-        // Si el usuario está autenticado y en una página pública, llévalo a la app.
-        if (['/', '/login', '/register'].includes(pathname)) {
-          router.push('/inicio');
-        }
-
         try {
-          const token = await firebaseUser.getIdToken(true);
-          console.log('Sincronizando usuario con backend...');
-
+          const token = await firebaseUser.getIdToken();
+          
+          // Sincronizamos con el backend para obtener/crear el usuario en MongoDB
           const response = await api.post('/auth/sync', { token });
-          setUser(response.data);
+          setUser({
+            uid: response.data.firebaseUid || firebaseUser.uid,
+            email: response.data.email || firebaseUser.email,
+            name: response.data.nombre || firebaseUser.displayName,
+          });
+
+          // Redirigir si estamos en una página de acceso
+          if (['/', '/login', '/register'].includes(pathname)) {
+            router.push('/inicio');
+          }
         } catch (error) {
-          console.error('Error syncing user with backend:', error);
-          // Si la sincronización falla, usamos los datos de Firebase para que la app continúe.
-          const appUser: AppUser = { 
+          console.error('Error sincronizando con el backend:', error);
+          // Fallback a datos locales de Firebase si el backend falla temporalmente
+          setUser({ 
             uid: firebaseUser.uid, 
             email: firebaseUser.email, 
             name: firebaseUser.displayName 
-          };
-          setUser(appUser);
+          });
         }
       } else {
         setUser(null);
@@ -90,17 +91,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const provider = new GoogleAuthProvider();
     try {
       await signInWithPopup(auth, provider);
-      // La redirección la maneja onAuthStateChanged
     } catch (error) {
       console.error("Error al iniciar sesión con Google:", error);
+      throw error;
     }
   };
 
   const registerWithEmail = async (name: string, email: string, password: string) => {
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      // Actualizamos el perfil en Firebase antes de cualquier otra cosa
       await updateProfile(userCredential.user, { displayName: name });
-      // La redirección la maneja onAuthStateChanged
+      // El observer onAuthStateChanged detectará el cambio y hará el sync
     } catch (error) {
       console.error("Error al registrar con email:", error);
       throw error;
@@ -110,7 +112,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signInWithEmail = async (email: string, password: string) => {
     try {
       await signInWithEmailAndPassword(auth, email, password);
-       // La redirección la maneja onAuthStateChanged
     } catch (error) {
       console.error("Error al iniciar sesión con email:", error);
       throw error;
