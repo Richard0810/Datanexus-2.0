@@ -1,9 +1,12 @@
 import axios from 'axios';
 
 const api = axios.create({
-  // Prioriza la variable de entorno, de lo contrario usa el puerto por defecto de NestJS
-  baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001',
+  // En desarrollo local/Cloud Workstations, el backend corre en el puerto 3001
+  baseURL: 'http://localhost:3001',
   withCredentials: true,
+  headers: {
+    'Content-Type': 'application/json',
+  }
 });
 
 export default api;

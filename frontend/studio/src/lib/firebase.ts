@@ -1,14 +1,15 @@
 import { initializeApp, getApps, getApp, type FirebaseApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 
+// Configuración explícita del nuevo proyecto datanexus-493420
 const firebaseConfig = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
-  measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID
+  apiKey: "AIzaSyCFRbmjKDpcN1ZrQwC-kR9jTp0pwYg4pu4",
+  authDomain: "datanexus-493420.firebaseapp.com",
+  projectId: "datanexus-493420",
+  storageBucket: "datanexus-493420.firebasestorage.app",
+  messagingSenderId: "751901670026",
+  appId: "1:751901670026:web:0a4502d42a429ac7a1cb73",
+  measurementId: "G-EGLTRZ31YF"
 };
 
 let app: FirebaseApp;

@@ -5,9 +5,9 @@ import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  // Habilitar CORS de manera amplia para desarrollo en Cloud Workstations
+  // Habilitar CORS amplio para permitir peticiones desde el frontend en puerto 9002
   app.enableCors({
-    origin: true,
+    origin: true, // Permitir cualquier origen en desarrollo para evitar errores de red
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     credentials: true,
   });
