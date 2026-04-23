@@ -1,7 +1,7 @@
+
 import { initializeApp, getApps, getApp, type FirebaseApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 
-// Usamos variables de entorno con el prefijo NEXT_PUBLIC para que sean accesibles en el navegador
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
   authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
@@ -12,11 +12,6 @@ const firebaseConfig = {
 };
 
 let app: FirebaseApp;
-
-// Verificamos que el apiKey esté presente para evitar errores silenciosos
-if (!firebaseConfig.apiKey || firebaseConfig.apiKey.includes('EXAMPLE')) {
-  console.warn("⚠️ Firebase: El API Key es inválido o no se ha configurado en el archivo .env");
-}
 
 try {
   if (!getApps().length) {

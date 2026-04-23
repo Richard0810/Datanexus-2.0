@@ -1,3 +1,4 @@
+
 import { Injectable, OnModuleInit } from '@nestjs/common';
 import * as admin from 'firebase-admin';
 
@@ -6,12 +7,11 @@ export class AuthService implements OnModuleInit {
   onModuleInit() {
     if (admin.apps.length === 0) {
       try {
-        // En Cloud Workstations / Studio, el Project ID suele estar disponible.
-        // Si tienes un archivo JSON de credenciales, podrías usar credential: admin.credential.cert(path)
+        // Inicializamos con el nuevo Project ID proporcionado por el usuario
         admin.initializeApp({
-          projectId: "datanexus-proyecto-richard",
+          projectId: "datanexus-493420",
         });
-        console.log('Firebase Admin inicializado correctamente.');
+        console.log('Firebase Admin inicializado correctamente para el proyecto: datanexus-493420');
       } catch (error) {
         console.error('Error inicializando Firebase Admin:', error.message);
       }
