@@ -23,6 +23,9 @@ export class EducationalResources {
 
   @Prop()
   url: string;
+
+  @Prop()
+  unidad: string; // Nueva propiedad para organizar por unidades
 }
 
 export const EducationalResourcesSchema = SchemaFactory.createForClass(EducationalResources);

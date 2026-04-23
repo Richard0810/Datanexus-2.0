@@ -1,3 +1,4 @@
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { BookOpen, Filter, MessageSquare, Video } from "lucide-react";
 import Image from "next/image";
@@ -7,10 +8,10 @@ const modules = [
   {
     id: "videos",
     title: "Tutoriales en Video",
-    description: "Aprende con nuestros tutoriales interactivos en video.",
+    description: "Aprende con nuestros tutoriales interactivos en video sobre bases de datos y operadores booleanos.",
     icon: Video,
-    imageSrc: "https://placehold.co/600x400.png",
-    aiHint: "video library",
+    imageSrc: "https://picsum.photos/seed/video1/600/400",
+    aiHint: "online education",
     detailsLink: "/modulos/videos"
   },
   {
@@ -18,8 +19,8 @@ const modules = [
     title: "Guías PDF Detalladas",
     description: "Consulta guías completas en formato PDF para profundizar tus conocimientos.",
     icon: BookOpen,
-    imageSrc: "https://placehold.co/600x400.png",
-    aiHint: "documents reading",
+    imageSrc: "https://picsum.photos/seed/guide1/600/400",
+    aiHint: "library books",
     detailsLink: "/modulos/guias"
   },
   {
@@ -27,8 +28,8 @@ const modules = [
     title: "Modelo PRISMA",
     description: "Domina la metodología PRISMA para revisiones sistemáticas.",
     icon: Filter,
-    imageSrc: "https://placehold.co/600x400.png",
-    aiHint: "research methodology",
+    imageSrc: "https://picsum.photos/seed/prisma1/600/400",
+    aiHint: "science research",
     detailsLink: "/modulos/prisma"
   },
   {
@@ -36,8 +37,8 @@ const modules = [
     title: "Ética y Uso de IA en Investigación",
     description: "Reflexiona sobre las implicaciones éticas del uso de IA en la academia.",
     icon: MessageSquare,
-    imageSrc: "https://placehold.co/600x400.png",
-    aiHint: "ethics ai",
+    imageSrc: "https://picsum.photos/seed/ethics1/600/400",
+    aiHint: "ethics robot",
     detailsLink: "/modulos/etica-ia"
   }
 ];
@@ -59,8 +60,8 @@ export default function ModulosPage() {
               <Image
                 src={module.imageSrc}
                 alt={module.title}
-                layout="fill"
-                objectFit="cover"
+                fill
+                style={{ objectFit: 'cover' }}
                 data-ai-hint={module.aiHint}
               />
             </div>
@@ -72,9 +73,8 @@ export default function ModulosPage() {
               <CardDescription>{module.description}</CardDescription>
             </CardHeader>
             <CardContent className="mt-auto">
-              {/* Placeholder for link to module details */}
               <Link href={module.detailsLink} className="text-sm font-medium text-primary hover:underline">
-                Ver más detalles &rarr;
+                Acceder al módulo &rarr;
               </Link>
             </CardContent>
           </Card>
