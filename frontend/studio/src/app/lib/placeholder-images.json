@@ -1,0 +1,33 @@
+
+{
+  "images": [
+    {
+      "id": "online-learning",
+      "url": "https://picsum.photos/seed/online1/600/400",
+      "width": 600,
+      "height": 400,
+      "aiHint": "online learning"
+    },
+    {
+      "id": "study-guide",
+      "url": "https://picsum.photos/seed/guide1/600/400",
+      "width": 600,
+      "height": 400,
+      "aiHint": "study guide"
+    },
+    {
+      "id": "data-search",
+      "url": "https://picsum.photos/seed/search1/600/400",
+      "width": 600,
+      "height": 400,
+      "aiHint": "data search"
+    },
+    {
+      "id": "ai-ethics",
+      "url": "https://picsum.photos/seed/ethics1/600/400",
+      "width": 600,
+      "height": 400,
+      "aiHint": "artificial intelligence"
+    }
+  ]
+}

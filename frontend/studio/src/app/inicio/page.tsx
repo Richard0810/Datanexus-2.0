@@ -1,9 +1,11 @@
+
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { ArrowRight, BookOpen, Database, Filter, Lightbulb, MessageSquare, PlayCircle, Search, Video } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
+import placeholderImages from "../lib/placeholder-images.json";
 
 interface QuickAccessItem {
   title: string;
@@ -16,9 +18,7 @@ interface LearningActivityItem {
   title: string;
   href: string;
   icon: React.ElementType;
-  imageSrc?: string;
-  imageAlt?: string;
-  aiHint?: string;
+  imageData: typeof placeholderImages.images[0];
 }
 
 const quickAccessItems: QuickAccessItem[] = [
@@ -29,10 +29,30 @@ const quickAccessItems: QuickAccessItem[] = [
 ];
 
 const learningActivities: LearningActivityItem[] = [
-  { title: "Tutoriales en Video", href: "/modulos#videos", icon: Video, imageSrc: "https://placehold.co/600x400.png", imageAlt: "Video tutoriales", aiHint: "online learning" },
-  { title: "Guías PDF Detalladas", href: "/modulos#guias", icon: BookOpen, imageSrc: "https://placehold.co/600x400.png", imageAlt: "Guías PDF", aiHint: "study guide" },
-  { title: "Simulaciones de Búsqueda", href: "/simulador", icon: PlayCircle, imageSrc: "https://placehold.co/600x400.png", imageAlt: "Simulaciones", aiHint: "data search" },
-  { title: "Ética y Uso de IA", href: "/modulos#etica-ia", icon: MessageSquare, imageSrc: "https://placehold.co/600x400.png", imageAlt: "Ética IA", aiHint: "artificial intelligence" },
+  { 
+    title: "Tutoriales en Video", 
+    href: "/modulos/videos", 
+    icon: Video, 
+    imageData: placeholderImages.images.find(img => img.id === "online-learning")!
+  },
+  { 
+    title: "Guías PDF Detalladas", 
+    href: "/modulos/guias", 
+    icon: BookOpen, 
+    imageData: placeholderImages.images.find(img => img.id === "study-guide")!
+  },
+  { 
+    title: "Simulaciones de Búsqueda", 
+    href: "/simulador", 
+    icon: PlayCircle, 
+    imageData: placeholderImages.images.find(img => img.id === "data-search")!
+  },
+  { 
+    title: "Ética y Uso de IA", 
+    href: "/modulos#etica-ia", 
+    icon: MessageSquare, 
+    imageData: placeholderImages.images.find(img => img.id === "ai-ethics")!
+  },
 ];
 
 export default function HomePage() {
@@ -82,25 +102,23 @@ export default function HomePage() {
         <h2 className="text-2xl font-headline mb-4">Aprendizaje Activo</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {learningActivities.map((activity) => (
-            <Card key={activity.title} className="overflow-hidden hover:shadow-xl transition-shadow duration-300">
-              {activity.imageSrc && (
-                <div className="relative h-48 w-full">
-                  <Image
-                    src={activity.imageSrc}
-                    alt={activity.imageAlt || activity.title}
-                    layout="fill"
-                    objectFit="cover"
-                    data-ai-hint={activity.aiHint}
-                  />
-                </div>
-              )}
+            <Card key={activity.title} className="overflow-hidden hover:shadow-xl transition-shadow duration-300 flex flex-col">
+              <div className="relative h-48 w-full">
+                <Image
+                  src={activity.imageData.url}
+                  alt={activity.title}
+                  fill
+                  style={{ objectFit: 'cover' }}
+                  data-ai-hint={activity.imageData.aiHint}
+                />
+              </div>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-xl">
                   <activity.icon className="h-6 w-6 text-primary" />
                   {activity.title}
                 </CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="mt-auto">
                 <Button asChild className="w-full bg-primary hover:bg-primary/90">
                   <Link href={activity.href}>
                     Explorar <ArrowRight className="ml-2 h-4 w-4" />
