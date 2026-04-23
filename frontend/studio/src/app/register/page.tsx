@@ -9,7 +9,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { AlertCircle, UserPlus } from 'lucide-react';
+import { AlertCircle, UserPlus, Loader2 } from 'lucide-react';
 
 export default function RegisterPage() {
   const [email, setEmail] = useState('');
@@ -17,7 +17,7 @@ export default function RegisterPage() {
   const [name, setName] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const { registerWithEmail } = useAuth(); // Corregido: usando registerWithEmail
+  const { registerWithEmail } = useAuth();
   const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -26,50 +26,62 @@ export default function RegisterPage() {
     setIsLoading(true);
 
     try {
-      // Llamando a la función correcta con los parámetros en el orden correcto
-      await registerWithEmail(name, email, password);
-      // El listener onAuthStateChanged en el context se encargará de la redirección
-      // No es necesario un router.push('/inicio') aquí, ya que el estado cambiará
-    } catch (err: any) {
-      // Manejo de errores más específico de Firebase
-      if (err.code === 'auth/email-already-in-use') {
-        setError('Este correo electrónico ya está en uso. Intenta iniciar sesión.');
-      } else if (err.code === 'auth/weak-password') {
-        setError('La contraseña es demasiado débil. Debe tener al menos 6 caracteres.');
-      } else {
-        setError('No se pudo crear la cuenta. Por favor, inténtalo de nuevo.');
+      if (password.length < 6) {
+        throw new Error('La contraseña debe tener al menos 6 caracteres.');
       }
-      console.error("Error en el registro:", err);
+      
+      await registerWithEmail(name, email, password);
+      // El AuthContext manejará la redirección al detectar el nuevo usuario
+    } catch (err: any) {
+      console.error("Error detallado en el registro:", err);
+      
+      // Mapeo de errores comunes de Firebase para el usuario
+      let message = 'No se pudo crear la cuenta. Por favor, inténtalo de nuevo.';
+      
+      if (err.code === 'auth/email-already-in-use') {
+        message = 'Este correo electrónico ya está registrado.';
+      } else if (err.code === 'auth/invalid-email') {
+        message = 'El formato del correo electrónico no es válido.';
+      } else if (err.code === 'auth/weak-password') {
+        message = 'La contraseña es muy débil.';
+      } else if (err.code === 'auth/invalid-api-key') {
+        message = 'Error de configuración: Clave de API de Firebase inválida. Contacta al administrador.';
+      } else if (err.message) {
+        message = err.message;
+      }
+      
+      setError(message);
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-background">
-      <Card className="w-full max-w-md mx-auto">
+    <div className="flex items-center justify-center min-h-screen bg-background p-4">
+      <Card className="w-full max-w-md shadow-xl">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl font-headline">Crear Cuenta</CardTitle>
-          <CardDescription>Únete a DataNexus para empezar</CardDescription>
+          <CardDescription>Únete a DataNexus para empezar tu formación académica</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
              {error && (
               <Alert variant="destructive">
                 <AlertCircle className="h-4 w-4" />
-                <AlertTitle>Error en el Registro</AlertTitle>
+                <AlertTitle>Error</AlertTitle>
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
             )}
             <div className="space-y-2">
-              <Label htmlFor="name">Nombre</Label>
+              <Label htmlFor="name">Nombre Completo</Label>
               <Input
                 id="name"
                 type="text"
-                placeholder="Tu Nombre Completo"
+                placeholder="Ej: Juan Pérez"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 required
+                disabled={isLoading}
               />
             </div>
             <div className="space-y-2">
@@ -77,10 +89,11 @@ export default function RegisterPage() {
               <Input
                 id="email"
                 type="email"
-                placeholder="tu@correo.com"
+                placeholder="juan@ejemplo.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
+                disabled={isLoading}
               />
             </div>
             <div className="space-y-2">
@@ -92,16 +105,27 @@ export default function RegisterPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
+                disabled={isLoading}
               />
             </div>
             <Button type="submit" className="w-full bg-primary hover:bg-primary/90" disabled={isLoading}>
-              {isLoading ? 'Creando cuenta...' : <><UserPlus className="mr-2 h-4 w-4" /> Registrarse </>}
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Procesando...
+                </>
+              ) : (
+                <>
+                  <UserPlus className="mr-2 h-4 w-4" />
+                  Registrarse
+                </>
+              )}
             </Button>
           </form>
-          <div className="mt-4 text-center text-sm">
+          <div className="mt-6 text-center text-sm">
             ¿Ya tienes una cuenta?{' '}
-            <Link href="/login" className="underline text-primary">
-              Inicia sesión
+            <Link href="/login" className="font-semibold text-primary hover:underline">
+              Inicia sesión aquí
             </Link>
           </div>
         </CardContent>

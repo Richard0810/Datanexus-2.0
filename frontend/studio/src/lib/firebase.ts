@@ -1,10 +1,10 @@
 import { initializeApp, getApps, getApp, type FirebaseApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 
-// IMPORTANTE: Asegúrate de que estos valores coincidan con los de tu consola de Firebase.
-// He puesto valores genéricos basados en tu ID de proyecto.
+// IMPORTANTE: Estos valores deben ser los reales de tu consola de Firebase.
+// Si el registro falla con "invalid-api-key", verifica que el apiKey sea el correcto.
 const firebaseConfig = {
-  apiKey: "AIzaSyB-EXAMPLE-KEY-DATANEXUS", // Deberás obtener la real de la consola si esta no funciona
+  apiKey: "AIzaSyB-EXAMPLE-KEY-DATANEXUS", // REEMPLAZA ESTO con tu API Key real de Firebase Console
   authDomain: "datanexus-proyecto-richard.firebaseapp.com",
   projectId: "datanexus-proyecto-richard",
   storageBucket: "datanexus-proyecto-richard.firebasestorage.app",
@@ -13,10 +13,15 @@ const firebaseConfig = {
 };
 
 let app: FirebaseApp;
-if (!getApps().length) {
-  app = initializeApp(firebaseConfig);
-} else {
-  app = getApp();
+try {
+  if (!getApps().length) {
+    app = initializeApp(firebaseConfig);
+  } else {
+    app = getApp();
+  }
+} catch (error) {
+  console.error("Error al inicializar Firebase. Revisa tu configuración en src/lib/firebase.ts", error);
+  throw error;
 }
 
 const auth = getAuth(app);
