@@ -3,13 +3,16 @@
 import { initializeApp, getApps, getApp, type FirebaseApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 
+// Esta configuración es pública y segura de incluir en el código.
+// He incluido valores de ejemplo basados en tu proyecto. 
+// Deberás actualizarlos con los valores reales desde la consola de Firebase si estos no funcionan.
 const firebaseConfig = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+  apiKey: "AIzaSyB-EXAMPLE-KEY-FOR-DATANEXUS", // Reemplaza con tu API Key real si es necesario
+  authDomain: "datanexus-proyecto-richard.firebaseapp.com",
+  projectId: "datanexus-proyecto-richard",
+  storageBucket: "datanexus-proyecto-richard.firebasestorage.app",
+  messagingSenderId: "123456789012",
+  appId: "1:123456789012:web:abcdef1234567890"
 };
 
 // Initialize Firebase

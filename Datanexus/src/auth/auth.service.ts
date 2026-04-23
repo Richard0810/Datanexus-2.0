@@ -1,16 +1,20 @@
 
 import { Injectable, OnModuleInit } from '@nestjs/common';
 import * as admin from 'firebase-admin';
-import * as serviceAccount from '../serviceAccountKey.json';
 
 @Injectable()
 export class AuthService implements OnModuleInit {
   onModuleInit() {
-    // Check if the app is already initialized to prevent errors
+    // Inicialización de Firebase Admin para el backend sin depender de archivos JSON locales.
     if (admin.apps.length === 0) {
-      admin.initializeApp({
-        credential: admin.credential.cert(serviceAccount as any),
-      });
+      try {
+        admin.initializeApp({
+          projectId: "datanexus-proyecto-richard",
+        });
+        console.log('Firebase Admin inicializado correctamente.');
+      } catch (error) {
+        console.warn('Advertencia: Firebase Admin no pudo inicializarse con las credenciales por defecto. Esto es normal en entornos locales si no se ha configurado GOOGLE_APPLICATION_CREDENTIALS.', error.message);
+      }
     }
   }
 
@@ -19,8 +23,7 @@ export class AuthService implements OnModuleInit {
       const decodedToken = await admin.auth().verifyIdToken(token);
       return decodedToken;
     } catch (error) {
-      // Handle token verification error (e.g., token expired, invalid)
-      console.error('Error verifying token:', error);
+      console.error('Error verificando el token de Firebase:', error);
       return null;
     }
   }
