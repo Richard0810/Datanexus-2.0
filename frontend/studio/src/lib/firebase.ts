@@ -1,7 +1,8 @@
 import { initializeApp, getApps, getApp, type FirebaseApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 
-// Configuración explícita del nuevo proyecto datanexus-493420
+// CONFIGURACIÓN OFICIAL PROYECTO: datanexus-493420
+// Se hardcodea para evitar conflictos con proyectos anteriores o variables de entorno cacheadas
 const firebaseConfig = {
   apiKey: "AIzaSyCFRbmjKDpcN1ZrQwC-kR9jTp0pwYg4pu4",
   authDomain: "datanexus-493420.firebaseapp.com",
@@ -17,6 +18,7 @@ let app: FirebaseApp;
 try {
   if (!getApps().length) {
     app = initializeApp(firebaseConfig);
+    console.log("Firebase inicializado correctamente con el proyecto: datanexus-493420");
   } else {
     app = getApp();
   }
