@@ -48,7 +48,7 @@ export default function VideosPage() {
       {
         titulo: "Concepto de base de datos",
         descripcion: "Introducción fundamental a qué es una base de datos y su importancia.",
-        url: "https://www.youtube.com/embed/6S8A-1jBD5Y",
+        url: "https://youtu.be/6S8A-1jBD5Y?si=O0abKswmjJXojEKM",
         unidad: "Unidad 1",
         tipo: "video",
         formato: "YouTube"
@@ -56,7 +56,7 @@ export default function VideosPage() {
       {
         titulo: "Cómo funcionan los operadores booleanos",
         descripcion: "Aprende a usar AND, OR y NOT para mejorar tus búsquedas académicas.",
-        url: "https://www.youtube.com/embed/k4kq_QxTU8Q",
+        url: "https://youtu.be/k4kq_QxTU8Q?si=qPrLRJxeFjutINX5",
         unidad: "Unidad 2",
         tipo: "video",
         formato: "YouTube"
@@ -83,12 +83,24 @@ export default function VideosPage() {
     }
   };
 
-  // Función para convertir links de youtube normales a embed
+  // Función para convertir links de youtube (largos o cortos) a formato embed para iframes
   const getEmbedUrl = (url: string) => {
+    if (!url) return "";
+    
+    // Si ya es un link de embed, lo devolvemos tal cual
+    if (url.includes("youtube.com/embed/")) return url;
+
+    let videoId = "";
+    
     if (url.includes("youtu.be/")) {
-      return url.replace("youtu.be/", "www.youtube.com/embed/").split("?")[0];
+      // Formato corto: https://youtu.be/ID?params
+      videoId = url.split("youtu.be/")[1].split("?")[0];
+    } else if (url.includes("v=")) {
+      // Formato largo: https://www.youtube.com/watch?v=ID
+      videoId = url.split("v=")[1].split("&")[0];
     }
-    return url;
+
+    return videoId ? `https://www.youtube.com/embed/${videoId}` : url;
   };
 
   return (
