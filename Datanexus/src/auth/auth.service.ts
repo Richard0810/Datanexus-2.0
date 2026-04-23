@@ -7,9 +7,9 @@ export class AuthService implements OnModuleInit {
     if (admin.apps.length === 0) {
       try {
         admin.initializeApp({
-          projectId: "datanexus-493420",
+          projectId: "studio-9921318265-313d2",
         });
-        console.log('Firebase Admin inicializado correctamente para el proyecto: datanexus-493420');
+        console.log('Firebase Admin inicializado correctamente para el proyecto: studio-9921318265-313d2');
       } catch (error) {
         console.error('Error inicializando Firebase Admin:', error.message);
       }
