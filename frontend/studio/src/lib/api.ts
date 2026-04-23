@@ -8,17 +8,16 @@ const getBackendUrl = () => {
     
     // Si estamos en una Cloud Workstation (Firebase Studio)
     if (hostname.includes('cloudworkstations.dev')) {
-      // El patrón habitual es puerto-nombre-id.cluster...
-      // Queremos cambiar el puerto 9002 (frontend) por el 3001 (backend)
-      if (hostname.startsWith('9002-')) {
-        return `${protocol}//${hostname.replace('9002-', '3001-')}`;
-      }
-      
-      // Fallback: si el puerto no está al inicio, intentamos reemplazarlo en cualquier parte
-      // (algunas configuraciones de red pueden variar)
-      const newHostname = hostname.replace('9002', '3001');
+      // Reemplazamos cualquier puerto al inicio (ej: 9000-, 9002-) por el puerto del backend (3001-)
+      const newHostname = hostname.replace(/^\d+-/, '3001-');
       if (newHostname !== hostname) {
         return `${protocol}//${newHostname}`;
+      }
+      
+      // Fallback: si no hay puerto al inicio, intentamos reemplazar 9002 por 3001 en cualquier parte
+      const fallbackHostname = hostname.replace('9002', '3001');
+      if (fallbackHostname !== hostname) {
+        return `${protocol}//${fallbackHostname}`;
       }
     }
   }
@@ -42,7 +41,8 @@ api.interceptors.response.use(
       url: error.config?.url,
       message: error.message,
       status: error.response?.status,
-      baseURL: error.config?.baseURL
+      baseURL: error.config?.baseURL,
+      data: error.response?.data
     });
     return Promise.reject(error);
   }

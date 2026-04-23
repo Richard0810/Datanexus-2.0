@@ -54,21 +54,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         try {
           const token = await firebaseUser.getIdToken();
           
-          // Sincronizamos con el backend para obtener/crear el usuario en MongoDB
-          const response = await api.post('/auth/sync', { token });
+          // Sincronizamos con el backend pasándole también el nombre actual de Firebase
+          const response = await api.post('/auth/sync', { 
+            token,
+            name: firebaseUser.displayName 
+          });
+          
           setUser({
             uid: response.data.firebaseUid || firebaseUser.uid,
             email: response.data.email || firebaseUser.email,
             name: response.data.nombre || firebaseUser.displayName,
           });
 
-          // Redirigir si estamos en una página de acceso
           if (['/', '/login', '/register'].includes(pathname)) {
             router.push('/inicio');
           }
         } catch (error) {
           console.error('Error sincronizando con el backend:', error);
-          // Fallback a datos locales de Firebase si el backend falla temporalmente
           setUser({ 
             uid: firebaseUser.uid, 
             email: firebaseUser.email, 
@@ -77,7 +79,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       } else {
         setUser(null);
-        if (!['/', '/login', '/register'].includes(pathname)) {
+        if (!['/', '/login', '/register', '/modelo'].includes(pathname)) {
           router.push('/login');
         }
       }
@@ -100,9 +102,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const registerWithEmail = async (name: string, email: string, password: string) => {
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      // Actualizamos el perfil en Firebase antes de cualquier otra cosa
+      // Primero actualizamos el perfil en Firebase
       await updateProfile(userCredential.user, { displayName: name });
-      // El observer onAuthStateChanged detectará el cambio y hará el sync
+      
+      // Forzamos la sincronización inmediata con el nombre correcto
+      const token = await userCredential.user.getIdToken();
+      await api.post('/auth/sync', { token, name });
+      
     } catch (error) {
       console.error("Error al registrar con email:", error);
       throw error;
