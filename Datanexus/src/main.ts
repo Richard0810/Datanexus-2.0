@@ -5,9 +5,16 @@ import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  // Configuración de CORS extremadamente permisiva para desarrollo
+  // CORS altamente permisivo para desarrollo en Cloud Workstations
   app.enableCors({
-    origin: true, 
+    origin: (origin, callback) => {
+      // Permitir cualquier origen que venga de cloudworkstations.dev o localhost
+      if (!origin || origin.includes('cloudworkstations.dev') || origin.includes('localhost')) {
+        callback(null, true);
+      } else {
+        callback(null, true); // En desarrollo permitimos todo por ahora
+      }
+    },
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     credentials: true,
     allowedHeaders: 'Content-Type, Accept, Authorization',
@@ -23,8 +30,8 @@ async function bootstrap() {
   SwaggerModule.setup('api', app, documentFactory);
 
   const port = process.env.PORT || 3001;
-  // Escuchamos en todas las interfaces para permitir acceso desde el contenedor
+  // Escuchamos en todas las interfaces
   await app.listen(port, '0.0.0.0');
-  console.log(`Backend de DataNexus corriendo en: http://0.0.0.0:${port}`);
+  console.log(`Backend de DataNexus corriendo en el puerto: ${port}`);
 }
 bootstrap();
