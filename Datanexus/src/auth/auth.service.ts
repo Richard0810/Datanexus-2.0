@@ -1,4 +1,3 @@
-
 import { Injectable, OnModuleInit } from '@nestjs/common';
 import * as admin from 'firebase-admin';
 
@@ -7,7 +6,6 @@ export class AuthService implements OnModuleInit {
   onModuleInit() {
     if (admin.apps.length === 0) {
       try {
-        // Inicializamos con el nuevo Project ID proporcionado por el usuario
         admin.initializeApp({
           projectId: "datanexus-493420",
         });
