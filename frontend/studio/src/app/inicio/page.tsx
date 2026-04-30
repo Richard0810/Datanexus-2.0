@@ -2,7 +2,7 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { ArrowRight, BookOpen, Database, Filter, Lightbulb, MessageSquare, PlayCircle, Search, Video } from "lucide-react";
+import { ArrowRight, BookOpen, Database, Filter, Lightbulb, MessageSquare, PlayCircle, Search, Video, GraduationCap } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import placeholderImages from "../lib/placeholder-images.json";
@@ -18,76 +18,82 @@ interface LearningActivityItem {
   title: string;
   href: string;
   icon: React.ElementType;
+  description: string;
   imageData: typeof placeholderImages.images[0];
 }
 
 const quickAccessItems: QuickAccessItem[] = [
-  { title: "Iniciar búsqueda académica asistida", href: "/herramientas-ia", icon: Search, description: "Usa IA para refinar tus búsquedas." },
-  { title: "Formular pregunta PICO/PECO", href: "/herramientas-ia#pico-peco", icon: Lightbulb, description: "Estructura tus preguntas de investigación." },
-  { title: "Explorar bases de datos", href: "/simulador", icon: Database, description: "Practica en Google Scholar, SciELO y más." },
-  { title: "Aplicar modelo PRISMA", href: "/modulos#prisma", icon: Filter, description: "Aprende a seleccionar estudios sistemáticamente." },
+  { title: "Búsqueda Asistida", href: "/herramientas-ia", icon: Search, description: "Usa IA para refinar tus búsquedas académicas." },
+  { title: "Pregunta PICO/PECO", href: "/herramientas-ia#pico-peco", icon: Lightbulb, description: "Estructura tus preguntas de investigación." },
+  { title: "Simulador de BD", href: "/simulador", icon: Database, description: "Practica en entornos académicos controlados." },
+  { title: "Modelo PRISMA", href: "/modulos/2", icon: Filter, description: "Aprende a seleccionar estudios sistemáticamente." },
 ];
 
 const learningActivities: LearningActivityItem[] = [
   { 
-    title: "Tutoriales en Video", 
-    href: "/modulos/videos", 
-    icon: Video, 
+    title: "Módulo 1: Fundamentos", 
+    href: "/modulos/1", 
+    icon: GraduationCap, 
+    description: "Bases de datos y operadores booleanos.",
     imageData: placeholderImages.images.find(img => img.id === "online-learning")!
   },
   { 
-    title: "Guías PDF Detalladas", 
-    href: "/modulos/guias", 
-    icon: BookOpen, 
+    title: "Módulo 2: Estrategia", 
+    href: "/modulos/2", 
+    icon: Filter, 
+    description: "Metodología PRISMA y selección de artículos.",
     imageData: placeholderImages.images.find(img => img.id === "study-guide")!
   },
   { 
-    title: "Simulaciones de Búsqueda", 
-    href: "/simulador", 
-    icon: PlayCircle, 
-    imageData: placeholderImages.images.find(img => img.id === "data-search")!
+    title: "Módulo 3: Ética e IA", 
+    href: "/modulos/3", 
+    icon: MessageSquare, 
+    description: "Uso responsable de IA en la academia.",
+    imageData: placeholderImages.images.find(img => img.id === "ai-ethics")!
   },
   { 
-    title: "Ética y Uso de IA", 
-    href: "/modulos#etica-ia", 
-    icon: MessageSquare, 
-    imageData: placeholderImages.images.find(img => img.id === "ai-ethics")!
+    title: "Simulaciones", 
+    href: "/simulador", 
+    icon: PlayCircle, 
+    description: "Pon a prueba tus conocimientos en tiempo real.",
+    imageData: placeholderImages.images.find(img => img.id === "data-search")!
   },
 ];
 
 export default function HomePage() {
-  // Placeholder user data
   const userName = "Estudiante";
-  const progressLevel = 65; // Example progress percentage
+  const progressLevel = 65;
 
   return (
     <div className="space-y-8">
-      <Card className="shadow-lg">
+      <Card className="shadow-lg border-none bg-gradient-to-br from-primary/20 via-background to-accent/20">
         <CardHeader>
-          <CardTitle className="text-3xl font-headline">Bienvenido de nuevo, {userName}!</CardTitle>
-          <CardDescription>Tu progreso general en el desarrollo de competencias informacionales.</CardDescription>
+          <CardTitle className="text-3xl font-headline">¡Bienvenido de nuevo, {userName}!</CardTitle>
+          <CardDescription className="text-lg">Has completado el 65% de tu formación en competencias informacionales.</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex items-center gap-4">
             <Progress value={progressLevel} className="w-full h-3" />
-            <span className="text-lg font-semibold text-primary">{progressLevel}%</span>
+            <span className="text-lg font-bold text-primary">{progressLevel}%</span>
           </div>
-          <p className="mt-2 text-sm text-muted-foreground">¡Sigue así para alcanzar tus metas académicas!</p>
         </CardContent>
       </Card>
 
       <section>
-        <h2 className="text-2xl font-headline mb-4">Accesos Directos</h2>
+        <h2 className="text-2xl font-headline mb-4 flex items-center gap-2">
+          <Database className="h-6 w-6 text-accent" />
+          Herramientas Rápidas
+        </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {quickAccessItems.map((item) => (
-            <Card key={item.title} className="hover:shadow-xl transition-shadow duration-300">
+            <Card key={item.title} className="hover:shadow-xl transition-all duration-300 border-none bg-card/50 backdrop-blur-sm">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-lg font-medium">{item.title}</CardTitle>
-                <item.icon className="h-6 w-6 text-accent" />
+                <item.icon className="h-5 w-5 text-accent" />
               </CardHeader>
               <CardContent>
-                <p className="text-sm text-muted-foreground mb-4">{item.description}</p>
-                <Button asChild variant="outline" size="sm" className="w-full">
+                <p className="text-sm text-muted-foreground mb-4 h-[40px]">{item.description}</p>
+                <Button asChild variant="ghost" size="sm" className="w-full text-primary hover:text-primary hover:bg-primary/10">
                   <Link href={item.href}>
                     Ir ahora <ArrowRight className="ml-2 h-4 w-4" />
                   </Link>
@@ -99,32 +105,38 @@ export default function HomePage() {
       </section>
 
       <section>
-        <h2 className="text-2xl font-headline mb-4">Aprendizaje Activo</h2>
+        <h2 className="text-2xl font-headline mb-4 flex items-center gap-2">
+          <GraduationCap className="h-6 w-6 text-primary" />
+          Ruta de Aprendizaje Activo
+        </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {learningActivities.map((activity) => (
-            <Card key={activity.title} className="overflow-hidden hover:shadow-xl transition-shadow duration-300 flex flex-col">
-              <div className="relative h-48 w-full">
+            <Card key={activity.title} className="overflow-hidden hover:shadow-xl transition-all duration-300 border-none group">
+              <div className="relative h-48 w-full overflow-hidden">
                 <Image
                   src={activity.imageData.url}
                   alt={activity.title}
                   fill
                   style={{ objectFit: 'cover' }}
+                  className="group-hover:scale-105 transition-transform duration-500"
                   data-ai-hint={activity.imageData.aiHint}
                 />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                <div className="absolute bottom-4 left-4 text-white">
+                  <p className="text-xs font-bold uppercase tracking-widest text-primary-foreground/80">{activity.description}</p>
+                </div>
               </div>
-              <CardHeader>
+              <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle className="flex items-center gap-2 text-xl">
                   <activity.icon className="h-6 w-6 text-primary" />
                   {activity.title}
                 </CardTitle>
-              </CardHeader>
-              <CardContent className="mt-auto">
-                <Button asChild className="w-full bg-primary hover:bg-primary/90">
-                  <Link href={activity.href}>
-                    Explorar <ArrowRight className="ml-2 h-4 w-4" />
+                <Button asChild variant="outline" size="icon" className="rounded-full">
+                   <Link href={activity.href}>
+                    <ArrowRight className="h-4 w-4" />
                   </Link>
                 </Button>
-              </CardContent>
+              </CardHeader>
             </Card>
           ))}
         </div>

@@ -1,0 +1,185 @@
+
+"use client";
+
+import { useEffect, useState, use } from "react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { GraduationCap, ArrowLeft, Loader2, Video, FileText, ExternalLink, PlusCircle } from "lucide-react";
+import Link from "next/link";
+import api from "@/lib/api";
+import { useToast } from "@/hooks/use-toast";
+import { Badge } from "@/components/ui/badge";
+
+interface Resource {
+  _id?: string;
+  titulo: string;
+  descripcion: string;
+  url: string;
+  unidad: string;
+  tipo: string;
+  formato: string;
+}
+
+export default function ModuloDetallePage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params);
+  const [resources, setResources] = useState<Resource[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [isSeeding, setIsSeeding] = useState(false);
+  const { toast } = useToast();
+
+  const fetchResources = async () => {
+    try {
+      setLoading(true);
+      const response = await api.get("/educational-resources");
+      // Mapeamos unidad X a modulo X para la búsqueda
+      const filtered = response.data.filter((res: any) => 
+        res.unidad === `Módulo ${id}` || res.unidad === `Unidad ${id}`
+      );
+      setResources(filtered);
+    } catch (error) {
+      console.error("Error fetching resources:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchResources();
+  }, [id]);
+
+  const handleSeedResources = async () => {
+    setIsSeeding(true);
+    let initialData: any[] = [];
+    
+    if (id === "1") {
+      initialData = [
+        {
+          titulo: "Concepto de base de datos",
+          descripcion: "Introducción fundamental a qué es una base de datos y su importancia.",
+          url: "https://youtu.be/6S8A-1jBD5Y?si=O0abKswmjJXojEKM",
+          unidad: "Módulo 1",
+          tipo: "video",
+          formato: "YouTube"
+        },
+        {
+          titulo: "Maestros de la Búsqueda: Operadores Booleanos",
+          descripcion: "Una guía interactiva completa sobre cómo dominar los operadores AND, OR y NOT.",
+          url: "https://gamma.app/docs/Maestros-de-la-Busqueda-8a9kvdc2sqn4klr",
+          unidad: "Módulo 1",
+          tipo: "guia",
+          formato: "Web/Interactivo"
+        }
+      ];
+    }
+
+    try {
+      for (const item of initialData) {
+        await api.post("/educational-resources", item);
+      }
+      toast({
+        title: "Recursos cargados",
+        description: `Se han añadido los materiales del Módulo ${id}.`,
+      });
+      fetchResources();
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "No se pudieron guardar los recursos.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSeeding(false);
+    }
+  };
+
+  const getEmbedUrl = (url: string) => {
+    if (!url) return "";
+    if (url.includes("youtube.com/embed/")) return url;
+    let videoId = "";
+    if (url.includes("youtu.be/")) {
+      videoId = url.split("youtu.be/")[1].split("?")[0];
+    } else if (url.includes("v=")) {
+      videoId = url.split("v=")[1].split("&")[0];
+    }
+    return videoId ? `https://www.youtube.com/embed/${videoId}` : url;
+  };
+
+  return (
+    <div className="space-y-8">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <Button asChild variant="ghost" size="icon">
+            <Link href="/modulos">
+              <ArrowLeft className="h-5 w-5" />
+            </Link>
+          </Button>
+          <h1 className="text-3xl font-headline">Módulo {id}</h1>
+        </div>
+        
+        {resources.length === 0 && !loading && id === "1" && (
+          <Button onClick={handleSeedResources} disabled={isSeeding} className="bg-accent hover:bg-accent/90">
+            {isSeeding ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <PlusCircle className="mr-2 h-4 w-4" />}
+            Cargar Materiales del Módulo
+          </Button>
+        )}
+      </div>
+
+      {loading ? (
+        <div className="flex flex-col items-center justify-center py-20">
+          <Loader2 className="h-12 w-12 animate-spin text-primary" />
+          <p className="mt-4 text-muted-foreground">Cargando materiales...</p>
+        </div>
+      ) : resources.length > 0 ? (
+        <div className="grid grid-cols-1 gap-8">
+          {resources.map((res, index) => (
+            <Card key={res._id || index} className="overflow-hidden shadow-md">
+              <div className="flex flex-col md:flex-row">
+                {res.tipo === "video" && (
+                  <div className="md:w-1/2 aspect-video bg-black">
+                    <iframe
+                      src={getEmbedUrl(res.url)}
+                      title={res.titulo}
+                      className="w-full h-full"
+                      allowFullScreen
+                    />
+                  </div>
+                )}
+                <div className={res.tipo === "video" ? "md:w-1/2 p-6 flex flex-col" : "w-full p-6 flex flex-col"}>
+                  <div className="flex items-center gap-2 mb-4">
+                    <Badge variant={res.tipo === "video" ? "default" : "secondary"} className="flex gap-1 items-center">
+                      {res.tipo === "video" ? <Video className="h-3 w-3" /> : <FileText className="h-3 w-3" />}
+                      {res.tipo.toUpperCase()}
+                    </Badge>
+                  </div>
+                  <CardTitle className="text-2xl mb-2">{res.titulo}</CardTitle>
+                  <CardDescription className="text-base mb-6">{res.descripcion}</CardDescription>
+                  <div className="mt-auto">
+                    {res.tipo === "guia" && (
+                      <Button asChild className="w-full md:w-auto">
+                        <a href={res.url} target="_blank" rel="noopener noreferrer">
+                          Abrir Guía <ExternalLink className="ml-2 h-4 w-4" />
+                        </a>
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </Card>
+          ))}
+        </div>
+      ) : (
+        <Card className="p-12 text-center">
+          <CardContent className="space-y-4">
+            <GraduationCap className="h-16 w-16 text-muted-foreground mx-auto" />
+            <h3 className="text-xl font-semibold">Este módulo aún no tiene materiales</h3>
+            <p className="text-muted-foreground max-w-md mx-auto">
+              {id === "1" 
+                ? "Usa el botón superior para cargar el video y la guía del Módulo 1." 
+                : "Estamos preparando el mejor contenido para este módulo. ¡Vuelve pronto!"}
+            </p>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+}
