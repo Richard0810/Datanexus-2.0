@@ -2,13 +2,63 @@
 "use client";
 
 import { useEffect, useState, use } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { GraduationCap, ArrowLeft, Loader2, Video, FileText, ExternalLink, PlusCircle, CheckCircle2 } from "lucide-react";
+import { 
+  GraduationCap, 
+  ArrowLeft, 
+  Loader2, 
+  Video, 
+  FileText, 
+  ExternalLink, 
+  PlusCircle, 
+  CheckCircle2, 
+  Pencil, 
+  Trash2,
+  MoreVertical,
+  Link as LinkIcon,
+  Upload
+} from "lucide-react";
 import Link from "next/link";
 import api from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 const modulesData = {
   "1": { title: "Módulo 1: Fundamentos de Bases de Datos e Investigación", objective: "Comprender los conceptos básicos de bases de datos y su importancia en la investigación académica." },
@@ -36,8 +86,19 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
   const { id } = use(params);
   const [resources, setResources] = useState<Resource[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isSeeding, setIsSeeding] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingResource, setEditingResource] = useState<Resource | null>(null);
   const { toast } = useToast();
+
+  const [formData, setFormData] = useState<Resource>({
+    titulo: "",
+    descripcion: "",
+    url: "",
+    unidad: `Módulo ${id}`,
+    tipo: "guia",
+    formato: "URL"
+  });
 
   const moduleInfo = modulesData[id as keyof typeof modulesData] || { title: `Módulo ${id}`, objective: "" };
 
@@ -45,7 +106,6 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
     try {
       setLoading(true);
       const response = await api.get("/educational-resources");
-      // Filtramos por el nombre del módulo
       const filtered = response.data.filter((res: any) => 
         res.unidad === `Módulo ${id}`
       );
@@ -61,72 +121,74 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
     fetchResources();
   }, [id]);
 
-  const handleSeedResources = async () => {
-    setIsSeeding(true);
-    let initialData: any[] = [];
-    
-    if (id === "1") {
-      initialData = [
-        {
-          titulo: "Concepto de base de datos",
-          descripcion: "Introducción fundamental a qué es una base de datos y su importancia.",
-          url: "https://youtu.be/6S8A-1jBD5Y?si=O0abKswmjJXojEKM",
-          unidad: `Módulo 1`,
-          tipo: "video",
-          formato: "YouTube"
-        },
-        {
-          titulo: "Guía: Maestros de la Búsqueda",
-          descripcion: "Guía interactiva sobre fundamentos y operadores bibliográficos.",
-          url: "https://gamma.app/docs/Maestros-de-la-Busqueda-8a9kvdc2sqn4klr",
-          unidad: `Módulo 1`,
-          tipo: "guia",
-          formato: "Web/Interactivo"
-        }
-      ];
-    } else if (id === "4") {
-      initialData = [
-        {
-          titulo: "Cómo funcionan los operadores booleanos",
-          descripcion: "Aprende a usar AND, OR y NOT para mejorar tus búsquedas académicas de forma avanzada.",
-          url: "https://youtu.be/k4kq_QxTU8Q?si=qPrLRJxeFjutINX5",
-          unidad: `Módulo 4`,
-          tipo: "video",
-          formato: "YouTube"
-        }
-      ];
+  const handleOpenDialog = (resource?: Resource) => {
+    if (resource) {
+      setEditingResource(resource);
+      setFormData(resource);
+    } else {
+      setEditingResource(null);
+      setFormData({
+        titulo: "",
+        descripcion: "",
+        url: "",
+        unidad: `Módulo ${id}`,
+        tipo: "guia",
+        formato: "URL"
+      });
+    }
+    setIsDialogOpen(true);
+  };
+
+  const handleSaveResource = async () => {
+    if (!formData.titulo || !formData.url) {
+      toast({ title: "Campos requeridos", description: "El título y la URL/Archivo son obligatorios.", variant: "destructive" });
+      return;
     }
 
+    setIsProcessing(true);
     try {
-      if (initialData.length === 0) {
-        toast({
-          title: "Próximamente",
-          description: "Aún no hay materiales preconfigurados para este módulo.",
-        });
-        return;
+      if (editingResource?._id) {
+        await api.patch(`/educational-resources/${editingResource._id}`, formData);
+        toast({ title: "Recurso actualizado", description: "Los cambios se guardaron correctamente." });
+      } else {
+        await api.post("/educational-resources", formData);
+        toast({ title: "Recurso creado", description: "El nuevo material ha sido añadido al módulo." });
       }
-
-      for (const item of initialData) {
-        await api.post("/educational-resources", item);
-      }
-      toast({
-        title: "Recursos cargados",
-        description: `Se han añadido los materiales al Módulo ${id}.`,
-      });
+      setIsDialogOpen(false);
       fetchResources();
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "No se pudieron guardar los recursos.",
-        variant: "destructive"
-      });
+      toast({ title: "Error", description: "No se pudo procesar la solicitud.", variant: "destructive" });
     } finally {
-      setIsSeeding(false);
+      setIsProcessing(false);
+    }
+  };
+
+  const handleDeleteResource = async (resourceId: string) => {
+    try {
+      await api.delete(`/educational-resources/${resourceId}`);
+      toast({ title: "Recurso eliminado", description: "El material fue removido del módulo." });
+      fetchResources();
+    } catch (error) {
+      toast({ title: "Error", description: "No se pudo eliminar el recurso.", variant: "destructive" });
+    }
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Simulación de subida: Generamos un nombre ficticio para la URL
+      setFormData({
+        ...formData,
+        titulo: formData.titulo || file.name,
+        url: `file://${file.name}`,
+        formato: file.type || "Archivo"
+      });
+      toast({ title: "Archivo seleccionado", description: file.name });
     }
   };
 
   const getEmbedUrl = (url: string) => {
-    if (!url) return "";
+    if (!url || !url.startsWith("http")) return "";
     if (url.includes("youtube.com/embed/")) return url;
     let videoId = "";
     if (url.includes("youtu.be/")) {
@@ -139,7 +201,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
 
   return (
     <div className="space-y-8">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex items-center gap-4">
           <Button asChild variant="ghost" size="icon">
             <Link href="/modulos">
@@ -155,12 +217,91 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
           </div>
         </div>
         
-        {resources.length === 0 && !loading && (id === "1" || id === "4") && (
-          <Button onClick={handleSeedResources} disabled={isSeeding} className="bg-accent hover:bg-accent/90">
-            {isSeeding ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <PlusCircle className="mr-2 h-4 w-4" />}
-            Cargar Materiales
-          </Button>
-        )}
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <DialogTrigger asChild>
+            <Button onClick={() => handleOpenDialog()} className="bg-primary hover:bg-primary/90">
+              <PlusCircle className="mr-2 h-4 w-4" />
+              Añadir Recurso
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-[500px]">
+            <DialogHeader>
+              <DialogTitle>{editingResource ? "Editar Recurso" : "Nuevo Recurso Educativo"}</DialogTitle>
+              <DialogDescription>
+                Completa los campos para {editingResource ? "modificar" : "añadir"} material al {moduleInfo.title}.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label htmlFor="titulo">Título del recurso</Label>
+                <Input 
+                  id="titulo" 
+                  value={formData.titulo} 
+                  onChange={(e) => setFormData({...formData, titulo: e.target.value})}
+                  placeholder="Ej: Tutorial de búsqueda básica"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="tipo">Tipo de contenido</Label>
+                <Select value={formData.tipo} onValueChange={(val) => setFormData({...formData, tipo: val})}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecciona tipo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="video">Video (YouTube)</SelectItem>
+                    <SelectItem value="guia">Guía / Documento</SelectItem>
+                    <SelectItem value="articulo">Artículo Académico</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="descripcion">Descripción</Label>
+                <Textarea 
+                  id="descripcion" 
+                  value={formData.descripcion} 
+                  onChange={(e) => setFormData({...formData, descripcion: e.target.value})}
+                  placeholder="Breve descripción del material..."
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label>Origen del recurso</Label>
+                <div className="flex gap-2">
+                  <Input 
+                    placeholder="URL del recurso (https://...)" 
+                    className="flex-1"
+                    value={formData.url.startsWith('file://') ? '' : formData.url}
+                    onChange={(e) => setFormData({...formData, url: e.target.value, formato: 'URL'})}
+                  />
+                  <div className="relative">
+                    <Input 
+                      type="file" 
+                      className="hidden" 
+                      id="file-upload" 
+                      onChange={handleFileUpload}
+                    />
+                    <Button asChild variant="outline" size="icon">
+                      <label htmlFor="file-upload" className="cursor-pointer">
+                        <Upload className="h-4 w-4" />
+                      </label>
+                    </Button>
+                  </div>
+                </div>
+                {formData.url.startsWith('file://') && (
+                  <p className="text-xs text-primary font-medium flex items-center gap-1">
+                    <CheckCircle2 className="h-3 w-3" /> Archivo seleccionado: {formData.url.replace('file://', '')}
+                  </p>
+                )}
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="ghost" onClick={() => setIsDialogOpen(false)}>Cancelar</Button>
+              <Button onClick={handleSaveResource} disabled={isProcessing}>
+                {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {editingResource ? "Guardar Cambios" : "Crear Recurso"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
 
       {loading ? (
@@ -170,10 +311,49 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
         </div>
       ) : resources.length > 0 ? (
         <div className="grid grid-cols-1 gap-8">
-          {resources.map((res, index) => (
-            <Card key={res._id || index} className="overflow-hidden shadow-md">
+          {resources.map((res) => (
+            <Card key={res._id} className="overflow-hidden shadow-md group relative">
+              <div className="absolute top-4 right-4 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="secondary" size="icon" className="h-8 w-8 rounded-full shadow-lg">
+                      <MoreVertical className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => handleOpenDialog(res)}>
+                      <Pencil className="mr-2 h-4 w-4" /> Editar
+                    </DropdownMenuItem>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive">
+                          <Trash2 className="mr-2 h-4 w-4" /> Eliminar
+                        </DropdownMenuItem>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Esta acción no se puede deshacer. El recurso "{res.titulo}" será eliminado permanentemente.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                          <AlertDialogAction 
+                            onClick={() => res._id && handleDeleteResource(res._id)}
+                            className="bg-destructive text-destructive-foreground"
+                          >
+                            Eliminar
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+
               <div className="flex flex-col md:flex-row">
-                {res.tipo === "video" && (
+                {res.tipo === "video" && res.url.startsWith("http") && (
                   <div className="md:w-1/2 aspect-video bg-black">
                     <iframe
                       src={getEmbedUrl(res.url)}
@@ -183,7 +363,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                     />
                   </div>
                 )}
-                <div className={res.tipo === "video" ? "md:w-1/2 p-6 flex flex-col" : "w-full p-6 flex flex-col"}>
+                <div className={res.tipo === "video" && res.url.startsWith("http") ? "md:w-1/2 p-6 flex flex-col" : "w-full p-6 flex flex-col"}>
                   <div className="flex items-center gap-2 mb-4">
                     <Badge variant={res.tipo === "video" ? "default" : "secondary"} className="flex gap-1 items-center">
                       {res.tipo === "video" ? <Video className="h-3 w-3" /> : <FileText className="h-3 w-3" />}
@@ -193,12 +373,20 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                   <CardTitle className="text-2xl mb-2">{res.titulo}</CardTitle>
                   <CardDescription className="text-base mb-6">{res.descripcion}</CardDescription>
                   <div className="mt-auto">
-                    {res.tipo === "guia" && (
+                    {res.url.startsWith("http") ? (
                       <Button asChild className="w-full md:w-auto">
                         <a href={res.url} target="_blank" rel="noopener noreferrer">
                           Abrir Recurso <ExternalLink className="ml-2 h-4 w-4" />
                         </a>
                       </Button>
+                    ) : (
+                      <div className="p-3 bg-muted rounded-md flex items-center justify-between">
+                         <div className="flex items-center gap-2 text-sm">
+                           <FileText className="h-4 w-4 text-primary" />
+                           <span>Archivo: {res.url.replace('file://', '')}</span>
+                         </div>
+                         <Badge variant="outline">Local</Badge>
+                      </div>
                     )}
                   </div>
                 </div>
@@ -210,11 +398,9 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
         <Card className="p-12 text-center">
           <CardContent className="space-y-4">
             <GraduationCap className="h-16 w-16 text-muted-foreground mx-auto" />
-            <h3 className="text-xl font-semibold">Este módulo aún no tiene materiales registrados</h3>
+            <h3 className="text-xl font-semibold">Este módulo aún no tiene materiales</h3>
             <p className="text-muted-foreground max-w-md mx-auto">
-              {(id === "1" || id === "4")
-                ? "Usa el botón superior para cargar el contenido diseñado para este módulo." 
-                : "Estamos preparando el material educativo para este módulo. ¡Vuelve pronto!"}
+              Usa el botón "Añadir Recurso" para comenzar a poblar este módulo con contenido educativo.
             </p>
           </CardContent>
         </Card>
