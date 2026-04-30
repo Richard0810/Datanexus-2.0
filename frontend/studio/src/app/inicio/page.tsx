@@ -2,7 +2,7 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { ArrowRight, BookOpen, Database, Filter, Lightbulb, MessageSquare, PlayCircle, Search, Video, GraduationCap } from "lucide-react";
+import { ArrowRight, Database, Lightbulb, PlayCircle, GraduationCap, Search, BrainCircuit, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import placeholderImages from "../lib/placeholder-images.json";
@@ -26,50 +26,50 @@ const quickAccessItems: QuickAccessItem[] = [
   { title: "Búsqueda Asistida", href: "/herramientas-ia", icon: Search, description: "Usa IA para refinar tus búsquedas académicas." },
   { title: "Pregunta PICO/PECO", href: "/herramientas-ia#pico-peco", icon: Lightbulb, description: "Estructura tus preguntas de investigación." },
   { title: "Simulador de BD", href: "/simulador", icon: Database, description: "Practica en entornos académicos controlados." },
-  { title: "Modelo PRISMA", href: "/modulos/2", icon: Filter, description: "Aprende a seleccionar estudios sistemáticamente." },
+  { title: "IA en Búsqueda", href: "/modulos/5", icon: BrainCircuit, description: "Aprende a optimizar búsquedas con IA." },
 ];
 
 const learningActivities: LearningActivityItem[] = [
   { 
     title: "Módulo 1: Fundamentos", 
     href: "/modulos/1", 
-    icon: GraduationCap, 
-    description: "Bases de datos y operadores booleanos.",
+    icon: Database, 
+    description: "Conceptos básicos de bases de datos e investigación.",
     imageData: placeholderImages.images.find(img => img.id === "online-learning")!
   },
   { 
-    title: "Módulo 2: Estrategia", 
-    href: "/modulos/2", 
-    icon: Filter, 
-    description: "Metodología PRISMA y selección de artículos.",
+    title: "Módulo 4: Estrategias", 
+    href: "/modulos/4", 
+    icon: PlayCircle, 
+    description: "Operadores booleanos y búsqueda avanzada.",
     imageData: placeholderImages.images.find(img => img.id === "study-guide")!
   },
   { 
-    title: "Módulo 3: Ética e IA", 
-    href: "/modulos/3", 
-    icon: MessageSquare, 
-    description: "Uso responsable de IA en la academia.",
+    title: "Módulo 5: IA Académica", 
+    href: "/modulos/5", 
+    icon: BrainCircuit, 
+    description: "Uso de herramientas de IA en la investigación.",
     imageData: placeholderImages.images.find(img => img.id === "ai-ethics")!
   },
   { 
-    title: "Simulaciones", 
-    href: "/simulador", 
-    icon: PlayCircle, 
-    description: "Pon a prueba tus conocimientos en tiempo real.",
+    title: "Módulo 8: Ética e IA", 
+    href: "/modulos/8", 
+    icon: ShieldCheck, 
+    description: "Principios éticos y uso responsable de información.",
     imageData: placeholderImages.images.find(img => img.id === "data-search")!
   },
 ];
 
 export default function HomePage() {
   const userName = "Estudiante";
-  const progressLevel = 65;
+  const progressLevel = 35;
 
   return (
     <div className="space-y-8">
       <Card className="shadow-lg border-none bg-gradient-to-br from-primary/20 via-background to-accent/20">
         <CardHeader>
           <CardTitle className="text-3xl font-headline">¡Bienvenido de nuevo, {userName}!</CardTitle>
-          <CardDescription className="text-lg">Has completado el 65% de tu formación en competencias informacionales.</CardDescription>
+          <CardDescription className="text-lg">Tu camino hacia la maestría informacional está en marcha.</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex items-center gap-4">
@@ -107,7 +107,7 @@ export default function HomePage() {
       <section>
         <h2 className="text-2xl font-headline mb-4 flex items-center gap-2">
           <GraduationCap className="h-6 w-6 text-primary" />
-          Ruta de Aprendizaje Activo
+          Ruta de Aprendizaje Personalizada
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {learningActivities.map((activity) => (
@@ -127,7 +127,7 @@ export default function HomePage() {
                 </div>
               </div>
               <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle className="flex items-center gap-2 text-xl">
+                <CardTitle className="flex items-center gap-2 text-xl font-headline">
                   <activity.icon className="h-6 w-6 text-primary" />
                   {activity.title}
                 </CardTitle>

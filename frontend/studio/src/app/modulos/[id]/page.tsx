@@ -4,11 +4,23 @@
 import { useEffect, useState, use } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { GraduationCap, ArrowLeft, Loader2, Video, FileText, ExternalLink, PlusCircle } from "lucide-react";
+import { GraduationCap, ArrowLeft, Loader2, Video, FileText, ExternalLink, PlusCircle, CheckCircle2 } from "lucide-react";
 import Link from "next/link";
 import api from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
+
+const modulesData = {
+  "1": { title: "Fundamentos de Bases de Datos e Investigación", objective: "Comprender los conceptos básicos de bases de datos y su importancia en la investigación académica." },
+  "2": { title: "Acceso e Identificación de Recursos", objective: "Aprender a acceder a las bases de datos institucionales." },
+  "3": { title: "Navegación y Búsqueda Básica", objective: "Realizar búsquedas simples en bases de datos." },
+  "4": { title: "Estrategias de Búsqueda Avanzada", objective: "Aplicar técnicas avanzadas para mejorar resultados de búsqueda." },
+  "5": { title: "Inteligencia Artificial en la Búsqueda", objective: "Utilizar herramientas de IA para optimizar la búsqueda académica." },
+  "6": { title: "Gestión de la Información", objective: "Organizar y almacenar información recuperada." },
+  "7": { title: "Evaluación y Selección de Fuentes", objective: "Evaluar la calidad de la información académica." },
+  "8": { title: "Ética y Uso Responsable de la Información", objective: "Aplicar principios éticos en el uso de información." },
+  "9": { title: "Aplicación Práctica en Investigación", objective: "Integrar todos los conocimientos en un ejercicio completo." }
+};
 
 interface Resource {
   _id?: string;
@@ -27,11 +39,12 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
   const [isSeeding, setIsSeeding] = useState(false);
   const { toast } = useToast();
 
+  const moduleInfo = modulesData[id as keyof typeof modulesData] || { title: `Módulo ${id}`, objective: "" };
+
   const fetchResources = async () => {
     try {
       setLoading(true);
       const response = await api.get("/educational-resources");
-      // Mapeamos unidad X a modulo X para la búsqueda
       const filtered = response.data.filter((res: any) => 
         res.unidad === `Módulo ${id}` || res.unidad === `Unidad ${id}`
       );
@@ -57,15 +70,15 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
           titulo: "Concepto de base de datos",
           descripcion: "Introducción fundamental a qué es una base de datos y su importancia.",
           url: "https://youtu.be/6S8A-1jBD5Y?si=O0abKswmjJXojEKM",
-          unidad: "Módulo 1",
+          unidad: `Módulo ${id}`,
           tipo: "video",
           formato: "YouTube"
         },
         {
-          titulo: "Maestros de la Búsqueda: Operadores Booleanos",
-          descripcion: "Una guía interactiva completa sobre cómo dominar los operadores AND, OR y NOT.",
+          titulo: "Operadores Booleanos",
+          descripcion: "Guía completa sobre cómo dominar los operadores AND, OR y NOT.",
           url: "https://gamma.app/docs/Maestros-de-la-Busqueda-8a9kvdc2sqn4klr",
-          unidad: "Módulo 1",
+          unidad: `Módulo ${id}`,
           tipo: "guia",
           formato: "Web/Interactivo"
         }
@@ -113,13 +126,19 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
               <ArrowLeft className="h-5 w-5" />
             </Link>
           </Button>
-          <h1 className="text-3xl font-headline">Módulo {id}</h1>
+          <div>
+            <h1 className="text-3xl font-headline">{moduleInfo.title}</h1>
+            <p className="text-muted-foreground mt-1 flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4 text-primary" />
+              {moduleInfo.objective}
+            </p>
+          </div>
         </div>
         
         {resources.length === 0 && !loading && id === "1" && (
           <Button onClick={handleSeedResources} disabled={isSeeding} className="bg-accent hover:bg-accent/90">
             {isSeeding ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <PlusCircle className="mr-2 h-4 w-4" />}
-            Cargar Materiales del Módulo
+            Cargar Materiales
           </Button>
         )}
       </div>
@@ -157,7 +176,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                     {res.tipo === "guia" && (
                       <Button asChild className="w-full md:w-auto">
                         <a href={res.url} target="_blank" rel="noopener noreferrer">
-                          Abrir Guía <ExternalLink className="ml-2 h-4 w-4" />
+                          Abrir Recurso <ExternalLink className="ml-2 h-4 w-4" />
                         </a>
                       </Button>
                     )}
@@ -171,11 +190,11 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
         <Card className="p-12 text-center">
           <CardContent className="space-y-4">
             <GraduationCap className="h-16 w-16 text-muted-foreground mx-auto" />
-            <h3 className="text-xl font-semibold">Este módulo aún no tiene materiales</h3>
+            <h3 className="text-xl font-semibold">Este módulo aún no tiene materiales registrados</h3>
             <p className="text-muted-foreground max-w-md mx-auto">
               {id === "1" 
-                ? "Usa el botón superior para cargar el video y la guía del Módulo 1." 
-                : "Estamos preparando el mejor contenido para este módulo. ¡Vuelve pronto!"}
+                ? "Usa el botón superior para cargar el contenido de fundamentos." 
+                : "Estamos preparando el material educativo para este módulo. ¡Vuelve pronto!"}
             </p>
           </CardContent>
         </Card>
