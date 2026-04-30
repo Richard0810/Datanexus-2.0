@@ -11,15 +11,15 @@ import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 
 const modulesData = {
-  "1": { title: "Fundamentos de Bases de Datos e Investigación", objective: "Comprender los conceptos básicos de bases de datos y su importancia en la investigación académica." },
-  "2": { title: "Acceso e Identificación de Recursos", objective: "Aprender a acceder a las bases de datos institucionales." },
-  "3": { title: "Navegación y Búsqueda Básica", objective: "Realizar búsquedas simples en bases de datos." },
-  "4": { title: "Estrategias de Búsqueda Avanzada", objective: "Aplicar técnicas avanzadas para mejorar resultados de búsqueda." },
-  "5": { title: "Inteligencia Artificial en la Búsqueda", objective: "Utilizar herramientas de IA para optimizar la búsqueda académica." },
-  "6": { title: "Gestión de la Información", objective: "Organizar y almacenar información recuperada." },
-  "7": { title: "Evaluación y Selección de Fuentes", objective: "Evaluar la calidad de la información académica." },
-  "8": { title: "Ética y Uso Responsable de la Información", objective: "Aplicar principios éticos en el uso de información." },
-  "9": { title: "Aplicación Práctica en Investigación", objective: "Integrar todos los conocimientos en un ejercicio completo." }
+  "1": { title: "Módulo 1: Fundamentos de Bases de Datos e Investigación", objective: "Comprender los conceptos básicos de bases de datos y su importancia en la investigación académica." },
+  "2": { title: "Módulo 2: Acceso e Identificación de Recursos", objective: "Aprender a acceder a las bases de datos institucionales." },
+  "3": { title: "Módulo 3: Navegación y Búsqueda Básica", objective: "Realizar búsquedas simples en bases de datos." },
+  "4": { title: "Módulo 4: Estrategias de Búsqueda Avanzada", objective: "Aplicar técnicas avanzadas para mejorar resultados de búsqueda." },
+  "5": { title: "Módulo 5: Inteligencia Artificial en la Búsqueda", objective: "Utilizar herramientas de IA para optimizar la búsqueda académica." },
+  "6": { title: "Módulo 6: Gestión de la Información", objective: "Organizar y almacenar información recuperada." },
+  "7": { title: "Módulo 7: Evaluación y Selección de Fuentes", objective: "Evaluar la calidad de la información académica." },
+  "8": { title: "Módulo 8: Ética y Uso Responsable de la Información", objective: "Aplicar principios éticos en el uso de información." },
+  "9": { title: "Módulo 9: Aplicación Práctica en Investigación", objective: "Integrar todos los conocimientos en un ejercicio completo." }
 };
 
 interface Resource {
@@ -45,8 +45,9 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
     try {
       setLoading(true);
       const response = await api.get("/educational-resources");
+      // Filtramos por el nombre del módulo
       const filtered = response.data.filter((res: any) => 
-        res.unidad === `Módulo ${id}` || res.unidad === `Unidad ${id}`
+        res.unidad === `Módulo ${id}`
       );
       setResources(filtered);
     } catch (error) {
@@ -70,28 +71,47 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
           titulo: "Concepto de base de datos",
           descripcion: "Introducción fundamental a qué es una base de datos y su importancia.",
           url: "https://youtu.be/6S8A-1jBD5Y?si=O0abKswmjJXojEKM",
-          unidad: `Módulo ${id}`,
+          unidad: `Módulo 1`,
           tipo: "video",
           formato: "YouTube"
         },
         {
-          titulo: "Operadores Booleanos",
-          descripcion: "Guía completa sobre cómo dominar los operadores AND, OR y NOT.",
+          titulo: "Guía: Maestros de la Búsqueda",
+          descripcion: "Guía interactiva sobre fundamentos y operadores bibliográficos.",
           url: "https://gamma.app/docs/Maestros-de-la-Busqueda-8a9kvdc2sqn4klr",
-          unidad: `Módulo ${id}`,
+          unidad: `Módulo 1`,
           tipo: "guia",
           formato: "Web/Interactivo"
+        }
+      ];
+    } else if (id === "4") {
+      initialData = [
+        {
+          titulo: "Cómo funcionan los operadores booleanos",
+          descripcion: "Aprende a usar AND, OR y NOT para mejorar tus búsquedas académicas de forma avanzada.",
+          url: "https://youtu.be/k4kq_QxTU8Q?si=qPrLRJxeFjutINX5",
+          unidad: `Módulo 4`,
+          tipo: "video",
+          formato: "YouTube"
         }
       ];
     }
 
     try {
+      if (initialData.length === 0) {
+        toast({
+          title: "Próximamente",
+          description: "Aún no hay materiales preconfigurados para este módulo.",
+        });
+        return;
+      }
+
       for (const item of initialData) {
         await api.post("/educational-resources", item);
       }
       toast({
         title: "Recursos cargados",
-        description: `Se han añadido los materiales del Módulo ${id}.`,
+        description: `Se han añadido los materiales al Módulo ${id}.`,
       });
       fetchResources();
     } catch (error) {
@@ -135,7 +155,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
           </div>
         </div>
         
-        {resources.length === 0 && !loading && id === "1" && (
+        {resources.length === 0 && !loading && (id === "1" || id === "4") && (
           <Button onClick={handleSeedResources} disabled={isSeeding} className="bg-accent hover:bg-accent/90">
             {isSeeding ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <PlusCircle className="mr-2 h-4 w-4" />}
             Cargar Materiales
@@ -192,8 +212,8 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
             <GraduationCap className="h-16 w-16 text-muted-foreground mx-auto" />
             <h3 className="text-xl font-semibold">Este módulo aún no tiene materiales registrados</h3>
             <p className="text-muted-foreground max-w-md mx-auto">
-              {id === "1" 
-                ? "Usa el botón superior para cargar el contenido de fundamentos." 
+              {(id === "1" || id === "4")
+                ? "Usa el botón superior para cargar el contenido diseñado para este módulo." 
                 : "Estamos preparando el material educativo para este módulo. ¡Vuelve pronto!"}
             </p>
           </CardContent>
