@@ -275,10 +275,20 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
       return url.replace("gamma.app/docs/", "gamma.app/embed/");
     }
 
-    // Google Drive (Preview mode)
+    // Google Slides (Modo Presentación/Embed)
+    if (url.includes("docs.google.com/presentation/d/")) {
+      const fileIdMatch = url.match(/\/d\/(.+?)(\/|$)/);
+      if (fileIdMatch) {
+        return `https://docs.google.com/presentation/d/${fileIdMatch[1]}/embed?start=false&loop=false&delayms=3000`;
+      }
+    }
+
+    // Google Drive (Preview mode - standard for PPTX and other files)
     if (url.includes("drive.google.com/file/d/")) {
-      const fileIdMatch = url.match(/\/d\/(.+?)\//);
-      if (fileIdMatch) return `https://drive.google.com/file/d/${fileIdMatch[1]}/preview`;
+      const fileIdMatch = url.match(/\/d\/(.+?)(\/|$)/);
+      if (fileIdMatch) {
+        return `https://drive.google.com/file/d/${fileIdMatch[1]}/preview`;
+      }
     }
 
     return url;
