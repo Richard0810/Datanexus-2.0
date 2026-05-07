@@ -443,9 +443,22 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                     <CardTitle className="mt-2">{act.titulo}</CardTitle>
                     <CardDescription>{act.descripcion}</CardDescription>
                   </CardHeader>
-                  <CardContent className="flex-1">
-                    <p className="text-sm font-semibold mb-1">Criterios de Evaluación:</p>
-                    <p className="text-sm text-muted-foreground">{act.criterios_evaluacion}</p>
+                  <CardContent className="flex-1 space-y-4">
+                    <div>
+                      <p className="text-sm font-semibold mb-1">Criterios de Evaluación:</p>
+                      <p className="text-sm text-muted-foreground">{act.criterios_evaluacion}</p>
+                    </div>
+                    {act.archivoUrl && (
+                      <div className="p-3 border rounded-md bg-muted/20 flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2 overflow-hidden">
+                          <LinkIcon className="h-4 w-4 text-primary shrink-0" />
+                          <span className="text-xs truncate text-muted-foreground">Material adjunto</span>
+                        </div>
+                        <Button asChild variant="link" size="sm" className="h-auto p-0 text-primary">
+                          <a href={act.archivoUrl} target="_blank" rel="noopener noreferrer">Ver recurso</a>
+                        </Button>
+                      </div>
+                    )}
                   </CardContent>
                   <CardFooter className="pt-0">
                     <Button variant="outline" className="w-full">
