@@ -1,29 +1,25 @@
 
 import axios from 'axios';
 
-// Función para determinar la URL del backend dinámicamente en el entorno de Cloud Workstations
+// Función robusta para determinar la URL del backend en Cloud Workstations
 const getBackendUrl = () => {
   if (typeof window !== 'undefined') {
     const hostname = window.location.hostname;
     const protocol = window.location.protocol;
     
-    // Si estamos en una Cloud Workstation (Firebase Studio)
+    // Si estamos en una Cloud Workstation
     if (hostname.includes('cloudworkstations.dev')) {
-      // Reemplazamos cualquier puerto al inicio (ej: 9000-, 9002-) por el puerto del backend (3001-)
-      // Buscamos un patrón de puerto al inicio (ej: 9002-studio-...)
+      // Reemplazamos el puerto del frontend (cualquiera que sea) por el 3001 del backend
+      // El patrón suele ser: puerto-studio-id.dominio
       const portPrefixMatch = hostname.match(/^(\d+)-/);
       if (portPrefixMatch) {
         const currentPort = portPrefixMatch[1];
-        if (currentPort !== '3001') {
-          return `${protocol}//${hostname.replace(`${currentPort}-`, '3001-')}`;
-        }
+        return `${protocol}//${hostname.replace(`${currentPort}-`, '3001-')}`;
       }
       
-      // Fallback: si no hay puerto al inicio, intentamos reemplazar 9002 por 3001 en cualquier parte
-      const fallbackHostname = hostname.replace('9002', '3001');
-      if (fallbackHostname !== hostname) {
-        return `${protocol}//${fallbackHostname}`;
-      }
+      // Fallback: búsqueda y reemplazo directo de puertos comunes
+      const fallbackHostname = hostname.replace('9002', '3001').replace('9000', '3001').replace('3000', '3001');
+      return `${protocol}//${fallbackHostname}`;
     }
   }
   // Localhost por defecto
@@ -38,11 +34,9 @@ const api = axios.create({
   }
 });
 
-// Interceptor para logs de error en desarrollo
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    // Evitamos mostrar un objeto vacío en el log
     const errorInfo = {
       url: error.config?.url,
       message: error.message,
