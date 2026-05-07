@@ -26,7 +26,9 @@ import {
   Check,
   Circle,
   RotateCcw,
-  Trophy
+  Trophy,
+  FileText,
+  Video
 } from "lucide-react";
 import Link from "next/link";
 import api from "@/lib/api";
@@ -118,7 +120,6 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
   const [isProcessing, setIsProcessing] = useState(false);
   const [viewMode, setViewMode] = useState<'edit' | 'preview'>('edit');
   
-  // Estados para la previsualización interactiva
   const [userAnswers, setUserAnswers] = useState<Record<string, string>>({});
   const [showFeedback, setShowFeedback] = useState(false);
   const [score, setScore] = useState<{ correct: number; total: number } | null>(null);
@@ -205,15 +206,6 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
       toast({ title: "Atención", description: "Escribe el enunciado de la pregunta.", variant: "destructive" });
       return;
     }
-    if (currentQuestion.tipo === 'opcion-multiple' && currentQuestion.opciones.some(o => !o)) {
-      toast({ title: "Atención", description: "Todas las opciones deben tener texto.", variant: "destructive" });
-      return;
-    }
-    if (currentQuestion.tipo !== 'escrita' && !currentQuestion.respuestaCorrecta) {
-      toast({ title: "Atención", description: "Debes marcar la respuesta correcta.", variant: "destructive" });
-      return;
-    }
-
     setAssessmentForm({
       ...assessmentForm,
       preguntas: [...assessmentForm.preguntas, currentQuestion]
@@ -254,19 +246,11 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
   const handleGradePreview = () => {
     let correctCount = 0;
     const autoGradableQuestions = assessmentForm.preguntas.filter(q => q.tipo !== 'escrita');
-    
     autoGradableQuestions.forEach(q => {
-      if (userAnswers[q.id] === q.respuestaCorrecta) {
-        correctCount++;
-      }
+      if (userAnswers[q.id] === q.respuestaCorrecta) correctCount++;
     });
-
     setScore({ correct: correctCount, total: autoGradableQuestions.length });
     setShowFeedback(true);
-    toast({
-      title: "Evaluación Calificada",
-      description: `Puntaje: ${correctCount} de ${autoGradableQuestions.length} respuestas correctas (Preguntas escritas no incluidas).`,
-    });
   };
 
   const handleResetPreview = () => {
@@ -277,10 +261,27 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
 
   const getEmbedUrl = (url: string) => {
     if (!url || !url.startsWith("http")) return "";
-    let videoId = "";
-    if (url.includes("youtu.be/")) videoId = url.split("youtu.be/")[1].split("?")[0];
-    else if (url.includes("v=")) videoId = url.split("v=")[1].split("&")[0];
-    return videoId ? `https://www.youtube.com/embed/${videoId}` : url;
+    
+    // YouTube
+    if (url.includes("youtube.com") || url.includes("youtu.be")) {
+      let videoId = "";
+      if (url.includes("youtu.be/")) videoId = url.split("youtu.be/")[1].split("?")[0];
+      else if (url.includes("v=")) videoId = url.split("v=")[1].split("&")[0];
+      return videoId ? `https://www.youtube.com/embed/${videoId}` : url;
+    }
+
+    // Gamma
+    if (url.includes("gamma.app/docs/")) {
+      return url.replace("gamma.app/docs/", "gamma.app/embed/");
+    }
+
+    // Google Drive (Preview mode)
+    if (url.includes("drive.google.com/file/d/")) {
+      const fileIdMatch = url.match(/\/d\/(.+?)\//);
+      if (fileIdMatch) return `https://drive.google.com/file/d/${fileIdMatch[1]}/preview`;
+    }
+
+    return url;
   };
 
   return (
@@ -305,9 +306,9 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
         <TabsContent value="recursos" className="space-y-6">
           <div className="flex justify-between items-center"><h2 className="text-xl font-headline">Materiales de Estudio</h2><Button onClick={() => { setEditingResource(null); setIsResourceDialogOpen(true); }} size="sm"><PlusCircle className="mr-2 h-4 w-4" /> Añadir Recurso</Button></div>
           {loading ? <div className="py-20 flex justify-center"><Loader2 className="animate-spin" /></div> : resources.length > 0 ? (
-            <div className="grid grid-cols-1 gap-6">
+            <div className="grid grid-cols-1 gap-8">
               {resources.map((res) => (
-                <Card key={res._id} className="overflow-hidden group relative">
+                <Card key={res._id} className="overflow-hidden group relative shadow-md hover:shadow-lg transition-shadow">
                    <div className="absolute top-4 right-4 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild><Button variant="secondary" size="icon" className="h-8 w-8 rounded-full shadow-md"><MoreVertical className="h-4 w-4" /></Button></DropdownMenuTrigger>
@@ -317,13 +318,29 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </div>
-                  <div className="flex flex-col md:flex-row">
-                    {res.tipo === "video" && <div className="md:w-1/3 aspect-video bg-black"><iframe src={getEmbedUrl(res.url)} className="w-full h-full" allowFullScreen /></div>}
-                    <div className="p-6 flex-1">
-                      <Badge className="mb-2">{res.tipo.toUpperCase()}</Badge>
-                      <CardTitle className="text-xl mb-2">{res.titulo}</CardTitle>
-                      <CardDescription className="mb-4">{res.descripcion}</CardDescription>
-                      <Button asChild variant="outline" size="sm"><a href={res.url} target="_blank" rel="noopener noreferrer"><ExternalLink className="mr-2 h-4 w-4" /> Abrir</a></Button>
+                  <div className="flex flex-col">
+                    <div className="p-6">
+                      <div className="flex items-center gap-2 mb-3">
+                        {res.tipo === "video" ? <Video className="h-4 w-4 text-red-500" /> : <FileText className="h-4 w-4 text-blue-500" />}
+                        <Badge variant="outline" className="uppercase">{res.tipo}</Badge>
+                      </div>
+                      <CardTitle className="text-2xl mb-2">{res.titulo}</CardTitle>
+                      <CardDescription className="text-base mb-6">{res.descripcion}</CardDescription>
+                      
+                      {/* Renderizado del Link/Iframe */}
+                      <div className="rounded-xl overflow-hidden border bg-black aspect-video w-full mb-4">
+                        <iframe 
+                          src={getEmbedUrl(res.url)} 
+                          className="w-full h-full border-0" 
+                          allowFullScreen 
+                          title={res.titulo}
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                        />
+                      </div>
+
+                      <div className="flex justify-end">
+                        <Button asChild variant="ghost" size="sm" className="text-primary"><a href={res.url} target="_blank" rel="noopener noreferrer"><ExternalLink className="mr-2 h-4 w-4" /> Abrir en ventana externa</a></Button>
+                      </div>
                     </div>
                   </div>
                 </Card>
@@ -337,7 +354,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
           {loading ? <div className="py-20 flex justify-center"><Loader2 className="animate-spin" /></div> : activities.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {activities.map((act) => (
-                <Card key={act._id} className="flex flex-col">
+                <Card key={act._id} className="flex flex-col shadow-sm border-t-4 border-t-accent/50">
                   <CardHeader>
                     <div className="flex justify-between items-start">
                       <Badge variant="secondary">{act.tipo.toUpperCase()}</Badge>
@@ -347,21 +364,28 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                       </div>
                     </div>
                     <CardTitle className="mt-2">{act.titulo}</CardTitle>
-                    <CardDescription>{act.descripcion}</CardDescription>
+                    <CardDescription className="text-base">{act.descripcion}</CardDescription>
                   </CardHeader>
                   <CardContent className="flex-1 space-y-4">
+                    <Separator />
                     <div>
-                      <p className="text-sm font-semibold mb-1">Criterios de Evaluación:</p>
+                      <p className="text-sm font-semibold text-primary mb-1">Criterios de Evaluación:</p>
                       <p className="text-sm text-muted-foreground">{act.criterios_evaluacion}</p>
                     </div>
                     {act.archivoUrl && (
-                      <div className="p-3 border rounded-md bg-muted/20 flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-2 overflow-hidden"><LinkIcon className="h-4 w-4 text-primary shrink-0" /><span className="text-xs truncate text-muted-foreground">Material adjunto</span></div>
-                        <Button asChild variant="link" size="sm" className="h-auto p-0 text-primary"><a href={act.archivoUrl} target="_blank" rel="noopener noreferrer">Ver recurso</a></Button>
+                      <div className="p-4 border rounded-xl bg-primary/5 flex items-center justify-between gap-3 border-primary/20">
+                        <div className="flex items-center gap-3 overflow-hidden">
+                          <LinkIcon className="h-5 w-5 text-primary shrink-0" />
+                          <div className="overflow-hidden">
+                             <p className="text-xs font-bold text-primary truncate">Material de referencia</p>
+                             <p className="text-[10px] text-muted-foreground truncate">{act.archivoUrl}</p>
+                          </div>
+                        </div>
+                        <Button asChild variant="outline" size="sm" className="h-8 text-xs shrink-0"><a href={act.archivoUrl} target="_blank" rel="noopener noreferrer">Abrir link</a></Button>
                       </div>
                     )}
                   </CardContent>
-                  <CardFooter className="pt-0"><Button variant="outline" className="w-full"><Upload className="mr-2 h-4 w-4" /> Subir Entrega</Button></CardFooter>
+                  <CardFooter className="pt-0"><Button variant="default" className="w-full bg-accent hover:bg-accent/90"><Upload className="mr-2 h-4 w-4" /> Subir Entrega</Button></CardFooter>
                 </Card>
               ))}
             </div>
@@ -373,7 +397,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
           {loading ? <div className="py-20 flex justify-center"><Loader2 className="animate-spin" /></div> : assessments.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {assessments.map((ass) => (
-                <Card key={ass._id} className="hover:border-primary transition-colors cursor-pointer group relative">
+                <Card key={ass._id} className="hover:border-primary transition-colors cursor-pointer group relative shadow-md">
                    <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
                       <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); setEditingAssessment(ass); setAssessmentForm(ass); setViewMode('edit'); handleResetPreview(); setIsAssessmentDialogOpen(true); }}><Pencil className="h-4 w-4" /></Button>
                       <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={async (e) => { e.stopPropagation(); await api.delete(`/assessments/${ass._id}`); fetchData(); }}><Trash2 className="h-4 w-4" /></Button>
@@ -382,8 +406,8 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                     <CardTitle className="text-lg">{ass.titulo}</CardTitle>
                     <CardDescription className="line-clamp-2">{ass.descripcion}</CardDescription>
                   </CardHeader>
-                  <CardContent><div className="flex items-center gap-2 text-sm text-muted-foreground"><HelpCircle className="h-4 w-4" /> {ass.preguntas.length} Preguntas</div></CardContent>
-                  <CardFooter><Button className="w-full" onClick={() => { setEditingAssessment(ass); setAssessmentForm(ass); setViewMode('preview'); handleResetPreview(); setIsAssessmentDialogOpen(true); }}>Realizar Evaluación</Button></CardFooter>
+                  <CardContent><div className="flex items-center gap-2 text-sm text-muted-foreground"><HelpCircle className="h-4 w-4 text-primary" /> {ass.preguntas.length} Preguntas</div></CardContent>
+                  <CardFooter><Button className="w-full" variant="outline" onClick={() => { setEditingAssessment(ass); setAssessmentForm(ass); setViewMode('preview'); handleResetPreview(); setIsAssessmentDialogOpen(true); }}>Comenzar Test</Button></CardFooter>
                 </Card>
               ))}
             </div>
@@ -391,49 +415,50 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
         </TabsContent>
       </Tabs>
 
-      {/* Resource Dialog */}
+      {/* Modals para Resource, Activity, Assessment */}
       <Dialog open={isResourceDialogOpen} onOpenChange={setIsResourceDialogOpen}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>{editingResource ? "Editar" : "Nuevo"} Recurso</DialogTitle></DialogHeader>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader><DialogTitle className="text-2xl font-headline">{editingResource ? "Editar" : "Nuevo"} Recurso Educativo</DialogTitle></DialogHeader>
           <div className="grid gap-4 py-4">
-            <div className="grid gap-2"><Label>Título</Label><Input value={resourceForm.titulo} onChange={e => setResourceForm({...resourceForm, titulo: e.target.value})} /></div>
-            <div className="grid gap-2"><Label>Descripción</Label><Textarea value={resourceForm.descripcion} onChange={e => setResourceForm({...resourceForm, descripcion: e.target.value})} /></div>
-            <div className="grid gap-2"><Label>URL</Label><Input value={resourceForm.url} onChange={e => setResourceForm({...resourceForm, url: e.target.value})} /></div>
-            <div className="grid gap-2">
-              <Label>Tipo</Label>
-              <Select value={resourceForm.tipo} onValueChange={v => setResourceForm({...resourceForm, tipo: v})}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent><SelectItem value="video">Video</SelectItem><SelectItem value="guia">Guía</SelectItem><SelectItem value="articulo">Artículo</SelectItem></SelectContent>
-              </Select>
+            <div className="grid gap-2"><Label>Título</Label><Input value={resourceForm.titulo} onChange={e => setResourceForm({...resourceForm, titulo: e.target.value})} placeholder="Ej: Guía de Operadores Booleanos" /></div>
+            <div className="grid gap-2"><Label>Descripción Corta</Label><Textarea value={resourceForm.descripcion} onChange={e => setResourceForm({...resourceForm, descripcion: e.target.value})} placeholder="Describe de qué trata este material..." /></div>
+            <div className="grid gap-2"><Label>Enlace (Link)</Label><Input value={resourceForm.url} onChange={e => setResourceForm({...resourceForm, url: e.target.value})} placeholder="Pega el link de YouTube, Gamma o Drive..." /></div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label>Tipo de Recurso</Label>
+                <Select value={resourceForm.tipo} onValueChange={v => setResourceForm({...resourceForm, tipo: v})}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent><SelectItem value="video">Video Tutorial</SelectItem><SelectItem value="guia">Guía Interactiva</SelectItem><SelectItem value="articulo">Artículo / PDF</SelectItem></SelectContent>
+                </Select>
+              </div>
+              <div className="grid gap-2"><Label>Formato</Label><Input value={resourceForm.formato} onChange={e => setResourceForm({...resourceForm, formato: e.target.value})} placeholder="Ej: MP4, Gamma App, Web" /></div>
             </div>
           </div>
-          <DialogFooter><Button onClick={handleSaveResource} disabled={isProcessing}>{isProcessing ? <Loader2 className="animate-spin" /> : "Guardar"}</Button></DialogFooter>
+          <DialogFooter><Button onClick={handleSaveResource} disabled={isProcessing} className="w-full">{isProcessing ? <Loader2 className="animate-spin" /> : "Publicar Recurso"}</Button></DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Activity Dialog */}
       <Dialog open={isActivityDialogOpen} onOpenChange={setIsActivityDialogOpen}>
         <DialogContent>
-          <DialogHeader><DialogTitle>{editingActivity ? "Editar" : "Nueva"} Actividad</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{editingActivity ? "Editar" : "Nueva"} Actividad Práctica</DialogTitle></DialogHeader>
           <div className="grid gap-4 py-4">
-            <div className="grid gap-2"><Label>Título de la Actividad</Label><Input value={activityForm.titulo} onChange={e => setActivityForm({...activityForm, titulo: e.target.value})} /></div>
-            <div className="grid gap-2"><Label>Descripción/Instrucciones</Label><Textarea value={activityForm.descripcion} onChange={e => setActivityForm({...activityForm, descripcion: e.target.value})} /></div>
+            <div className="grid gap-2"><Label>Título</Label><Input value={activityForm.titulo} onChange={e => setActivityForm({...activityForm, titulo: e.target.value})} /></div>
+            <div className="grid gap-2"><Label>Instrucciones Detalladas</Label><Textarea value={activityForm.descripcion} onChange={e => setActivityForm({...activityForm, descripcion: e.target.value})} rows={5}/></div>
             <div className="grid gap-2"><Label>Criterios de Evaluación</Label><Input value={activityForm.criterios_evaluacion} onChange={e => setActivityForm({...activityForm, criterios_evaluacion: e.target.value})} /></div>
-            <div className="grid gap-2"><Label>Material Adjunto (URL Drive/Gamma)</Label><Input placeholder="URL..." value={activityForm.archivoUrl} onChange={e => setActivityForm({...activityForm, archivoUrl: e.target.value})} /></div>
+            <div className="grid gap-2"><Label>Material de Referencia (Link Drive/Gamma)</Label><Input placeholder="Pega el link aquí..." value={activityForm.archivoUrl} onChange={e => setActivityForm({...activityForm, archivoUrl: e.target.value})} /></div>
           </div>
-          <DialogFooter><Button onClick={handleSaveActivity} disabled={isProcessing}>{isProcessing ? <Loader2 className="animate-spin" /> : "Guardar Actividad"}</Button></DialogFooter>
+          <DialogFooter><Button onClick={handleSaveActivity} disabled={isProcessing} className="w-full">{isProcessing ? <Loader2 className="animate-spin" /> : "Crear Actividad"}</Button></DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Assessment Dialog */}
       <Dialog open={isAssessmentDialogOpen} onOpenChange={setIsAssessmentDialogOpen}>
         <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <div className="flex items-center justify-between pr-8">
-              <DialogTitle className="text-2xl">{editingAssessment ? "Gestionar" : "Crear"} Evaluación</DialogTitle>
+              <DialogTitle className="text-2xl font-headline">Gestor de Evaluaciones</DialogTitle>
               <div className="flex gap-2">
-                <Button variant={viewMode === 'edit' ? 'default' : 'outline'} size="sm" onClick={() => setViewMode('edit')}><Settings2 className="mr-2 h-4 w-4" /> Editor</Button>
-                <Button variant={viewMode === 'preview' ? 'default' : 'outline'} size="sm" onClick={() => { setViewMode('preview'); handleResetPreview(); }}><Eye className="mr-2 h-4 w-4" /> Previsualizar</Button>
+                <Button variant={viewMode === 'edit' ? 'default' : 'outline'} size="sm" onClick={() => setViewMode('edit')}><Settings2 className="mr-2 h-4 w-4" /> Configurar</Button>
+                <Button variant={viewMode === 'preview' ? 'default' : 'outline'} size="sm" onClick={() => { setViewMode('preview'); handleResetPreview(); }}><Eye className="mr-2 h-4 w-4" /> Vista Previa</Button>
               </div>
             </div>
           </DialogHeader>
@@ -441,213 +466,105 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
           {viewMode === 'edit' ? (
             <div className="grid gap-6 py-4">
               <div className="grid grid-cols-2 gap-4">
-                 <div className="grid gap-2"><Label>Título</Label><Input value={assessmentForm.titulo} onChange={e => setAssessmentForm({...assessmentForm, titulo: e.target.value})} /></div>
-                 <div className="grid gap-2"><Label>Descripción</Label><Input value={assessmentForm.descripcion} onChange={e => setAssessmentForm({...assessmentForm, descripcion: e.target.value})} /></div>
+                 <div className="grid gap-2"><Label>Nombre del Examen</Label><Input value={assessmentForm.titulo} onChange={e => setAssessmentForm({...assessmentForm, titulo: e.target.value})} /></div>
+                 <div className="grid gap-2"><Label>Breve Introducción</Label><Input value={assessmentForm.descripcion} onChange={e => setAssessmentForm({...assessmentForm, descripcion: e.target.value})} /></div>
               </div>
-              
               <Separator />
-              
-              <div className="p-4 border rounded-xl bg-muted/20 space-y-4">
-                <h3 className="font-bold flex items-center gap-2 text-primary"><PlusCircle className="h-5 w-5" /> Nueva Pregunta</h3>
+              <div className="p-5 border rounded-2xl bg-muted/20 space-y-4">
+                <h3 className="font-bold flex items-center gap-2 text-primary"><PlusCircle className="h-5 w-5" /> Añadir Pregunta</h3>
+                <div className="grid gap-2"><Label>Enunciado</Label><Input value={currentQuestion.texto} onChange={e => setCurrentQuestion({...currentQuestion, texto: e.target.value})} /></div>
                 <div className="grid gap-2">
-                  <Label>Enunciado</Label>
-                  <Input value={currentQuestion.texto} onChange={e => setCurrentQuestion({...currentQuestion, texto: e.target.value})} placeholder="Ej: ¿Qué es una base de datos relacional?" />
+                  <Label>Tipo de Respuesta</Label>
+                  <Select value={currentQuestion.tipo} onValueChange={(v: any) => setCurrentQuestion({...currentQuestion, tipo: v, opciones: v === 'opcion-multiple' ? ["Opción A", "Opción B"] : [], respuestaCorrecta: ""})}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent><SelectItem value="opcion-multiple">Opción Múltiple</SelectItem><SelectItem value="verdadero-falso">Verdadero o Falso</SelectItem><SelectItem value="escrita">Respuesta Abierta</SelectItem></SelectContent>
+                  </Select>
                 </div>
-                
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="grid gap-2">
-                    <Label>Tipo de Pregunta</Label>
-                    <Select value={currentQuestion.tipo} onValueChange={(v: any) => setCurrentQuestion({...currentQuestion, tipo: v, opciones: v === 'opcion-multiple' ? ["Opción A", "Opción B"] : [], respuestaCorrecta: ""})}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="opcion-multiple">Opción Múltiple</SelectItem>
-                        <SelectItem value="verdadero-falso">Verdadero o Falso</SelectItem>
-                        <SelectItem value="escrita">Respuesta Escrita</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
                 {currentQuestion.tipo === 'opcion-multiple' && (
                   <div className="space-y-3">
-                    <Label>Opciones de respuesta (Marca la correcta)</Label>
+                    <Label className="text-xs text-muted-foreground uppercase">Opciones (Marca el círculo de la correcta)</Label>
                     <RadioGroup value={currentQuestion.respuestaCorrecta} onValueChange={v => setCurrentQuestion({...currentQuestion, respuestaCorrecta: v})}>
                       <div className="space-y-2">
                         {currentQuestion.opciones.map((opt, idx) => (
                           <div key={idx} className="flex items-center gap-3">
-                            <RadioGroupItem value={opt} id={`opt-${idx}`} />
-                            <Input 
-                              placeholder={`Opción ${idx + 1}`} 
-                              value={opt} 
-                              onChange={e => {
+                            <RadioGroupItem value={opt} />
+                            <Input value={opt} onChange={e => {
                                 const newOpts = [...currentQuestion.opciones];
                                 newOpts[idx] = e.target.value;
                                 setCurrentQuestion({...currentQuestion, opciones: newOpts});
-                              }}
-                              className="flex-1"
-                            />
+                            }} className="flex-1" />
                             <Button variant="ghost" size="icon" onClick={() => handleRemoveOption(idx)} disabled={currentQuestion.opciones.length <= 2}><X className="h-4 w-4" /></Button>
                           </div>
                         ))}
                       </div>
                     </RadioGroup>
-                    <Button variant="outline" size="sm" onClick={handleAddOption} className="w-full mt-2"><PlusCircle className="mr-2 h-4 w-4" /> Añadir Opción</Button>
+                    <Button variant="outline" size="sm" onClick={handleAddOption} className="w-full border-dashed"><PlusCircle className="mr-2 h-4 w-4" /> Agregar Opción</Button>
                   </div>
                 )}
-
                 {currentQuestion.tipo === 'verdadero-falso' && (
                   <div className="grid gap-2">
                     <Label>Respuesta Correcta</Label>
                     <Select value={currentQuestion.respuestaCorrecta} onValueChange={v => setCurrentQuestion({...currentQuestion, respuestaCorrecta: v})}>
-                      <SelectTrigger><SelectValue placeholder="Selecciona..." /></SelectTrigger>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent><SelectItem value="Verdadero">Verdadero</SelectItem><SelectItem value="Falso">Falso</SelectItem></SelectContent>
                     </Select>
                   </div>
                 )}
-
-                <Button variant="secondary" onClick={handleAddQuestion} className="w-full font-bold">Añadir Pregunta a la Evaluación</Button>
+                <Button variant="default" onClick={handleAddQuestion} className="w-full shadow-lg">Confirmar Pregunta</Button>
               </div>
-
               <div className="space-y-3">
-                 <h3 className="font-bold flex items-center gap-2">Preguntas Añadidas <Badge variant="secondary">{assessmentForm.preguntas.length}</Badge></h3>
+                 <h3 className="font-bold">Lista de Preguntas ({assessmentForm.preguntas.length})</h3>
                  <div className="space-y-2">
                    {assessmentForm.preguntas.map((q, idx) => (
-                     <div key={q.id} className="flex items-center justify-between p-3 border rounded-lg bg-background shadow-sm">
+                     <div key={q.id} className="flex items-center justify-between p-3 border rounded-xl bg-background shadow-sm">
                        <div className="flex items-center gap-3">
-                         <span className="h-6 w-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold">{idx + 1}</span>
-                         <div>
-                           <p className="text-sm font-medium">{q.texto}</p>
-                           <div className="flex gap-2 mt-1">
-                              <Badge variant="outline" className="text-[10px] h-4">{q.tipo.replace('-', ' ')}</Badge>
-                              {q.respuestaCorrecta && <Badge variant="secondary" className="text-[10px] h-4 bg-green-100 text-green-700">Correcta: {q.respuestaCorrecta}</Badge>}
-                           </div>
-                         </div>
+                         <Badge variant="secondary" className="h-6 w-6 rounded-full p-0 flex items-center justify-center font-bold">{idx + 1}</Badge>
+                         <p className="text-sm font-medium">{q.texto}</p>
                        </div>
                        <Button variant="ghost" size="icon" onClick={() => setAssessmentForm({...assessmentForm, preguntas: assessmentForm.preguntas.filter(p => p.id !== q.id)})}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                      </div>
                    ))}
                  </div>
               </div>
-              <DialogFooter><Button onClick={handleSaveAssessment} disabled={isProcessing} className="w-full">{isProcessing ? <Loader2 className="animate-spin" /> : "Guardar Evaluación Completa"}</Button></DialogFooter>
+              <DialogFooter><Button onClick={handleSaveAssessment} disabled={isProcessing} className="w-full font-bold h-12">{isProcessing ? <Loader2 className="animate-spin" /> : "Guardar Evaluación"}</Button></DialogFooter>
             </div>
           ) : (
-            /* Modo Previsualización Interactiva */
             <div className="py-6 space-y-8">
-              <div className="flex justify-between items-start border-b pb-4">
-                <div>
-                  <h2 className="text-xl font-bold">{assessmentForm.titulo || "Evaluación sin título"}</h2>
-                  <p className="text-muted-foreground">{assessmentForm.descripcion || "Sin descripción."}</p>
-                </div>
-                {score && (
-                  <Badge className="text-lg py-1 px-4 bg-primary/20 text-primary border-primary/20">
-                    <Trophy className="mr-2 h-4 w-4" /> {score.correct} / {score.total}
-                  </Badge>
-                )}
+              <div className="border-b pb-6">
+                 <h2 className="text-2xl font-bold text-primary">{assessmentForm.titulo}</h2>
+                 <p className="text-muted-foreground">{assessmentForm.descripcion}</p>
+                 {score && <div className="mt-4 p-4 bg-primary/10 rounded-xl flex items-center justify-between"><span className="font-bold flex items-center gap-2"><Trophy className="h-5 w-5 text-primary" /> Resultados:</span><Badge className="text-lg px-4">{score.correct} / {score.total}</Badge></div>}
               </div>
-
-              {assessmentForm.preguntas.length === 0 ? (
-                <div className="text-center py-20 bg-muted/10 border rounded-xl border-dashed">
-                  <HelpCircle className="h-12 w-12 mx-auto text-muted-foreground mb-2" />
-                  <p className="text-muted-foreground italic">No has añadido ninguna pregunta todavía.</p>
-                </div>
-              ) : (
-                <div className="space-y-10">
-                  {assessmentForm.preguntas.map((q, idx) => (
-                    <Card key={q.id} className="border-none shadow-none">
-                      <CardHeader className="p-0 mb-4">
-                        <div className="flex items-start gap-3">
-                          <span className="mt-1 flex-shrink-0 w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold">{idx + 1}</span>
-                          <h4 className="text-lg font-medium">{q.texto}</h4>
-                        </div>
-                      </CardHeader>
-                      <CardContent className="p-0 pl-11">
-                        {q.tipo === 'opcion-multiple' && (
-                          <RadioGroup 
-                            value={userAnswers[q.id]} 
-                            onValueChange={val => !showFeedback && setUserAnswers({ ...userAnswers, [q.id]: val })} 
-                            className="space-y-3"
-                          >
-                            {q.opciones.map((opt, i) => {
-                              const isSelected = userAnswers[q.id] === opt;
-                              const isCorrect = q.respuestaCorrecta === opt;
-                              const feedbackClass = showFeedback 
-                                ? isCorrect 
-                                  ? "bg-green-100 border-green-500 text-green-800" 
-                                  : isSelected 
-                                    ? "bg-red-100 border-red-500 text-red-800" 
-                                    : "opacity-50"
-                                : "hover:bg-muted/50";
-
-                              return (
-                                <div key={i} className={cn("flex items-center space-x-3 p-3 border rounded-lg cursor-pointer transition-colors", feedbackClass)}>
-                                  <RadioGroupItem value={opt} id={`q-${idx}-opt-${i}`} disabled={showFeedback} />
-                                  <Label htmlFor={`q-${idx}-opt-${i}`} className="flex-1 cursor-pointer flex items-center justify-between">
-                                    {opt}
-                                    {showFeedback && isCorrect && <Check className="h-4 w-4 text-green-600" />}
-                                    {showFeedback && isSelected && !isCorrect && <X className="h-4 w-4 text-red-600" />}
-                                  </Label>
-                                </div>
-                              );
-                            })}
-                          </RadioGroup>
-                        )}
-                        {q.tipo === 'verdadero-falso' && (
-                          <div className="flex gap-4">
-                            {['Verdadero', 'Falso'].map(val => {
-                              const isSelected = userAnswers[q.id] === val;
-                              const isCorrect = q.respuestaCorrecta === val;
-                              const variant = showFeedback 
-                                ? isCorrect ? 'default' : isSelected ? 'destructive' : 'outline'
-                                : isSelected ? 'default' : 'outline';
-                              
-                              return (
-                                <Button 
-                                  key={val}
-                                  variant={variant} 
-                                  className={cn("w-full h-12 flex items-center justify-center gap-2", 
-                                    showFeedback && isCorrect && "bg-green-600 hover:bg-green-600"
-                                  )}
-                                  onClick={() => !showFeedback && setUserAnswers({ ...userAnswers, [q.id]: val })}
-                                >
-                                  {val}
-                                  {showFeedback && isCorrect && isSelected && <Check className="h-4 w-4" />}
-                                  {showFeedback && !isCorrect && isSelected && <X className="h-4 w-4" />}
-                                </Button>
-                              );
-                            })}
+              {assessmentForm.preguntas.map((q, idx) => (
+                <div key={q.id} className="space-y-4">
+                  <p className="text-lg font-bold flex gap-3"><span className="text-primary">{idx + 1}.</span> {q.texto}</p>
+                  <div className="pl-8">
+                    {q.tipo === 'opcion-multiple' && (
+                      <RadioGroup value={userAnswers[q.id]} onValueChange={v => !showFeedback && setUserAnswers({...userAnswers, [q.id]: v})} className="space-y-2">
+                        {q.opciones.map((opt, i) => (
+                          <div key={i} className={cn("flex items-center space-x-3 p-3 border rounded-xl transition-colors", 
+                            showFeedback && q.respuestaCorrecta === opt ? "bg-green-100 border-green-500" : 
+                            showFeedback && userAnswers[q.id] === opt && q.respuestaCorrecta !== opt ? "bg-red-100 border-red-500" : "hover:bg-muted/50")}>
+                            <RadioGroupItem value={opt} id={`q${idx}o${i}`} disabled={showFeedback} />
+                            <Label htmlFor={`q${idx}o${i}`} className="flex-1 flex items-center justify-between cursor-pointer">{opt} {showFeedback && q.respuestaCorrecta === opt && <Check className="h-4 w-4 text-green-600"/>}</Label>
                           </div>
-                        )}
-                        {q.tipo === 'escrita' && (
-                          <div className="space-y-2">
-                             <Textarea 
-                                placeholder="Escribe tu respuesta aquí..." 
-                                value={userAnswers[q.id] || ""}
-                                onChange={e => !showFeedback && setUserAnswers({ ...userAnswers, [q.id]: e.target.value })}
-                                className="min-h-[120px] resize-none" 
-                                disabled={showFeedback}
-                              />
-                             {showFeedback && (
-                               <p className="text-sm text-muted-foreground italic">Nota: Las respuestas escritas deben ser evaluadas manualmente por un tutor.</p>
-                             )}
-                          </div>
-                        )}
-                      </CardContent>
-                    </Card>
-                  ))}
-                  
-                  <div className="pt-6 flex gap-4">
-                    {!showFeedback ? (
-                      <Button onClick={handleGradePreview} className="w-full font-bold h-12 bg-primary hover:bg-primary/90">
-                        Finalizar y Calificar Previsualización
-                      </Button>
-                    ) : (
-                      <Button onClick={handleResetPreview} variant="outline" className="w-full font-bold h-12">
-                        <RotateCcw className="mr-2 h-4 w-4" /> Intentar de nuevo
-                      </Button>
+                        ))}
+                      </RadioGroup>
                     )}
+                    {q.tipo === 'verdadero-falso' && (
+                      <div className="flex gap-4">
+                         {['Verdadero', 'Falso'].map(val => (
+                           <Button key={val} variant={userAnswers[q.id] === val ? 'default' : 'outline'} className="flex-1" onClick={() => !showFeedback && setUserAnswers({...userAnswers, [q.id]: val})} disabled={showFeedback}>{val}</Button>
+                         ))}
+                      </div>
+                    )}
+                    {q.tipo === 'escrita' && <Textarea placeholder="Tu respuesta..." value={userAnswers[q.id] || ""} onChange={e => !showFeedback && setUserAnswers({...userAnswers, [q.id]: e.target.value})} disabled={showFeedback} />}
                   </div>
                 </div>
-              )}
+              ))}
+              <div className="pt-6 border-t flex gap-4">
+                {!showFeedback ? <Button className="flex-1 h-12 font-bold" onClick={handleGradePreview}>Finalizar y Calificar</Button> : <Button variant="outline" className="flex-1 h-12" onClick={handleResetPreview}><RotateCcw className="mr-2 h-4 w-4" /> Reintentar</Button>}
+              </div>
             </div>
           )}
         </DialogContent>
