@@ -24,7 +24,9 @@ import {
   Settings2,
   X,
   Check,
-  Circle
+  Circle,
+  RotateCcw,
+  Trophy
 } from "lucide-react";
 import Link from "next/link";
 import api from "@/lib/api";
@@ -57,6 +59,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { cn } from "@/lib/utils";
 
 const modulesData = {
   "1": { title: "Módulo 1: Fundamentos de Bases de Datos e Investigación", objective: "Comprender los conceptos básicos de bases de datos y su importancia en la investigación académica." },
@@ -115,6 +118,11 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
   const [isProcessing, setIsProcessing] = useState(false);
   const [viewMode, setViewMode] = useState<'edit' | 'preview'>('edit');
   
+  // Estados para la previsualización interactiva
+  const [userAnswers, setUserAnswers] = useState<Record<string, string>>({});
+  const [showFeedback, setShowFeedback] = useState(false);
+  const [score, setScore] = useState<{ correct: number; total: number } | null>(null);
+
   const [isResourceDialogOpen, setIsResourceDialogOpen] = useState(false);
   const [isActivityDialogOpen, setIsActivityDialogOpen] = useState(false);
   const [isAssessmentDialogOpen, setIsAssessmentDialogOpen] = useState(false);
@@ -243,6 +251,30 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
     finally { setIsProcessing(false); }
   };
 
+  const handleGradePreview = () => {
+    let correctCount = 0;
+    const autoGradableQuestions = assessmentForm.preguntas.filter(q => q.tipo !== 'escrita');
+    
+    autoGradableQuestions.forEach(q => {
+      if (userAnswers[q.id] === q.respuestaCorrecta) {
+        correctCount++;
+      }
+    });
+
+    setScore({ correct: correctCount, total: autoGradableQuestions.length });
+    setShowFeedback(true);
+    toast({
+      title: "Evaluación Calificada",
+      description: `Puntaje: ${correctCount} de ${autoGradableQuestions.length} respuestas correctas (Preguntas escritas no incluidas).`,
+    });
+  };
+
+  const handleResetPreview = () => {
+    setUserAnswers({});
+    setShowFeedback(false);
+    setScore(null);
+  };
+
   const getEmbedUrl = (url: string) => {
     if (!url || !url.startsWith("http")) return "";
     let videoId = "";
@@ -337,13 +369,13 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
         </TabsContent>
 
         <TabsContent value="evaluaciones" className="space-y-6">
-          <div className="flex justify-between items-center"><h2 className="text-xl font-headline">Evaluaciones y Quizzes</h2><Button onClick={() => { setEditingAssessment(null); setViewMode('edit'); setIsAssessmentDialogOpen(true); }} size="sm" variant="default"><PlusCircle className="mr-2 h-4 w-4" /> Crear Evaluación</Button></div>
+          <div className="flex justify-between items-center"><h2 className="text-xl font-headline">Evaluaciones y Quizzes</h2><Button onClick={() => { setEditingAssessment(null); setViewMode('edit'); handleResetPreview(); setIsAssessmentDialogOpen(true); }} size="sm" variant="default"><PlusCircle className="mr-2 h-4 w-4" /> Crear Evaluación</Button></div>
           {loading ? <div className="py-20 flex justify-center"><Loader2 className="animate-spin" /></div> : assessments.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {assessments.map((ass) => (
                 <Card key={ass._id} className="hover:border-primary transition-colors cursor-pointer group relative">
                    <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); setEditingAssessment(ass); setAssessmentForm(ass); setViewMode('edit'); setIsAssessmentDialogOpen(true); }}><Pencil className="h-4 w-4" /></Button>
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); setEditingAssessment(ass); setAssessmentForm(ass); setViewMode('edit'); handleResetPreview(); setIsAssessmentDialogOpen(true); }}><Pencil className="h-4 w-4" /></Button>
                       <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={async (e) => { e.stopPropagation(); await api.delete(`/assessments/${ass._id}`); fetchData(); }}><Trash2 className="h-4 w-4" /></Button>
                    </div>
                   <CardHeader>
@@ -351,7 +383,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                     <CardDescription className="line-clamp-2">{ass.descripcion}</CardDescription>
                   </CardHeader>
                   <CardContent><div className="flex items-center gap-2 text-sm text-muted-foreground"><HelpCircle className="h-4 w-4" /> {ass.preguntas.length} Preguntas</div></CardContent>
-                  <CardFooter><Button className="w-full" onClick={() => { setEditingAssessment(ass); setAssessmentForm(ass); setViewMode('preview'); setIsAssessmentDialogOpen(true); }}>Realizar Evaluación</Button></CardFooter>
+                  <CardFooter><Button className="w-full" onClick={() => { setEditingAssessment(ass); setAssessmentForm(ass); setViewMode('preview'); handleResetPreview(); setIsAssessmentDialogOpen(true); }}>Realizar Evaluación</Button></CardFooter>
                 </Card>
               ))}
             </div>
@@ -401,7 +433,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
               <DialogTitle className="text-2xl">{editingAssessment ? "Gestionar" : "Crear"} Evaluación</DialogTitle>
               <div className="flex gap-2">
                 <Button variant={viewMode === 'edit' ? 'default' : 'outline'} size="sm" onClick={() => setViewMode('edit')}><Settings2 className="mr-2 h-4 w-4" /> Editor</Button>
-                <Button variant={viewMode === 'preview' ? 'default' : 'outline'} size="sm" onClick={() => setViewMode('preview')}><Eye className="mr-2 h-4 w-4" /> Previsualizar</Button>
+                <Button variant={viewMode === 'preview' ? 'default' : 'outline'} size="sm" onClick={() => { setViewMode('preview'); handleResetPreview(); }}><Eye className="mr-2 h-4 w-4" /> Previsualizar</Button>
               </div>
             </div>
           </DialogHeader>
@@ -425,7 +457,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                 <div className="grid grid-cols-2 gap-4">
                   <div className="grid gap-2">
                     <Label>Tipo de Pregunta</Label>
-                    <Select value={currentQuestion.tipo} onValueChange={(v: any) => setCurrentQuestion({...currentQuestion, tipo: v, opciones: v === 'opcion-multiple' ? ["", ""] : [], respuestaCorrecta: ""})}>
+                    <Select value={currentQuestion.tipo} onValueChange={(v: any) => setCurrentQuestion({...currentQuestion, tipo: v, opciones: v === 'opcion-multiple' ? ["Opción A", "Opción B"] : [], respuestaCorrecta: ""})}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="opcion-multiple">Opción Múltiple</SelectItem>
@@ -443,7 +475,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                       <div className="space-y-2">
                         {currentQuestion.opciones.map((opt, idx) => (
                           <div key={idx} className="flex items-center gap-3">
-                            <RadioGroupItem value={opt} id={`opt-${idx}`} disabled={!opt} />
+                            <RadioGroupItem value={opt} id={`opt-${idx}`} />
                             <Input 
                               placeholder={`Opción ${idx + 1}`} 
                               value={opt} 
@@ -499,11 +531,18 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
               <DialogFooter><Button onClick={handleSaveAssessment} disabled={isProcessing} className="w-full">{isProcessing ? <Loader2 className="animate-spin" /> : "Guardar Evaluación Completa"}</Button></DialogFooter>
             </div>
           ) : (
-            /* Modo Previsualización */
+            /* Modo Previsualización Interactiva */
             <div className="py-6 space-y-8">
-              <div className="border-b pb-4">
-                <h2 className="text-xl font-bold">{assessmentForm.titulo || "Evaluación sin título"}</h2>
-                <p className="text-muted-foreground">{assessmentForm.descripcion || "Sin descripción."}</p>
+              <div className="flex justify-between items-start border-b pb-4">
+                <div>
+                  <h2 className="text-xl font-bold">{assessmentForm.titulo || "Evaluación sin título"}</h2>
+                  <p className="text-muted-foreground">{assessmentForm.descripcion || "Sin descripción."}</p>
+                </div>
+                {score && (
+                  <Badge className="text-lg py-1 px-4 bg-primary/20 text-primary border-primary/20">
+                    <Trophy className="mr-2 h-4 w-4" /> {score.correct} / {score.total}
+                  </Badge>
+                )}
               </div>
 
               {assessmentForm.preguntas.length === 0 ? (
@@ -523,33 +562,89 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                       </CardHeader>
                       <CardContent className="p-0 pl-11">
                         {q.tipo === 'opcion-multiple' && (
-                          <RadioGroup className="space-y-3">
-                            {q.opciones.map((opt, i) => (
-                              <div key={i} className="flex items-center space-x-3 p-3 border rounded-lg hover:bg-muted/50 cursor-pointer transition-colors">
-                                <RadioGroupItem value={opt} id={`q-${idx}-opt-${i}`} />
-                                <Label htmlFor={`q-${idx}-opt-${i}`} className="flex-1 cursor-pointer">{opt}</Label>
-                              </div>
-                            ))}
+                          <RadioGroup 
+                            value={userAnswers[q.id]} 
+                            onValueChange={val => !showFeedback && setUserAnswers({ ...userAnswers, [q.id]: val })} 
+                            className="space-y-3"
+                          >
+                            {q.opciones.map((opt, i) => {
+                              const isSelected = userAnswers[q.id] === opt;
+                              const isCorrect = q.respuestaCorrecta === opt;
+                              const feedbackClass = showFeedback 
+                                ? isCorrect 
+                                  ? "bg-green-100 border-green-500 text-green-800" 
+                                  : isSelected 
+                                    ? "bg-red-100 border-red-500 text-red-800" 
+                                    : "opacity-50"
+                                : "hover:bg-muted/50";
+
+                              return (
+                                <div key={i} className={cn("flex items-center space-x-3 p-3 border rounded-lg cursor-pointer transition-colors", feedbackClass)}>
+                                  <RadioGroupItem value={opt} id={`q-${idx}-opt-${i}`} disabled={showFeedback} />
+                                  <Label htmlFor={`q-${idx}-opt-${i}`} className="flex-1 cursor-pointer flex items-center justify-between">
+                                    {opt}
+                                    {showFeedback && isCorrect && <Check className="h-4 w-4 text-green-600" />}
+                                    {showFeedback && isSelected && !isCorrect && <X className="h-4 w-4 text-red-600" />}
+                                  </Label>
+                                </div>
+                              );
+                            })}
                           </RadioGroup>
                         )}
                         {q.tipo === 'verdadero-falso' && (
                           <div className="flex gap-4">
-                            <Button variant="outline" className="w-full h-12 flex items-center justify-center gap-2 hover:bg-green-50 hover:border-green-500 hover:text-green-700">Verdadero</Button>
-                            <Button variant="outline" className="w-full h-12 flex items-center justify-center gap-2 hover:bg-red-50 hover:border-red-500 hover:text-red-700">Falso</Button>
+                            {['Verdadero', 'Falso'].map(val => {
+                              const isSelected = userAnswers[q.id] === val;
+                              const isCorrect = q.respuestaCorrecta === val;
+                              const variant = showFeedback 
+                                ? isCorrect ? 'default' : isSelected ? 'destructive' : 'outline'
+                                : isSelected ? 'default' : 'outline';
+                              
+                              return (
+                                <Button 
+                                  key={val}
+                                  variant={variant} 
+                                  className={cn("w-full h-12 flex items-center justify-center gap-2", 
+                                    showFeedback && isCorrect && "bg-green-600 hover:bg-green-600"
+                                  )}
+                                  onClick={() => !showFeedback && setUserAnswers({ ...userAnswers, [q.id]: val })}
+                                >
+                                  {val}
+                                  {showFeedback && isCorrect && isSelected && <Check className="h-4 w-4" />}
+                                  {showFeedback && !isCorrect && isSelected && <X className="h-4 w-4" />}
+                                </Button>
+                              );
+                            })}
                           </div>
                         )}
                         {q.tipo === 'escrita' && (
-                          <Textarea placeholder="Escribe tu respuesta aquí..." className="min-h-[120px] resize-none" />
+                          <div className="space-y-2">
+                             <Textarea 
+                                placeholder="Escribe tu respuesta aquí..." 
+                                value={userAnswers[q.id] || ""}
+                                onChange={e => !showFeedback && setUserAnswers({ ...userAnswers, [q.id]: e.target.value })}
+                                className="min-h-[120px] resize-none" 
+                                disabled={showFeedback}
+                              />
+                             {showFeedback && (
+                               <p className="text-sm text-muted-foreground italic">Nota: Las respuestas escritas deben ser evaluadas manualmente por un tutor.</p>
+                             )}
+                          </div>
                         )}
                       </CardContent>
                     </Card>
                   ))}
-                  <div className="p-6 bg-primary/5 rounded-xl border border-primary/10 flex items-center justify-between">
-                    <div>
-                      <p className="font-bold">¡Has terminado la previsualización!</p>
-                      <p className="text-sm text-muted-foreground">Esta es la vista que verán tus alumnos.</p>
-                    </div>
-                    <Button onClick={() => setViewMode('edit')}>Volver al Editor</Button>
+                  
+                  <div className="pt-6 flex gap-4">
+                    {!showFeedback ? (
+                      <Button onClick={handleGradePreview} className="w-full font-bold h-12 bg-primary hover:bg-primary/90">
+                        Finalizar y Calificar Previsualización
+                      </Button>
+                    ) : (
+                      <Button onClick={handleResetPreview} variant="outline" className="w-full font-bold h-12">
+                        <RotateCcw className="mr-2 h-4 w-4" /> Intentar de nuevo
+                      </Button>
+                    )}
                   </div>
                 </div>
               )}
