@@ -5,8 +5,17 @@ export type assessmentsDocument = HydratedDocument<assessments>;
 
 @Schema()
 export class assessments {
+  @Prop({ required: true })
+  titulo: string;
+
   @Prop()
-  id: string;
+  descripcion: string;
+
+  @Prop({ required: true })
+  moduloId: string;
+
+  @Prop({ type: Array, default: [] })
+  preguntas: any[];
 
   @Prop()
   retroalimentacion: string;
@@ -16,7 +25,6 @@ export class assessments {
 
   @Prop()
   criterios_evaluacion: string;
-
 }
 
 export const assessmentsSchema = SchemaFactory.createForClass(assessments);
