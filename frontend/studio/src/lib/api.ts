@@ -1,3 +1,4 @@
+
 import axios from 'axios';
 
 // Función para determinar la URL del backend dinámicamente en el entorno de Cloud Workstations
@@ -9,9 +10,13 @@ const getBackendUrl = () => {
     // Si estamos en una Cloud Workstation (Firebase Studio)
     if (hostname.includes('cloudworkstations.dev')) {
       // Reemplazamos cualquier puerto al inicio (ej: 9000-, 9002-) por el puerto del backend (3001-)
-      const newHostname = hostname.replace(/^\d+-/, '3001-');
-      if (newHostname !== hostname) {
-        return `${protocol}//${newHostname}`;
+      // Buscamos un patrón de puerto al inicio (ej: 9002-studio-...)
+      const portPrefixMatch = hostname.match(/^(\d+)-/);
+      if (portPrefixMatch) {
+        const currentPort = portPrefixMatch[1];
+        if (currentPort !== '3001') {
+          return `${protocol}//${hostname.replace(`${currentPort}-`, '3001-')}`;
+        }
       }
       
       // Fallback: si no hay puerto al inicio, intentamos reemplazar 9002 por 3001 en cualquier parte
@@ -37,13 +42,16 @@ const api = axios.create({
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    console.error('Error en la llamada a la API:', {
+    // Evitamos mostrar un objeto vacío en el log
+    const errorInfo = {
       url: error.config?.url,
       message: error.message,
       status: error.response?.status,
       baseURL: error.config?.baseURL,
       data: error.response?.data
-    });
+    };
+    
+    console.error('Error en la llamada a la API:', errorInfo);
     return Promise.reject(error);
   }
 );
