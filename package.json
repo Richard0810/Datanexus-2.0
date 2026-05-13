@@ -4,8 +4,8 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "dev:backend": "npm run start:dev --prefix Datanexus --",
-    "dev:frontend": "npm run dev --prefix frontend/studio --",
+    "dev:backend": "npm run start:dev --prefix Datanexus",
+    "dev:frontend": "npm run dev --prefix frontend/studio",
     "dev": "npm-run-all --parallel dev:backend dev:frontend --"
   },
   "devDependencies": {

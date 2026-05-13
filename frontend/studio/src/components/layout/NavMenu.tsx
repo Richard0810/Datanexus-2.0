@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from 'next/link';
@@ -11,6 +12,7 @@ import {
   BarChart3,
   UserCircle,
   DatabaseZap,
+  Users,
   type LucideIcon,
 } from 'lucide-react';
 import {
@@ -19,11 +21,13 @@ import {
   SidebarMenuButton,
 } from '@/components/ui/sidebar';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/context/AuthContext';
 
 interface NavItem {
   href: string;
   label: string;
   icon: LucideIcon;
+  adminOnly?: boolean;
 }
 
 const navItems: NavItem[] = [
@@ -34,15 +38,22 @@ const navItems: NavItem[] = [
   { href: '/gestor-referencias', label: 'Gestor de Referencias', icon: BookMarked },
   { href: '/reportes', label: 'Reportes', icon: BarChart3 },
   { href: '/perfil', label: 'Perfil', icon: UserCircle },
+  { href: '/usuarios', label: 'Usuarios', icon: Users, adminOnly: true },
   { href: '/modelo', label: 'Modelo de Datos', icon: DatabaseZap },
 ];
 
 export function NavMenu() {
   const pathname = usePathname();
+  const { user } = useAuth();
+
+  const filteredItems = navItems.filter(item => {
+    if (item.adminOnly && user?.role !== 'admin') return false;
+    return true;
+  });
 
   return (
     <SidebarMenu>
-      {navItems.map((item) => (
+      {filteredItems.map((item) => (
         <SidebarMenuItem key={item.href}>
           <Link href={item.href} passHref legacyBehavior>
             <SidebarMenuButton
