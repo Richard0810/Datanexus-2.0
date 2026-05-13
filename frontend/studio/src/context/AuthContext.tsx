@@ -20,6 +20,7 @@ interface AppUser {
   uid: string;
   email: string | null;
   name: string | null;
+  role: string;
 }
 
 interface AuthContextType {
@@ -62,6 +63,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             uid: firebaseUser.uid,
             email: firebaseUser.email,
             name: response.data.nombre || firebaseUser.displayName || 'Usuario',
+            role: response.data.rol || 'estudiante',
           });
 
           if (['/', '/login', '/register'].includes(pathname)) {
@@ -72,7 +74,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setUser({ 
             uid: firebaseUser.uid, 
             email: firebaseUser.email, 
-            name: firebaseUser.displayName 
+            name: firebaseUser.displayName,
+            role: 'estudiante'
           });
         }
       } else {

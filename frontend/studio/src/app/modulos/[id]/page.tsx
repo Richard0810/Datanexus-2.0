@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useState, use } from "react";
@@ -28,7 +27,8 @@ import {
   RotateCcw,
   Trophy,
   FileText,
-  Video
+  Video,
+  ShieldCheck
 } from "lucide-react";
 import Link from "next/link";
 import api from "@/lib/api";
@@ -62,6 +62,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/context/AuthContext";
 
 const modulesData = {
   "1": { title: "Módulo 1: Fundamentos de Bases de Datos e Investigación", objective: "Comprender los conceptos básicos de bases de datos y su importancia en la investigación académica." },
@@ -113,12 +114,15 @@ interface Assessment {
 
 export default function ModuloDetallePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
+  
   const [resources, setResources] = useState<Resource[]>([]);
   const [activities, setActivities] = useState<Activity[]>([]);
   const [assessments, setAssessments] = useState<Assessment[]>([]);
   const [loading, setLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [viewMode, setViewMode] = useState<'edit' | 'preview'>('edit');
+  const [viewMode, setViewMode] = useState<'edit' | 'preview'>('preview');
   
   const [userAnswers, setUserAnswers] = useState<Record<string, string>>({});
   const [showFeedback, setShowFeedback] = useState(false);
@@ -262,7 +266,6 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
   const getEmbedUrl = (url: string) => {
     if (!url || !url.startsWith("http")) return "";
     
-    // YouTube
     if (url.includes("youtube.com") || url.includes("youtu.be")) {
       let videoId = "";
       if (url.includes("youtu.be/")) videoId = url.split("youtu.be/")[1].split("?")[0];
@@ -270,12 +273,10 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
       return videoId ? `https://www.youtube.com/embed/${videoId}` : url;
     }
 
-    // Gamma
     if (url.includes("gamma.app/docs/")) {
       return url.replace("gamma.app/docs/", "gamma.app/embed/");
     }
 
-    // Google Slides (Modo Presentación/Embed)
     if (url.includes("docs.google.com/presentation/d/")) {
       const fileIdMatch = url.match(/\/d\/(.+?)(\/|$)/);
       if (fileIdMatch) {
@@ -283,7 +284,6 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
       }
     }
 
-    // Google Drive (Preview mode - standard for PPTX and other files)
     if (url.includes("drive.google.com/file/d/")) {
       const fileIdMatch = url.match(/\/d\/(.+?)(\/|$)/);
       if (fileIdMatch) {
@@ -300,7 +300,10 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
         <div className="flex items-center gap-4">
           <Button asChild variant="ghost" size="icon"><Link href="/modulos"><ArrowLeft className="h-5 w-5" /></Link></Button>
           <div>
-            <h1 className="text-3xl font-headline">{moduleInfo.title}</h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-3xl font-headline">{moduleInfo.title}</h1>
+              {isAdmin && <Badge className="bg-primary/20 text-primary border-primary/30">Modo Docente</Badge>}
+            </div>
             <p className="text-muted-foreground mt-1 flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-primary" />{moduleInfo.objective}</p>
           </div>
         </div>
@@ -314,20 +317,29 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
         </TabsList>
 
         <TabsContent value="recursos" className="space-y-6">
-          <div className="flex justify-between items-center"><h2 className="text-xl font-headline">Materiales de Estudio</h2><Button onClick={() => { setEditingResource(null); setIsResourceDialogOpen(true); }} size="sm"><PlusCircle className="mr-2 h-4 w-4" /> Añadir Recurso</Button></div>
+          <div className="flex justify-between items-center">
+            <h2 className="text-xl font-headline">Materiales de Estudio</h2>
+            {isAdmin && (
+              <Button onClick={() => { setEditingResource(null); setIsResourceDialogOpen(true); }} size="sm">
+                <PlusCircle className="mr-2 h-4 w-4" /> Añadir Recurso
+              </Button>
+            )}
+          </div>
           {loading ? <div className="py-20 flex justify-center"><Loader2 className="animate-spin" /></div> : resources.length > 0 ? (
             <div className="grid grid-cols-1 gap-8">
               {resources.map((res) => (
                 <Card key={res._id} className="overflow-hidden group relative shadow-md hover:shadow-lg transition-shadow">
-                   <div className="absolute top-4 right-4 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild><Button variant="secondary" size="icon" className="h-8 w-8 rounded-full shadow-md"><MoreVertical className="h-4 w-4" /></Button></DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => { setEditingResource(res); setResourceForm(res); setIsResourceDialogOpen(true); }}><Pencil className="mr-2 h-4 w-4" /> Editar</DropdownMenuItem>
-                        <DropdownMenuItem onClick={async () => { await api.delete(`/educational-resources/${res._id}`); fetchData(); }} className="text-destructive"><Trash2 className="mr-2 h-4 w-4" /> Eliminar</DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
+                   {isAdmin && (
+                     <div className="absolute top-4 right-4 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild><Button variant="secondary" size="icon" className="h-8 w-8 rounded-full shadow-md"><MoreVertical className="h-4 w-4" /></Button></DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => { setEditingResource(res); setResourceForm(res); setIsResourceDialogOpen(true); }}><Pencil className="mr-2 h-4 w-4" /> Editar</DropdownMenuItem>
+                          <DropdownMenuItem onClick={async () => { await api.delete(`/educational-resources/${res._id}`); fetchData(); }} className="text-destructive"><Trash2 className="mr-2 h-4 w-4" /> Eliminar</DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                   )}
                   <div className="flex flex-col">
                     <div className="p-6">
                       <div className="flex items-center gap-2 mb-3">
@@ -337,7 +349,6 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                       <CardTitle className="text-2xl mb-2">{res.titulo}</CardTitle>
                       <CardDescription className="text-base mb-6">{res.descripcion}</CardDescription>
                       
-                      {/* Renderizado del Link/Iframe */}
                       <div className="rounded-xl overflow-hidden border bg-black aspect-video w-full mb-4">
                         <iframe 
                           src={getEmbedUrl(res.url)} 
@@ -360,18 +371,27 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
         </TabsContent>
 
         <TabsContent value="actividades" className="space-y-6">
-          <div className="flex justify-between items-center"><h2 className="text-xl font-headline">Actividades Prácticas</h2><Button onClick={() => { setEditingActivity(null); setIsActivityDialogOpen(true); }} size="sm" className="bg-accent hover:bg-accent/90"><PlusCircle className="mr-2 h-4 w-4" /> Nueva Actividad</Button></div>
+          <div className="flex justify-between items-center">
+            <h2 className="text-xl font-headline">Actividades Prácticas</h2>
+            {isAdmin && (
+              <Button onClick={() => { setEditingActivity(null); setIsActivityDialogOpen(true); }} size="sm" className="bg-accent hover:bg-accent/90">
+                <PlusCircle className="mr-2 h-4 w-4" /> Nueva Actividad
+              </Button>
+            )}
+          </div>
           {loading ? <div className="py-20 flex justify-center"><Loader2 className="animate-spin" /></div> : activities.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {activities.map((act) => (
-                <Card key={act._id} className="flex flex-col shadow-sm border-t-4 border-t-accent/50">
+                <Card key={act._id} className="flex flex-col shadow-sm border-t-4 border-t-accent/50 group">
                   <CardHeader>
                     <div className="flex justify-between items-start">
                       <Badge variant="secondary">{act.tipo.toUpperCase()}</Badge>
-                      <div className="flex gap-2">
-                         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setEditingActivity(act); setActivityForm(act); setIsActivityDialogOpen(true); }}><Pencil className="h-4 w-4" /></Button>
-                         <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={async () => { await api.delete(`/activities/${act._id}`); fetchData(); }}><Trash2 className="h-4 w-4" /></Button>
-                      </div>
+                      {isAdmin && (
+                        <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                           <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setEditingActivity(act); setActivityForm(act); setIsActivityDialogOpen(true); }}><Pencil className="h-4 w-4" /></Button>
+                           <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={async () => { await api.delete(`/activities/${act._id}`); fetchData(); }}><Trash2 className="h-4 w-4" /></Button>
+                        </div>
+                      )}
                     </div>
                     <CardTitle className="mt-2">{act.titulo}</CardTitle>
                     <CardDescription className="text-base">{act.descripcion}</CardDescription>
@@ -403,15 +423,24 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
         </TabsContent>
 
         <TabsContent value="evaluaciones" className="space-y-6">
-          <div className="flex justify-between items-center"><h2 className="text-xl font-headline">Evaluaciones y Quizzes</h2><Button onClick={() => { setEditingAssessment(null); setViewMode('edit'); handleResetPreview(); setIsAssessmentDialogOpen(true); }} size="sm" variant="default"><PlusCircle className="mr-2 h-4 w-4" /> Crear Evaluación</Button></div>
+          <div className="flex justify-between items-center">
+            <h2 className="text-xl font-headline">Evaluaciones y Quizzes</h2>
+            {isAdmin && (
+              <Button onClick={() => { setEditingAssessment(null); setViewMode('edit'); handleResetPreview(); setIsAssessmentDialogOpen(true); }} size="sm" variant="default">
+                <PlusCircle className="mr-2 h-4 w-4" /> Crear Evaluación
+              </Button>
+            )}
+          </div>
           {loading ? <div className="py-20 flex justify-center"><Loader2 className="animate-spin" /></div> : assessments.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {assessments.map((ass) => (
                 <Card key={ass._id} className="hover:border-primary transition-colors cursor-pointer group relative shadow-md">
-                   <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); setEditingAssessment(ass); setAssessmentForm(ass); setViewMode('edit'); handleResetPreview(); setIsAssessmentDialogOpen(true); }}><Pencil className="h-4 w-4" /></Button>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={async (e) => { e.stopPropagation(); await api.delete(`/assessments/${ass._id}`); fetchData(); }}><Trash2 className="h-4 w-4" /></Button>
-                   </div>
+                   {isAdmin && (
+                     <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); setEditingAssessment(ass); setAssessmentForm(ass); setViewMode('edit'); handleResetPreview(); setIsAssessmentDialogOpen(true); }}><Pencil className="h-4 w-4" /></Button>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={async (e) => { e.stopPropagation(); await api.delete(`/assessments/${ass._id}`); fetchData(); }}><Trash2 className="h-4 w-4" /></Button>
+                     </div>
+                   )}
                   <CardHeader>
                     <CardTitle className="text-lg">{ass.titulo}</CardTitle>
                     <CardDescription className="line-clamp-2">{ass.descripcion}</CardDescription>
@@ -425,7 +454,6 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
         </TabsContent>
       </Tabs>
 
-      {/* Modals para Resource, Activity, Assessment */}
       <Dialog open={isResourceDialogOpen} onOpenChange={setIsResourceDialogOpen}>
         <DialogContent className="sm:max-w-[600px]">
           <DialogHeader><DialogTitle className="text-2xl font-headline">{editingResource ? "Editar" : "Nuevo"} Recurso Educativo</DialogTitle></DialogHeader>
@@ -465,15 +493,19 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
         <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <div className="flex items-center justify-between pr-8">
-              <DialogTitle className="text-2xl font-headline">Gestor de Evaluaciones</DialogTitle>
-              <div className="flex gap-2">
-                <Button variant={viewMode === 'edit' ? 'default' : 'outline'} size="sm" onClick={() => setViewMode('edit')}><Settings2 className="mr-2 h-4 w-4" /> Configurar</Button>
-                <Button variant={viewMode === 'preview' ? 'default' : 'outline'} size="sm" onClick={() => { setViewMode('preview'); handleResetPreview(); }}><Eye className="mr-2 h-4 w-4" /> Vista Previa</Button>
-              </div>
+              <DialogTitle className="text-2xl font-headline">
+                {viewMode === 'edit' ? 'Gestor de Evaluaciones' : 'Realizar Evaluación'}
+              </DialogTitle>
+              {isAdmin && (
+                <div className="flex gap-2">
+                  <Button variant={viewMode === 'edit' ? 'default' : 'outline'} size="sm" onClick={() => setViewMode('edit')}><Settings2 className="mr-2 h-4 w-4" /> Configurar</Button>
+                  <Button variant={viewMode === 'preview' ? 'default' : 'outline'} size="sm" onClick={() => { setViewMode('preview'); handleResetPreview(); }}><Eye className="mr-2 h-4 w-4" /> Vista Previa</Button>
+                </div>
+              )}
             </div>
           </DialogHeader>
 
-          {viewMode === 'edit' ? (
+          {viewMode === 'edit' && isAdmin ? (
             <div className="grid gap-6 py-4">
               <div className="grid grid-cols-2 gap-4">
                  <div className="grid gap-2"><Label>Nombre del Examen</Label><Input value={assessmentForm.titulo} onChange={e => setAssessmentForm({...assessmentForm, titulo: e.target.value})} /></div>

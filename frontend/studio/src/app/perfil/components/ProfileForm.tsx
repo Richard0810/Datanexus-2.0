@@ -1,4 +1,3 @@
-
 "use client";
 
 import { Button } from "@/components/ui/button";
@@ -8,9 +7,10 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
-import { Save } from "lucide-react";
+import { Save, ShieldCheck, User as UserIcon } from "lucide-react";
 import { useState, type FormEvent, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
+import { Badge } from "@/components/ui/badge";
 
 export function ProfileForm() {
   const { user } = useAuth();
@@ -19,6 +19,7 @@ export function ProfileForm() {
   const [profileData, setProfileData] = useState({
     name: "",
     email: "",
+    role: "estudiante",
     language: "es",
     difficulty: "intermedio",
     contextualHelp: true,
@@ -30,6 +31,7 @@ export function ProfileForm() {
         ...prev,
         name: user.name || "",
         email: user.email || "",
+        role: user.role || "estudiante",
       }));
     }
   }, [user]);
@@ -40,7 +42,6 @@ export function ProfileForm() {
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
-    // Simulate saving profile data
     toast({
       title: "Perfil Actualizado",
       description: "Tus preferencias han sido guardadas localmente.",
@@ -52,9 +53,25 @@ export function ProfileForm() {
     <form onSubmit={handleSubmit}>
       <Card>
         <CardHeader>
-          <CardTitle>Información Personal</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <UserIcon className="h-5 w-5 text-primary" />
+            Información Personal
+          </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
+          <div className="flex items-center justify-between p-4 bg-muted/30 rounded-lg border border-dashed">
+            <div className="space-y-1">
+              <Label className="text-xs uppercase text-muted-foreground">Rol actual en el sistema</Label>
+              <div className="flex items-center gap-2">
+                <ShieldCheck className="h-4 w-4 text-primary" />
+                <span className="font-bold capitalize">{profileData.role}</span>
+              </div>
+            </div>
+            <Badge variant={profileData.role === 'admin' ? 'default' : 'secondary'}>
+              {profileData.role === 'admin' ? 'Docente' : 'Estudiante'}
+            </Badge>
+          </div>
+
           <div className="space-y-2">
             <Label htmlFor="name">Nombre</Label>
             <Input 
