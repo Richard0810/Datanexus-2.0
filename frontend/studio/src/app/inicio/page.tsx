@@ -1,4 +1,6 @@
 
+'use client';
+
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -6,6 +8,7 @@ import { ArrowRight, Database, Lightbulb, PlayCircle, GraduationCap, Search, Bra
 import Link from "next/link";
 import Image from "next/image";
 import placeholderImages from "../lib/placeholder-images.json";
+import { useAuth } from "@/context/AuthContext";
 
 interface QuickAccessItem {
   title: string;
@@ -61,7 +64,8 @@ const learningActivities: LearningActivityItem[] = [
 ];
 
 export default function HomePage() {
-  const userName = "Estudiante";
+  const { user } = useAuth();
+  const userName = user?.name || "Estudiante";
   const progressLevel = 35;
 
   return (

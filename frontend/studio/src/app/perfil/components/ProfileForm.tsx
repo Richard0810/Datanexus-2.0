@@ -1,3 +1,4 @@
+
 "use client";
 
 import { Button } from "@/components/ui/button";
@@ -8,17 +9,30 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { Save } from "lucide-react";
-import { useState, type FormEvent } from "react";
+import { useState, type FormEvent, useEffect } from "react";
+import { useAuth } from "@/context/AuthContext";
 
 export function ProfileForm() {
+  const { user } = useAuth();
   const { toast } = useToast();
+  
   const [profileData, setProfileData] = useState({
-    name: "Estudiante Ejemplo",
-    email: "estudiante@example.com",
+    name: "",
+    email: "",
     language: "es",
     difficulty: "intermedio",
     contextualHelp: true,
   });
+
+  useEffect(() => {
+    if (user) {
+      setProfileData(prev => ({
+        ...prev,
+        name: user.name || "",
+        email: user.email || "",
+      }));
+    }
+  }, [user]);
 
   const handleChange = (field: string, value: string | boolean) => {
     setProfileData(prev => ({ ...prev, [field]: value }));
@@ -29,7 +43,7 @@ export function ProfileForm() {
     // Simulate saving profile data
     toast({
       title: "Perfil Actualizado",
-      description: "Tus preferencias han sido guardadas.",
+      description: "Tus preferencias han sido guardadas localmente.",
     });
     console.log("Profile data saved:", profileData);
   };
@@ -43,11 +57,22 @@ export function ProfileForm() {
         <CardContent className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="name">Nombre</Label>
-            <Input id="name" value={profileData.name} onChange={(e) => handleChange("name", e.target.value)} />
+            <Input 
+              id="name" 
+              value={profileData.name} 
+              onChange={(e) => handleChange("name", e.target.value)} 
+              placeholder="Cargando nombre..."
+            />
           </div>
           <div className="space-y-2">
             <Label htmlFor="email">Correo Electrónico</Label>
-            <Input id="email" type="email" value={profileData.email} onChange={(e) => handleChange("email", e.target.value)} />
+            <Input 
+              id="email" 
+              type="email" 
+              value={profileData.email} 
+              readOnly
+              className="bg-muted cursor-not-allowed"
+            />
           </div>
         </CardContent>
       </Card>
