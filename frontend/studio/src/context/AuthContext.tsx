@@ -49,28 +49,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
-      setLoading(true);
       if (firebaseUser) {
         try {
           const token = await firebaseUser.getIdToken();
           
-          // Sincronizamos con el backend pasándole también el nombre actual de Firebase
+          // Sincronizamos con el backend. Esto asegura que el usuario exista en MongoDB.
           const response = await api.post('/auth/sync', { 
             token,
             name: firebaseUser.displayName 
           });
           
           setUser({
-            uid: response.data.firebaseUid || firebaseUser.uid,
-            email: response.data.email || firebaseUser.email,
-            name: response.data.nombre || firebaseUser.displayName,
+            uid: firebaseUser.uid,
+            email: firebaseUser.email,
+            name: response.data.nombre || firebaseUser.displayName || 'Usuario',
           });
 
+          // Redirigir si está en páginas de auth
           if (['/', '/login', '/register'].includes(pathname)) {
             router.push('/inicio');
           }
         } catch (error) {
           console.error('Error sincronizando con el backend:', error);
+          // Si falla el backend, al menos mantenemos la sesión de Firebase
           setUser({ 
             uid: firebaseUser.uid, 
             email: firebaseUser.email, 
@@ -79,6 +80,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       } else {
         setUser(null);
+        // Protegemos las rutas privadas
         if (!['/', '/login', '/register', '/modelo'].includes(pathname)) {
           router.push('/login');
         }
@@ -92,6 +94,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signInWithGoogle = async () => {
     const provider = new GoogleAuthProvider();
     try {
+      // Configuramos parámetros opcionales para forzar la selección de cuenta si es necesario
+      provider.setCustomParameters({ prompt: 'select_account' });
       await signInWithPopup(auth, provider);
     } catch (error) {
       console.error("Error al iniciar sesión con Google:", error);
@@ -102,13 +106,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const registerWithEmail = async (name: string, email: string, password: string) => {
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      // Primero actualizamos el perfil en Firebase
+      // Actualizamos el nombre en Firebase Auth
       await updateProfile(userCredential.user, { displayName: name });
       
-      // Forzamos la sincronización inmediata con el nombre correcto
-      const token = await userCredential.user.getIdToken();
-      await api.post('/auth/sync', { token, name });
-      
+      // La sincronización con MongoDB ocurrirá automáticamente en onAuthStateChanged
     } catch (error) {
       console.error("Error al registrar con email:", error);
       throw error;
