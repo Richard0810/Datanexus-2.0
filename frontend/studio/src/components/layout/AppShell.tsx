@@ -19,10 +19,17 @@ import Link from 'next/link';
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
 
-  // Ya no necesitamos excluir '/' porque redirige a /inicio
-  // pero mantenemos la lógica por si acaso se accede a una página "limpia"
-  if (pathname === '/register') {
-    return <>{children}</>;
+  // Rutas que deben mostrarse sin el Sidebar ni el Header (pantalla completa)
+  const isAuthRoute = pathname === '/login' || pathname === '/register';
+
+  if (isAuthRoute) {
+    return (
+      <div className="min-h-screen w-full bg-background flex flex-col">
+        <main className="flex-1 flex flex-col">
+          {children}
+        </main>
+      </div>
+    );
   }
 
   return (
