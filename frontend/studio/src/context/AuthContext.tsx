@@ -53,7 +53,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         try {
           const token = await firebaseUser.getIdToken();
           
-          // Sincronizamos con el backend. Esto asegura que el usuario exista en MongoDB.
           const response = await api.post('/auth/sync', { 
             token,
             name: firebaseUser.displayName 
@@ -65,13 +64,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             name: response.data.nombre || firebaseUser.displayName || 'Usuario',
           });
 
-          // Redirigir si está en páginas de auth
           if (['/', '/login', '/register'].includes(pathname)) {
             router.push('/inicio');
           }
         } catch (error) {
           console.error('Error sincronizando con el backend:', error);
-          // Si falla el backend, al menos mantenemos la sesión de Firebase
           setUser({ 
             uid: firebaseUser.uid, 
             email: firebaseUser.email, 
@@ -80,7 +77,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       } else {
         setUser(null);
-        // Protegemos las rutas privadas
         if (!['/', '/login', '/register', '/modelo'].includes(pathname)) {
           router.push('/login');
         }
@@ -94,10 +90,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signInWithGoogle = async () => {
     const provider = new GoogleAuthProvider();
     try {
-      // Configuramos parámetros opcionales para forzar la selección de cuenta si es necesario
       provider.setCustomParameters({ prompt: 'select_account' });
       await signInWithPopup(auth, provider);
-    } catch (error) {
+    } catch (error: any) {
+      if (error.code === 'auth/unauthorized-domain') {
+        const domain = typeof window !== 'undefined' ? window.location.hostname : 'tu dominio';
+        throw new Error(`Dominio no autorizado. Por favor, añade "${domain}" a la lista de dominios autorizados en la Consola de Firebase (Authentication > Settings > Authorized domains).`);
+      }
       console.error("Error al iniciar sesión con Google:", error);
       throw error;
     }
@@ -106,10 +105,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const registerWithEmail = async (name: string, email: string, password: string) => {
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      // Actualizamos el nombre en Firebase Auth
       await updateProfile(userCredential.user, { displayName: name });
-      
-      // La sincronización con MongoDB ocurrirá automáticamente en onAuthStateChanged
     } catch (error) {
       console.error("Error al registrar con email:", error);
       throw error;

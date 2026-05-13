@@ -9,7 +9,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/context/AuthContext';
 import LogoIcon from '@/components/icons/LogoIcon';
-import { Loader2 } from 'lucide-react';
+import { Loader2, AlertCircle } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -32,9 +33,8 @@ export default function LoginPage() {
       setError(null);
       setIsGoogleLoading(true);
       await signInWithGoogle();
-      // Redirección manejada por el AuthContext al detectar el cambio de estado
     } catch (err: any) {
-      setError("Error al iniciar sesión con Google. Inténtalo de nuevo.");
+      setError(err.message || "Error al iniciar sesión con Google.");
       console.error(err);
     } finally {
       setIsGoogleLoading(false);
@@ -66,6 +66,16 @@ export default function LoginPage() {
           <CardDescription>Inicia sesión para acceder a tu panel de aprendizaje</CardDescription>
         </CardHeader>
         <CardContent>
+          {error && (
+            <Alert variant="destructive" className="mb-6">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Atención</AlertTitle>
+              <AlertDescription className="text-xs">
+                {error}
+              </AlertDescription>
+            </Alert>
+          )}
+
           <form onSubmit={handleEmailLogin} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
@@ -90,7 +100,6 @@ export default function LoginPage() {
                 disabled={isLoggingIn || isGoogleLoading}
               />
             </div>
-            {error && <p className="text-sm font-medium text-destructive">{error}</p>}
             <Button type="submit" className="w-full" disabled={isLoggingIn || isGoogleLoading}>
               {isLoggingIn ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
               Iniciar Sesión
