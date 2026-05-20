@@ -3,28 +3,37 @@ import { HydratedDocument } from 'mongoose';
 
 export type PerformanceReportsDocument = HydratedDocument<PerformanceReports>;
 
-@Schema()
+@Schema({ timestamps: true })
 export class PerformanceReports {
   @Prop()
   id: string;
 
   @Prop()
-  periodo: string;
+  usuarioNombre: string;
 
   @Prop()
-  modulo_evaluado: string;
+  usuarioEmail: string;
 
   @Prop()
-  atividades_completadas: string;
+  tipoEnvio: string; // 'actividad' | 'evaluacion'
 
   @Prop()
-  recomendaciones: string;
+  moduloId: string;
+
+  @Prop()
+  tituloContenido: string;
+
+  @Prop()
+  detalleEnvio: string; // JSON string con respuestas o texto de entrega
 
   @Prop()
   puntaje: number;
 
   @Prop()
-  tiempo_invertido: number;
+  recomendaciones: string;
+
+  @Prop()
+  estado: string; // 'enviado' | 'calificado'
 }
 
 export const PerformanceReportsSchema = SchemaFactory.createForClass(PerformanceReports);

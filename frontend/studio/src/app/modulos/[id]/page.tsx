@@ -28,7 +28,9 @@ import {
   Trophy,
   FileText,
   Video,
-  ShieldCheck
+  ShieldCheck,
+  History,
+  MessageSquare
 } from "lucide-react";
 import Link from "next/link";
 import api from "@/lib/api";
@@ -61,6 +63,14 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/context/AuthContext";
 
@@ -112,14 +122,27 @@ interface Assessment {
   preguntas: Question[];
 }
 
+interface Submission {
+  _id: string;
+  usuarioNombre: string;
+  usuarioEmail: string;
+  tipoEnvio: string;
+  tituloContenido: string;
+  detalleEnvio: string;
+  puntaje: number;
+  estado: string;
+  createdAt: string;
+}
+
 export default function ModuloDetallePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const { user } = useAuth();
-  const isAdmin = user?.role === 'admin';
+  const isAdmin = user?.role === 'admin' || user?.role === 'administrador';
   
   const [resources, setResources] = useState<Resource[]>([]);
   const [activities, setActivities] = useState<Activity[]>([]);
   const [assessments, setAssessments] = useState<Assessment[]>([]);
+  const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [loading, setLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
   const [viewMode, setViewMode] = useState<'edit' | 'preview'>('preview');
@@ -131,6 +154,9 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
   const [isResourceDialogOpen, setIsResourceDialogOpen] = useState(false);
   const [isActivityDialogOpen, setIsActivityDialogOpen] = useState(false);
   const [isAssessmentDialogOpen, setIsAssessmentDialogOpen] = useState(false);
+  const [isSubmitActivityOpen, setIsSubmitActivityOpen] = useState(false);
+  const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
+  const [activitySubmissionText, setActivitySubmissionText] = useState("");
   
   const [editingResource, setEditingResource] = useState<Resource | null>(null);
   const [editingActivity, setEditingActivity] = useState<Activity | null>(null);
@@ -170,6 +196,11 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
       setResources(resResponse.data.filter((res: any) => res.unidad === `Módulo ${id}`));
       setActivities(actResponse.data.filter((act: any) => act.moduloId === id));
       setAssessments(assResponse.data.filter((ass: any) => ass.moduloId === id));
+
+      if (isAdmin) {
+        const subResponse = await api.get("/performance-reports");
+        setSubmissions(subResponse.data.filter((sub: any) => sub.moduloId === id));
+      }
     } catch (error) {
       console.error("Error fetching data:", error);
     } finally {
@@ -179,7 +210,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
 
   useEffect(() => {
     fetchData();
-  }, [id]);
+  }, [id, user]);
 
   const handleSaveResource = async () => {
     if (!resourceForm.titulo || !resourceForm.url) return;
@@ -189,6 +220,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
       else await api.post("/educational-resources", resourceForm);
       setIsResourceDialogOpen(false);
       fetchData();
+      toast({ title: "Recurso guardado" });
     } catch (error) { toast({ title: "Error", variant: "destructive" }); }
     finally { setIsProcessing(false); }
   };
@@ -201,8 +233,62 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
       else await api.post("/activities", activityForm);
       setIsActivityDialogOpen(false);
       fetchData();
+      toast({ title: "Actividad guardada" });
     } catch (error) { toast({ title: "Error", variant: "destructive" }); }
     finally { setIsProcessing(false); }
+  };
+
+  const handleSubmitActivity = async () => {
+    if (!selectedActivity || !activitySubmissionText) return;
+    setIsProcessing(true);
+    try {
+      await api.post("/performance-reports", {
+        usuarioNombre: user?.name || "Estudiante",
+        usuarioEmail: user?.email,
+        tipoEnvio: "actividad",
+        moduloId: id,
+        tituloContenido: selectedActivity.titulo,
+        detalleEnvio: activitySubmissionText,
+        estado: "enviado"
+      });
+      setIsSubmitActivityOpen(false);
+      setActivitySubmissionText("");
+      toast({ title: "Actividad enviada con éxito", description: "El docente revisará tu entrega pronto." });
+    } catch (error) {
+      toast({ title: "Error al enviar", variant: "destructive" });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleGradeAssessment = async () => {
+    let correctCount = 0;
+    const autoGradableQuestions = assessmentForm.preguntas.filter(q => q.tipo !== 'escrita');
+    autoGradableQuestions.forEach(q => {
+      if (userAnswers[q.id] === q.respuestaCorrecta) correctCount++;
+    });
+    
+    const finalScore = { correct: correctCount, total: autoGradableQuestions.length };
+    setScore(finalScore);
+    setShowFeedback(true);
+
+    // Guardar resultado si no es admin probando
+    if (!isAdmin) {
+      try {
+        await api.post("/performance-reports", {
+          usuarioNombre: user?.name || "Estudiante",
+          usuarioEmail: user?.email,
+          tipoEnvio: "evaluacion",
+          moduloId: id,
+          tituloContenido: assessmentForm.titulo,
+          detalleEnvio: JSON.stringify(userAnswers),
+          puntaje: (correctCount / autoGradableQuestions.length) * 10,
+          estado: "completado"
+        });
+      } catch (e) {
+        console.error("Error saving assessment result:", e);
+      }
+    }
   };
 
   const handleAddQuestion = () => {
@@ -243,18 +329,9 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
       else await api.post("/assessments", assessmentForm);
       setIsAssessmentDialogOpen(false);
       fetchData();
+      toast({ title: "Evaluación guardada" });
     } catch (error) { toast({ title: "Error", variant: "destructive" }); }
     finally { setIsProcessing(false); }
-  };
-
-  const handleGradePreview = () => {
-    let correctCount = 0;
-    const autoGradableQuestions = assessmentForm.preguntas.filter(q => q.tipo !== 'escrita');
-    autoGradableQuestions.forEach(q => {
-      if (userAnswers[q.id] === q.respuestaCorrecta) correctCount++;
-    });
-    setScore({ correct: correctCount, total: autoGradableQuestions.length });
-    setShowFeedback(true);
   };
 
   const handleResetPreview = () => {
@@ -265,32 +342,17 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
 
   const getEmbedUrl = (url: string) => {
     if (!url || !url.startsWith("http")) return "";
-    
     if (url.includes("youtube.com") || url.includes("youtu.be")) {
       let videoId = "";
       if (url.includes("youtu.be/")) videoId = url.split("youtu.be/")[1].split("?")[0];
       else if (url.includes("v=")) videoId = url.split("v=")[1].split("&")[0];
       return videoId ? `https://www.youtube.com/embed/${videoId}` : url;
     }
-
-    if (url.includes("gamma.app/docs/")) {
-      return url.replace("gamma.app/docs/", "gamma.app/embed/");
-    }
-
+    if (url.includes("gamma.app/docs/")) return url.replace("gamma.app/docs/", "gamma.app/embed/");
     if (url.includes("docs.google.com/presentation/d/")) {
-      const fileIdMatch = url.match(/\/d\/(.+?)(\/|$)/);
-      if (fileIdMatch) {
-        return `https://docs.google.com/presentation/d/${fileIdMatch[1]}/embed?start=false&loop=false&delayms=3000`;
-      }
+      const match = url.match(/\/d\/(.+?)(\/|$)/);
+      return match ? `https://docs.google.com/presentation/d/${match[1]}/embed` : url;
     }
-
-    if (url.includes("drive.google.com/file/d/")) {
-      const fileIdMatch = url.match(/\/d\/(.+?)(\/|$)/);
-      if (fileIdMatch) {
-        return `https://drive.google.com/file/d/${fileIdMatch[1]}/preview`;
-      }
-    }
-
     return url;
   };
 
@@ -310,10 +372,11 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
       </div>
 
       <Tabs defaultValue="recursos" className="w-full">
-        <TabsList className="grid w-full grid-cols-3 md:w-[400px] mb-8">
+        <TabsList className={cn("grid w-full mb-8", isAdmin ? "grid-cols-4 md:w-[600px]" : "grid-cols-3 md:w-[450px]")}>
           <TabsTrigger value="recursos" className="flex items-center gap-2"><Layers className="h-4 w-4" /> Recursos</TabsTrigger>
           <TabsTrigger value="actividades" className="flex items-center gap-2"><ClipboardList className="h-4 w-4" /> Actividades</TabsTrigger>
           <TabsTrigger value="evaluaciones" className="flex items-center gap-2"><FileQuestion className="h-4 w-4" /> Evaluaciones</TabsTrigger>
+          {isAdmin && <TabsTrigger value="seguimiento" className="flex items-center gap-2 text-accent"><History className="h-4 w-4" /> Seguimiento</TabsTrigger>}
         </TabsList>
 
         <TabsContent value="recursos" className="space-y-6">
@@ -328,7 +391,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
           {loading ? <div className="py-20 flex justify-center"><Loader2 className="animate-spin" /></div> : resources.length > 0 ? (
             <div className="grid grid-cols-1 gap-8">
               {resources.map((res) => (
-                <Card key={res._id} className="overflow-hidden group relative shadow-md hover:shadow-lg transition-shadow">
+                <Card key={res._id} className="overflow-hidden group relative shadow-md">
                    {isAdmin && (
                      <div className="absolute top-4 right-4 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
                       <DropdownMenu>
@@ -340,34 +403,21 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                       </DropdownMenu>
                     </div>
                    )}
-                  <div className="flex flex-col">
-                    <div className="p-6">
-                      <div className="flex items-center gap-2 mb-3">
-                        {res.tipo === "video" ? <Video className="h-4 w-4 text-red-500" /> : <FileText className="h-4 w-4 text-blue-500" />}
-                        <Badge variant="outline" className="uppercase">{res.tipo}</Badge>
-                      </div>
-                      <CardTitle className="text-2xl mb-2">{res.titulo}</CardTitle>
-                      <CardDescription className="text-base mb-6">{res.descripcion}</CardDescription>
-                      
-                      <div className="rounded-xl overflow-hidden border bg-black aspect-video w-full mb-4">
-                        <iframe 
-                          src={getEmbedUrl(res.url)} 
-                          className="w-full h-full border-0" 
-                          allowFullScreen 
-                          title={res.titulo}
-                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                        />
-                      </div>
-
-                      <div className="flex justify-end">
-                        <Button asChild variant="ghost" size="sm" className="text-primary"><a href={res.url} target="_blank" rel="noopener noreferrer"><ExternalLink className="mr-2 h-4 w-4" /> Abrir en ventana externa</a></Button>
-                      </div>
+                  <div className="p-6">
+                    <div className="flex items-center gap-2 mb-3">
+                      {res.tipo === "video" ? <Video className="h-4 w-4 text-red-500" /> : <FileText className="h-4 w-4 text-blue-500" />}
+                      <Badge variant="outline" className="uppercase">{res.tipo}</Badge>
+                    </div>
+                    <CardTitle className="text-2xl mb-2">{res.titulo}</CardTitle>
+                    <CardDescription className="text-base mb-6">{res.descripcion}</CardDescription>
+                    <div className="rounded-xl overflow-hidden border bg-black aspect-video w-full mb-4 shadow-inner">
+                      <iframe src={getEmbedUrl(res.url)} className="w-full h-full border-0" allowFullScreen />
                     </div>
                   </div>
                 </Card>
               ))}
             </div>
-          ) : <p className="text-center py-10 text-muted-foreground italic">No hay recursos en este módulo.</p>}
+          ) : <p className="text-center py-10 text-muted-foreground italic">No hay recursos disponibles.</p>}
         </TabsContent>
 
         <TabsContent value="actividades" className="space-y-6">
@@ -379,113 +429,139 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
               </Button>
             )}
           </div>
-          {loading ? <div className="py-20 flex justify-center"><Loader2 className="animate-spin" /></div> : activities.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {activities.map((act) => (
-                <Card key={act._id} className="flex flex-col shadow-sm border-t-4 border-t-accent/50 group">
-                  <CardHeader>
-                    <div className="flex justify-between items-start">
-                      <Badge variant="secondary">{act.tipo.toUpperCase()}</Badge>
-                      {isAdmin && (
-                        <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                           <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setEditingActivity(act); setActivityForm(act); setIsActivityDialogOpen(true); }}><Pencil className="h-4 w-4" /></Button>
-                           <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={async () => { await api.delete(`/activities/${act._id}`); fetchData(); }}><Trash2 className="h-4 w-4" /></Button>
-                        </div>
-                      )}
-                    </div>
-                    <CardTitle className="mt-2">{act.titulo}</CardTitle>
-                    <CardDescription className="text-base">{act.descripcion}</CardDescription>
-                  </CardHeader>
-                  <CardContent className="flex-1 space-y-4">
-                    <Separator />
-                    <div>
-                      <p className="text-sm font-semibold text-primary mb-1">Criterios de Evaluación:</p>
-                      <p className="text-sm text-muted-foreground">{act.criterios_evaluacion}</p>
-                    </div>
-                    {act.archivoUrl && (
-                      <div className="p-4 border rounded-xl bg-primary/5 flex items-center justify-between gap-3 border-primary/20">
-                        <div className="flex items-center gap-3 overflow-hidden">
-                          <LinkIcon className="h-5 w-5 text-primary shrink-0" />
-                          <div className="overflow-hidden">
-                             <p className="text-xs font-bold text-primary truncate">Material de referencia</p>
-                             <p className="text-[10px] text-muted-foreground truncate">{act.archivoUrl}</p>
-                          </div>
-                        </div>
-                        <Button asChild variant="outline" size="sm" className="h-8 text-xs shrink-0"><a href={act.archivoUrl} target="_blank" rel="noopener noreferrer">Abrir link</a></Button>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {activities.map((act) => (
+              <Card key={act._id} className="flex flex-col shadow-sm border-t-4 border-t-accent/50 group">
+                <CardHeader>
+                  <div className="flex justify-between items-start">
+                    <Badge variant="secondary">{act.tipo.toUpperCase()}</Badge>
+                    {isAdmin && (
+                      <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setEditingActivity(act); setActivityForm(act); setIsActivityDialogOpen(true); }}><Pencil className="h-4 w-4" /></Button>
+                         <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={async () => { await api.delete(`/activities/${act._id}`); fetchData(); }}><Trash2 className="h-4 w-4" /></Button>
                       </div>
                     )}
-                  </CardContent>
-                  <CardFooter className="pt-0"><Button variant="default" className="w-full bg-accent hover:bg-accent/90"><Upload className="mr-2 h-4 w-4" /> Subir Entrega</Button></CardFooter>
-                </Card>
-              ))}
-            </div>
-          ) : <p className="text-center py-10 text-muted-foreground italic">No hay actividades asignadas.</p>}
+                  </div>
+                  <CardTitle className="mt-2">{act.titulo}</CardTitle>
+                  <CardDescription>{act.descripcion}</CardDescription>
+                </CardHeader>
+                <CardContent className="flex-1 space-y-4">
+                  <Separator />
+                  <p className="text-sm"><strong>Criterios:</strong> {act.criterios_evaluacion}</p>
+                </CardContent>
+                <CardFooter>
+                  {!isAdmin && <Button variant="default" className="w-full bg-accent hover:bg-accent/90" onClick={() => { setSelectedActivity(act); setIsSubmitActivityOpen(true); }}><Upload className="mr-2 h-4 w-4" /> Entregar Tarea</Button>}
+                </CardFooter>
+              </Card>
+            ))}
+          </div>
         </TabsContent>
 
         <TabsContent value="evaluaciones" className="space-y-6">
           <div className="flex justify-between items-center">
-            <h2 className="text-xl font-headline">Evaluaciones y Quizzes</h2>
-            {isAdmin && (
-              <Button onClick={() => { setEditingAssessment(null); setViewMode('edit'); handleResetPreview(); setIsAssessmentDialogOpen(true); }} size="sm" variant="default">
-                <PlusCircle className="mr-2 h-4 w-4" /> Crear Evaluación
-              </Button>
-            )}
+            <h2 className="text-xl font-headline">Evaluaciones</h2>
+            {isAdmin && <Button onClick={() => { setEditingAssessment(null); setViewMode('edit'); setIsAssessmentDialogOpen(true); }} size="sm"><PlusCircle className="mr-2 h-4 w-4" /> Crear Evaluación</Button>}
           </div>
-          {loading ? <div className="py-20 flex justify-center"><Loader2 className="animate-spin" /></div> : assessments.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {assessments.map((ass) => (
-                <Card key={ass._id} className="hover:border-primary transition-colors cursor-pointer group relative shadow-md">
-                   {isAdmin && (
-                     <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); setEditingAssessment(ass); setAssessmentForm(ass); setViewMode('edit'); handleResetPreview(); setIsAssessmentDialogOpen(true); }}><Pencil className="h-4 w-4" /></Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={async (e) => { e.stopPropagation(); await api.delete(`/assessments/${ass._id}`); fetchData(); }}><Trash2 className="h-4 w-4" /></Button>
-                     </div>
-                   )}
-                  <CardHeader>
-                    <CardTitle className="text-lg">{ass.titulo}</CardTitle>
-                    <CardDescription className="line-clamp-2">{ass.descripcion}</CardDescription>
-                  </CardHeader>
-                  <CardContent><div className="flex items-center gap-2 text-sm text-muted-foreground"><HelpCircle className="h-4 w-4 text-primary" /> {ass.preguntas.length} Preguntas</div></CardContent>
-                  <CardFooter><Button className="w-full" variant="outline" onClick={() => { setEditingAssessment(ass); setAssessmentForm(ass); setViewMode('preview'); handleResetPreview(); setIsAssessmentDialogOpen(true); }}>Comenzar Test</Button></CardFooter>
-                </Card>
-              ))}
-            </div>
-          ) : <p className="text-center py-10 text-muted-foreground italic">No hay evaluaciones configuradas.</p>}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {assessments.map((ass) => (
+              <Card key={ass._id} className="hover:border-primary transition-all cursor-pointer group shadow-md" onClick={() => { setEditingAssessment(ass); setAssessmentForm(ass); setViewMode(isAdmin ? 'edit' : 'preview'); handleResetPreview(); setIsAssessmentDialogOpen(true); }}>
+                <CardHeader>
+                  <CardTitle className="text-lg">{ass.titulo}</CardTitle>
+                  <CardDescription className="line-clamp-2">{ass.descripcion}</CardDescription>
+                </CardHeader>
+                <CardContent><div className="text-sm text-muted-foreground flex items-center gap-2"><HelpCircle className="h-4 w-4" /> {ass.preguntas.length} Preguntas</div></CardContent>
+                <CardFooter><Button className="w-full" variant="outline">Entrar</Button></CardFooter>
+              </Card>
+            ))}
+          </div>
         </TabsContent>
+
+        {isAdmin && (
+          <TabsContent value="seguimiento" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2"><MessageSquare className="h-5 w-5 text-accent" /> Panel de Revisión</CardTitle>
+                <CardDescription>Revisa los envíos y resultados de tus estudiantes para este módulo.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Estudiante</TableHead>
+                      <TableHead>Tipo</TableHead>
+                      <TableHead>Contenido</TableHead>
+                      <TableHead>Puntaje</TableHead>
+                      <TableHead>Fecha</TableHead>
+                      <TableHead className="text-right">Acción</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {submissions.map((sub) => (
+                      <TableRow key={sub._id}>
+                        <TableCell className="font-medium">{sub.usuarioNombre}</TableCell>
+                        <TableCell><Badge variant="outline">{sub.tipoEnvio.toUpperCase()}</Badge></TableCell>
+                        <TableCell>{sub.tituloContenido}</TableCell>
+                        <TableCell>{sub.puntaje !== undefined ? <Badge className="bg-green-100 text-green-700">{sub.puntaje}/10</Badge> : "N/A"}</TableCell>
+                        <TableCell className="text-xs text-muted-foreground">{new Date(sub.createdAt).toLocaleDateString()}</TableCell>
+                        <TableCell className="text-right">
+                          <Button variant="ghost" size="sm" onClick={() => {
+                            toast({ title: "Detalle del envío", description: sub.detalleEnvio });
+                          }}>Ver Detalle</Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    {submissions.length === 0 && (
+                      <TableRow><TableCell colSpan={6} className="text-center py-10 text-muted-foreground italic">Aún no hay envíos registrados.</TableCell></TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        )}
       </Tabs>
+
+      {/* Diálogos de Edición y Envío */}
+      <Dialog open={isSubmitActivityOpen} onOpenChange={setIsSubmitActivityOpen}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Entregar: {selectedActivity?.titulo}</DialogTitle><DialogDescription>Pega el enlace de tu trabajo (Drive, Gamma, etc.) o escribe tu respuesta.</DialogDescription></DialogHeader>
+          <div className="py-4 space-y-4">
+            <Textarea placeholder="Escribe aquí tu respuesta o enlace..." value={activitySubmissionText} onChange={e => setActivitySubmissionText(e.target.value)} rows={6} />
+          </div>
+          <DialogFooter><Button onClick={handleSubmitActivity} disabled={isProcessing} className="w-full">{isProcessing ? <Loader2 className="animate-spin" /> : "Enviar Entrega"}</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={isResourceDialogOpen} onOpenChange={setIsResourceDialogOpen}>
         <DialogContent className="sm:max-w-[600px]">
-          <DialogHeader><DialogTitle className="text-2xl font-headline">{editingResource ? "Editar" : "Nuevo"} Recurso Educativo</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{editingResource ? "Editar" : "Nuevo"} Recurso</DialogTitle></DialogHeader>
           <div className="grid gap-4 py-4">
-            <div className="grid gap-2"><Label>Título</Label><Input value={resourceForm.titulo} onChange={e => setResourceForm({...resourceForm, titulo: e.target.value})} placeholder="Ej: Guía de Operadores Booleanos" /></div>
-            <div className="grid gap-2"><Label>Descripción Corta</Label><Textarea value={resourceForm.descripcion} onChange={e => setResourceForm({...resourceForm, descripcion: e.target.value})} placeholder="Describe de qué trata este material..." /></div>
-            <div className="grid gap-2"><Label>Enlace (Link)</Label><Input value={resourceForm.url} onChange={e => setResourceForm({...resourceForm, url: e.target.value})} placeholder="Pega el link de YouTube, Gamma o Drive..." /></div>
+            <div className="grid gap-2"><Label>Título</Label><Input value={resourceForm.titulo} onChange={e => setResourceForm({...resourceForm, titulo: e.target.value})} /></div>
+            <div className="grid gap-2"><Label>Descripción</Label><Textarea value={resourceForm.descripcion} onChange={e => setResourceForm({...resourceForm, descripcion: e.target.value})} /></div>
+            <div className="grid gap-2"><Label>URL</Label><Input value={resourceForm.url} onChange={e => setResourceForm({...resourceForm, url: e.target.value})} /></div>
             <div className="grid grid-cols-2 gap-4">
-              <div className="grid gap-2">
-                <Label>Tipo de Recurso</Label>
+              <div className="grid gap-2"><Label>Tipo</Label>
                 <Select value={resourceForm.tipo} onValueChange={v => setResourceForm({...resourceForm, tipo: v})}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent><SelectItem value="video">Video Tutorial</SelectItem><SelectItem value="guia">Guía Interactiva</SelectItem><SelectItem value="articulo">Artículo / PDF</SelectItem></SelectContent>
+                  <SelectContent><SelectItem value="video">Video</SelectItem><SelectItem value="guia">Guía</SelectItem><SelectItem value="articulo">Artículo</SelectItem></SelectContent>
                 </Select>
               </div>
-              <div className="grid gap-2"><Label>Formato</Label><Input value={resourceForm.formato} onChange={e => setResourceForm({...resourceForm, formato: e.target.value})} placeholder="Ej: MP4, Gamma App, Web" /></div>
+              <div className="grid gap-2"><Label>Formato</Label><Input value={resourceForm.formato} onChange={e => setResourceForm({...resourceForm, formato: e.target.value})} /></div>
             </div>
           </div>
-          <DialogFooter><Button onClick={handleSaveResource} disabled={isProcessing} className="w-full">{isProcessing ? <Loader2 className="animate-spin" /> : "Publicar Recurso"}</Button></DialogFooter>
+          <DialogFooter><Button onClick={handleSaveResource} disabled={isProcessing} className="w-full">Guardar Recurso</Button></DialogFooter>
         </DialogContent>
       </Dialog>
 
       <Dialog open={isActivityDialogOpen} onOpenChange={setIsActivityDialogOpen}>
         <DialogContent>
-          <DialogHeader><DialogTitle>{editingActivity ? "Editar" : "Nueva"} Actividad Práctica</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{editingActivity ? "Editar" : "Nueva"} Actividad</DialogTitle></DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2"><Label>Título</Label><Input value={activityForm.titulo} onChange={e => setActivityForm({...activityForm, titulo: e.target.value})} /></div>
-            <div className="grid gap-2"><Label>Instrucciones Detalladas</Label><Textarea value={activityForm.descripcion} onChange={e => setActivityForm({...activityForm, descripcion: e.target.value})} rows={5}/></div>
+            <div className="grid gap-2"><Label>Instrucciones</Label><Textarea value={activityForm.descripcion} onChange={e => setActivityForm({...activityForm, descripcion: e.target.value})} rows={4}/></div>
             <div className="grid gap-2"><Label>Criterios de Evaluación</Label><Input value={activityForm.criterios_evaluacion} onChange={e => setActivityForm({...activityForm, criterios_evaluacion: e.target.value})} /></div>
-            <div className="grid gap-2"><Label>Material de Referencia (Link Drive/Gamma)</Label><Input placeholder="Pega el link aquí..." value={activityForm.archivoUrl} onChange={e => setActivityForm({...activityForm, archivoUrl: e.target.value})} /></div>
           </div>
-          <DialogFooter><Button onClick={handleSaveActivity} disabled={isProcessing} className="w-full">{isProcessing ? <Loader2 className="animate-spin" /> : "Crear Actividad"}</Button></DialogFooter>
+          <DialogFooter><Button onClick={handleSaveActivity} disabled={isProcessing} className="w-full">Guardar Actividad</Button></DialogFooter>
         </DialogContent>
       </Dialog>
 
@@ -493,102 +569,74 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
         <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <div className="flex items-center justify-between pr-8">
-              <DialogTitle className="text-2xl font-headline">
-                {viewMode === 'edit' ? 'Gestor de Evaluaciones' : 'Realizar Evaluación'}
-              </DialogTitle>
+              <DialogTitle className="text-2xl font-headline">{viewMode === 'edit' ? 'Gestor de Examen' : 'Evaluación'}</DialogTitle>
               {isAdmin && (
                 <div className="flex gap-2">
-                  <Button variant={viewMode === 'edit' ? 'default' : 'outline'} size="sm" onClick={() => setViewMode('edit')}><Settings2 className="mr-2 h-4 w-4" /> Configurar</Button>
-                  <Button variant={viewMode === 'preview' ? 'default' : 'outline'} size="sm" onClick={() => { setViewMode('preview'); handleResetPreview(); }}><Eye className="mr-2 h-4 w-4" /> Vista Previa</Button>
+                  <Button variant={viewMode === 'edit' ? 'default' : 'outline'} size="sm" onClick={() => setViewMode('edit')}><Settings2 className="mr-2 h-4 w-4" /> Editar</Button>
+                  <Button variant={viewMode === 'preview' ? 'default' : 'outline'} size="sm" onClick={() => { setViewMode('preview'); handleResetPreview(); }}><Eye className="mr-2 h-4 w-4" /> Previsualizar</Button>
                 </div>
               )}
             </div>
           </DialogHeader>
 
-          {viewMode === 'edit' && isAdmin ? (
+          {viewMode === 'edit' ? (
             <div className="grid gap-6 py-4">
               <div className="grid grid-cols-2 gap-4">
-                 <div className="grid gap-2"><Label>Nombre del Examen</Label><Input value={assessmentForm.titulo} onChange={e => setAssessmentForm({...assessmentForm, titulo: e.target.value})} /></div>
-                 <div className="grid gap-2"><Label>Breve Introducción</Label><Input value={assessmentForm.descripcion} onChange={e => setAssessmentForm({...assessmentForm, descripcion: e.target.value})} /></div>
+                 <div className="grid gap-2"><Label>Título</Label><Input value={assessmentForm.titulo} onChange={e => setAssessmentForm({...assessmentForm, titulo: e.target.value})} /></div>
+                 <div className="grid gap-2"><Label>Descripción</Label><Input value={assessmentForm.descripcion} onChange={e => setAssessmentForm({...assessmentForm, descripcion: e.target.value})} /></div>
               </div>
               <Separator />
               <div className="p-5 border rounded-2xl bg-muted/20 space-y-4">
-                <h3 className="font-bold flex items-center gap-2 text-primary"><PlusCircle className="h-5 w-5" /> Añadir Pregunta</h3>
+                <h3 className="font-bold flex items-center gap-2 text-primary"><PlusCircle className="h-5 w-5" /> Nueva Pregunta</h3>
                 <div className="grid gap-2"><Label>Enunciado</Label><Input value={currentQuestion.texto} onChange={e => setCurrentQuestion({...currentQuestion, texto: e.target.value})} /></div>
                 <div className="grid gap-2">
-                  <Label>Tipo de Respuesta</Label>
+                  <Label>Tipo</Label>
                   <Select value={currentQuestion.tipo} onValueChange={(v: any) => setCurrentQuestion({...currentQuestion, tipo: v, opciones: v === 'opcion-multiple' ? ["Opción A", "Opción B"] : [], respuestaCorrecta: ""})}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent><SelectItem value="opcion-multiple">Opción Múltiple</SelectItem><SelectItem value="verdadero-falso">Verdadero o Falso</SelectItem><SelectItem value="escrita">Respuesta Abierta</SelectItem></SelectContent>
+                    <SelectContent><SelectItem value="opcion-multiple">Opción Múltiple</SelectItem><SelectItem value="verdadero-falso">Verdadero o Falso</SelectItem><SelectItem value="escrita">Abierta</SelectItem></SelectContent>
                   </Select>
                 </div>
                 {currentQuestion.tipo === 'opcion-multiple' && (
                   <div className="space-y-3">
-                    <Label className="text-xs text-muted-foreground uppercase">Opciones (Marca el círculo de la correcta)</Label>
                     <RadioGroup value={currentQuestion.respuestaCorrecta} onValueChange={v => setCurrentQuestion({...currentQuestion, respuestaCorrecta: v})}>
-                      <div className="space-y-2">
-                        {currentQuestion.opciones.map((opt, idx) => (
-                          <div key={idx} className="flex items-center gap-3">
-                            <RadioGroupItem value={opt} />
-                            <Input value={opt} onChange={e => {
-                                const newOpts = [...currentQuestion.opciones];
-                                newOpts[idx] = e.target.value;
-                                setCurrentQuestion({...currentQuestion, opciones: newOpts});
-                            }} className="flex-1" />
-                            <Button variant="ghost" size="icon" onClick={() => handleRemoveOption(idx)} disabled={currentQuestion.opciones.length <= 2}><X className="h-4 w-4" /></Button>
-                          </div>
-                        ))}
-                      </div>
+                      {currentQuestion.opciones.map((opt, idx) => (
+                        <div key={idx} className="flex items-center gap-3">
+                          <RadioGroupItem value={opt} />
+                          <Input value={opt} onChange={e => {
+                              const newOpts = [...currentQuestion.opciones];
+                              newOpts[idx] = e.target.value;
+                              setCurrentQuestion({...currentQuestion, opciones: newOpts});
+                          }} className="flex-1" />
+                          <Button variant="ghost" size="icon" onClick={() => handleRemoveOption(idx)} disabled={currentQuestion.opciones.length <= 2}><X className="h-4 w-4" /></Button>
+                        </div>
+                      ))}
                     </RadioGroup>
-                    <Button variant="outline" size="sm" onClick={handleAddOption} className="w-full border-dashed"><PlusCircle className="mr-2 h-4 w-4" /> Agregar Opción</Button>
+                    <Button variant="outline" size="sm" onClick={handleAddOption} className="w-full">Agregar Opción</Button>
                   </div>
                 )}
-                {currentQuestion.tipo === 'verdadero-falso' && (
-                  <div className="grid gap-2">
-                    <Label>Respuesta Correcta</Label>
-                    <Select value={currentQuestion.respuestaCorrecta} onValueChange={v => setCurrentQuestion({...currentQuestion, respuestaCorrecta: v})}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent><SelectItem value="Verdadero">Verdadero</SelectItem><SelectItem value="Falso">Falso</SelectItem></SelectContent>
-                    </Select>
-                  </div>
-                )}
-                <Button variant="default" onClick={handleAddQuestion} className="w-full shadow-lg">Confirmar Pregunta</Button>
+                <Button variant="default" onClick={handleAddQuestion} className="w-full">Agregar Pregunta</Button>
               </div>
-              <div className="space-y-3">
-                 <h3 className="font-bold">Lista de Preguntas ({assessmentForm.preguntas.length})</h3>
-                 <div className="space-y-2">
-                   {assessmentForm.preguntas.map((q, idx) => (
-                     <div key={q.id} className="flex items-center justify-between p-3 border rounded-xl bg-background shadow-sm">
-                       <div className="flex items-center gap-3">
-                         <Badge variant="secondary" className="h-6 w-6 rounded-full p-0 flex items-center justify-center font-bold">{idx + 1}</Badge>
-                         <p className="text-sm font-medium">{q.texto}</p>
-                       </div>
-                       <Button variant="ghost" size="icon" onClick={() => setAssessmentForm({...assessmentForm, preguntas: assessmentForm.preguntas.filter(p => p.id !== q.id)})}><Trash2 className="h-4 w-4 text-destructive" /></Button>
-                     </div>
-                   ))}
-                 </div>
-              </div>
-              <DialogFooter><Button onClick={handleSaveAssessment} disabled={isProcessing} className="w-full font-bold h-12">{isProcessing ? <Loader2 className="animate-spin" /> : "Guardar Evaluación"}</Button></DialogFooter>
+              <DialogFooter><Button onClick={handleSaveAssessment} disabled={isProcessing} className="w-full">Guardar Evaluación</Button></DialogFooter>
             </div>
           ) : (
             <div className="py-6 space-y-8">
               <div className="border-b pb-6">
                  <h2 className="text-2xl font-bold text-primary">{assessmentForm.titulo}</h2>
                  <p className="text-muted-foreground">{assessmentForm.descripcion}</p>
-                 {score && <div className="mt-4 p-4 bg-primary/10 rounded-xl flex items-center justify-between"><span className="font-bold flex items-center gap-2"><Trophy className="h-5 w-5 text-primary" /> Resultados:</span><Badge className="text-lg px-4">{score.correct} / {score.total}</Badge></div>}
+                 {score && <div className="mt-4 p-4 bg-primary/10 rounded-xl flex items-center justify-between"><span className="font-bold">Resultado:</span><Badge className="text-lg px-4">{score.correct} / {score.total}</Badge></div>}
               </div>
               {assessmentForm.preguntas.map((q, idx) => (
                 <div key={q.id} className="space-y-4">
-                  <p className="text-lg font-bold flex gap-3"><span className="text-primary">{idx + 1}.</span> {q.texto}</p>
-                  <div className="pl-8">
+                  <p className="text-lg font-bold">{idx + 1}. {q.texto}</p>
+                  <div className="pl-4">
                     {q.tipo === 'opcion-multiple' && (
                       <RadioGroup value={userAnswers[q.id]} onValueChange={v => !showFeedback && setUserAnswers({...userAnswers, [q.id]: v})} className="space-y-2">
                         {q.opciones.map((opt, i) => (
-                          <div key={i} className={cn("flex items-center space-x-3 p-3 border rounded-xl transition-colors", 
+                          <div key={i} className={cn("flex items-center space-x-3 p-3 border rounded-xl", 
                             showFeedback && q.respuestaCorrecta === opt ? "bg-green-100 border-green-500" : 
                             showFeedback && userAnswers[q.id] === opt && q.respuestaCorrecta !== opt ? "bg-red-100 border-red-500" : "hover:bg-muted/50")}>
                             <RadioGroupItem value={opt} id={`q${idx}o${i}`} disabled={showFeedback} />
-                            <Label htmlFor={`q${idx}o${i}`} className="flex-1 flex items-center justify-between cursor-pointer">{opt} {showFeedback && q.respuestaCorrecta === opt && <Check className="h-4 w-4 text-green-600"/>}</Label>
+                            <Label htmlFor={`q${idx}o${i}`} className="flex-1 cursor-pointer">{opt}</Label>
                           </div>
                         ))}
                       </RadioGroup>
@@ -600,13 +648,10 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                          ))}
                       </div>
                     )}
-                    {q.tipo === 'escrita' && <Textarea placeholder="Tu respuesta..." value={userAnswers[q.id] || ""} onChange={e => !showFeedback && setUserAnswers({...userAnswers, [q.id]: e.target.value})} disabled={showFeedback} />}
                   </div>
                 </div>
               ))}
-              <div className="pt-6 border-t flex gap-4">
-                {!showFeedback ? <Button className="flex-1 h-12 font-bold" onClick={handleGradePreview}>Finalizar y Calificar</Button> : <Button variant="outline" className="flex-1 h-12" onClick={handleResetPreview}><RotateCcw className="mr-2 h-4 w-4" /> Reintentar</Button>}
-              </div>
+              {!showFeedback ? <Button className="w-full h-12 font-bold" onClick={handleGradeAssessment}>Finalizar Evaluación</Button> : <Button variant="outline" className="w-full h-12" onClick={handleResetPreview}>Reintentar</Button>}
             </div>
           )}
         </DialogContent>
