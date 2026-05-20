@@ -281,6 +281,12 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
       if (userAnswers[q.id] === q.respuestaCorrecta) correctCount++;
     });
     
+    // Mapeamos las respuestas para incluir el texto de la pregunta para que el docente lo vea claro
+    const detailWithQuestions = assessmentForm.preguntas.map(q => ({
+      pregunta: q.texto,
+      respuesta: userAnswers[q.id] || "(Sin respuesta)"
+    }));
+
     const finalScore = { correct: correctCount, total: autoGradableQuestions.length };
     setScore(finalScore);
     setShowFeedback(true);
@@ -292,7 +298,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
         tipoEnvio: "evaluacion",
         moduloId: String(id),
         tituloContenido: assessmentForm.titulo,
-        detalleEnvio: JSON.stringify(userAnswers),
+        detalleEnvio: JSON.stringify(detailWithQuestions),
         puntaje: autoGradableQuestions.length > 0 ? (correctCount / autoGradableQuestions.length) * 10 : 0,
         estado: "enviado"
       });
@@ -399,12 +405,28 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
   const formatSubmissionDetail = (detail: string) => {
     try {
       const parsed = JSON.parse(detail);
+      
+      // Formato nuevo (Array de {pregunta, respuesta})
+      if (Array.isArray(parsed)) {
+        return (
+          <div className="space-y-4">
+            {parsed.map((item: any, idx) => (
+              <div key={idx} className="p-3 bg-muted rounded-lg border-l-4 border-primary">
+                <p className="text-sm font-bold text-primary mb-1">{item.pregunta}</p>
+                <p className="text-sm">{String(item.respuesta)}</p>
+              </div>
+            ))}
+          </div>
+        );
+      }
+      
+      // Formato viejo (Objeto con IDs)
       if (typeof parsed === 'object' && parsed !== null) {
         return (
           <div className="space-y-4">
             {Object.entries(parsed).map(([key, value], idx) => (
-              <div key={idx} className="p-3 bg-muted rounded-lg">
-                <p className="text-xs font-bold text-primary uppercase mb-1">Pregunta/ID: {key}</p>
+              <div key={idx} className="p-3 bg-muted rounded-lg border-l-4 border-primary/30">
+                <p className="text-[10px] font-bold text-primary uppercase mb-1">ID Pregunta: {key}</p>
                 <p className="text-sm">{String(value)}</p>
               </div>
             ))}
