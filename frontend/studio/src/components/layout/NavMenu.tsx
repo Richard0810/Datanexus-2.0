@@ -1,4 +1,3 @@
-
 "use client";
 
 import Link from 'next/link';
@@ -13,6 +12,7 @@ import {
   UserCircle,
   DatabaseZap,
   Users,
+  Bell,
   type LucideIcon,
 } from 'lucide-react';
 import {
@@ -28,6 +28,7 @@ interface NavItem {
   label: string;
   icon: LucideIcon;
   adminOnly?: boolean;
+  badge?: string;
 }
 
 const navItems: NavItem[] = [
@@ -52,27 +53,39 @@ export function NavMenu() {
   });
 
   return (
-    <SidebarMenu>
-      {filteredItems.map((item) => (
-        <SidebarMenuItem key={item.href}>
-          <Link href={item.href} passHref legacyBehavior>
-            <SidebarMenuButton
-              asChild
-              isActive={pathname === item.href}
-              className={cn(
-                "w-full justify-start",
-                pathname === item.href && "bg-sidebar-accent text-sidebar-accent-foreground"
-              )}
-              tooltip={item.label}
-            >
-              <a>
-                <item.icon className="h-5 w-5" />
-                <span className="font-medium">{item.label}</span>
-              </a>
-            </SidebarMenuButton>
-          </Link>
-        </SidebarMenuItem>
-      ))}
-    </SidebarMenu>
+    <div className="flex flex-col h-full">
+      <SidebarMenu className="space-y-2">
+        {filteredItems.map((item) => (
+          <SidebarMenuItem key={item.href}>
+            <Link href={item.href} passHref legacyBehavior>
+              <SidebarMenuButton
+                asChild
+                isActive={pathname === item.href}
+                className={cn(
+                  "w-full justify-start h-12 px-4 rounded-2xl transition-all duration-300",
+                  pathname === item.href 
+                    ? "bg-primary text-white shadow-lg shadow-primary/20 scale-[1.02]" 
+                    : "text-slate-400 hover:text-white hover:bg-white/10"
+                )}
+                tooltip={item.label}
+              >
+                <a className="flex items-center gap-3">
+                  <item.icon className={cn("h-5 w-5", pathname === item.href ? "text-white" : "text-inherit")} />
+                  <span className="font-medium">{item.label}</span>
+                </a>
+              </SidebarMenuButton>
+            </Link>
+          </SidebarMenuItem>
+        ))}
+      </SidebarMenu>
+
+      <div className="mt-auto pt-8 border-t border-white/10 px-2 pb-4">
+        <SidebarMenuButton className="text-slate-400 hover:text-white hover:bg-white/10 rounded-2xl h-12 px-4 flex items-center gap-3">
+          <div className="bg-destructive h-6 w-6 rounded-full flex items-center justify-center text-[10px] text-white font-bold">N</div>
+          <span className="font-medium">Notificaciones</span>
+          <span className="ml-auto bg-destructive text-white text-[10px] px-2 py-0.5 rounded-full font-bold">3</span>
+        </SidebarMenuButton>
+      </div>
+    </div>
   );
 }

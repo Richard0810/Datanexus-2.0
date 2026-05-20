@@ -1,4 +1,3 @@
-
 "use client";
 
 import React from 'react';
@@ -34,20 +33,22 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <SidebarProvider defaultOpen={true}>
-      <Sidebar className="border-r" collapsible="icon" variant="sidebar">
-        <SidebarHeader className="p-4">
-          <Link href="/inicio" className="flex items-center gap-2">
-            <LogoIcon className="h-8 w-8 text-primary" />
-            <span className="font-headline text-xl font-semibold text-foreground">DataNexus</span>
+      <Sidebar className="border-none bg-sidebar text-sidebar-foreground shadow-2xl" collapsible="icon" variant="sidebar">
+        <SidebarHeader className="p-8">
+          <Link href="/inicio" className="flex items-center gap-3 group">
+            <div className="bg-primary/20 p-2 rounded-xl group-hover:scale-110 transition-transform">
+              <LogoIcon className="h-8 w-8 text-primary" />
+            </div>
+            <span className="font-headline text-2xl font-bold tracking-tight text-white">DataNexus</span>
           </Link>
         </SidebarHeader>
-        <SidebarContent className="p-2">
+        <SidebarContent className="px-4 py-2">
           <NavMenu />
         </SidebarContent>
       </Sidebar>
-      <SidebarInset className="flex flex-col min-h-screen">
+      <SidebarInset className="flex flex-col min-h-screen bg-background rounded-l-[3rem] overflow-hidden">
         <Header />
-        <main className="flex-1 overflow-y-auto p-6 bg-background">
+        <main className="flex-1 overflow-y-auto p-8 md:p-12 scroll-smooth">
           {children}
         </main>
         <Footer />

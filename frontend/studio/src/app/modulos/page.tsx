@@ -1,3 +1,4 @@
+"use client";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { 
@@ -10,11 +11,15 @@ import {
   CheckSquare, 
   ShieldCheck, 
   PlayCircle,
-  ArrowRight 
+  ArrowRight,
+  Clock,
+  BookOpenCheck
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 
 export const modules = [
   {
@@ -24,6 +29,10 @@ export const modules = [
     icon: Database,
     imageSrc: "https://picsum.photos/seed/mod1/600/400",
     aiHint: "database research",
+    difficulty: "Básico",
+    lessons: 5,
+    progress: 0,
+    color: "bg-blue-500"
   },
   {
     id: "2",
@@ -32,6 +41,10 @@ export const modules = [
     icon: GraduationCap,
     imageSrc: "https://picsum.photos/seed/mod2/600/400",
     aiHint: "library portal",
+    difficulty: "Básico",
+    lessons: 4,
+    progress: 15,
+    color: "bg-green-500"
   },
   {
     id: "3",
@@ -40,6 +53,10 @@ export const modules = [
     icon: Search,
     imageSrc: "https://picsum.photos/seed/mod3/600/400",
     aiHint: "web search",
+    difficulty: "Básico",
+    lessons: 5,
+    progress: 30,
+    color: "bg-purple-500"
   },
   {
     id: "4",
@@ -48,6 +65,10 @@ export const modules = [
     icon: PlayCircle,
     imageSrc: "https://picsum.photos/seed/mod4/600/400",
     aiHint: "advanced strategy",
+    difficulty: "Intermedio",
+    lessons: 6,
+    progress: 40,
+    color: "bg-yellow-500"
   },
   {
     id: "5",
@@ -56,6 +77,10 @@ export const modules = [
     icon: BrainCircuit,
     imageSrc: "https://picsum.photos/seed/mod5/600/400",
     aiHint: "artificial intelligence",
+    difficulty: "Intermedio",
+    lessons: 6,
+    progress: 55,
+    color: "bg-violet-500"
   },
   {
     id: "6",
@@ -64,6 +89,10 @@ export const modules = [
     icon: BookMarked,
     imageSrc: "https://picsum.photos/seed/mod6/600/400",
     aiHint: "information management",
+    difficulty: "Intermedio",
+    lessons: 4,
+    progress: 60,
+    color: "bg-emerald-500"
   },
   {
     id: "7",
@@ -72,6 +101,10 @@ export const modules = [
     icon: CheckSquare,
     imageSrc: "https://picsum.photos/seed/mod7/600/400",
     aiHint: "quality evaluation",
+    difficulty: "Avanzado",
+    lessons: 5,
+    progress: 70,
+    color: "bg-sky-500"
   },
   {
     id: "8",
@@ -80,6 +113,10 @@ export const modules = [
     icon: ShieldCheck,
     imageSrc: "https://picsum.photos/seed/mod8/600/400",
     aiHint: "ethics responsibility",
+    difficulty: "Avanzado",
+    lessons: 4,
+    progress: 75,
+    color: "bg-orange-500"
   },
   {
     id: "9",
@@ -88,51 +125,84 @@ export const modules = [
     icon: BookOpen,
     imageSrc: "https://picsum.photos/seed/mod9/600/400",
     aiHint: "practical research",
+    difficulty: "Avanzado",
+    lessons: 6,
+    progress: 90,
+    color: "bg-indigo-600"
   }
 ];
 
 export default function ModulosPage() {
   return (
     <div className="space-y-8">
-      <Card className="shadow-lg border-none bg-gradient-to-r from-primary/10 to-accent/10">
-        <CardHeader>
-          <CardTitle className="text-3xl font-headline">Ruta de Aprendizaje Académico</CardTitle>
-          <CardDescription className="text-lg">Explora los 9 módulos diseñados para potenciar tus competencias informacionales de manera integral.</CardDescription>
-        </CardHeader>
-      </Card>
+      <div className="flex items-center gap-4 mb-8">
+        <div className="bg-primary/10 p-3 rounded-2xl">
+          <BookOpenCheck className="h-8 w-8 text-primary" />
+        </div>
+        <div>
+          <h1 className="text-3xl font-headline">Módulos</h1>
+          <p className="text-muted-foreground">Aprende a tu ritmo con nuestra ruta de investigación académica.</p>
+        </div>
+      </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
         {modules.map((module) => (
-          <Card key={module.id} className="flex flex-col overflow-hidden hover:shadow-xl transition-all duration-300 border-t-4 border-t-primary">
-            <div className="relative h-40 w-full">
-              <Image
-                src={module.imageSrc}
-                alt={module.title}
-                fill
-                style={{ objectFit: 'cover' }}
-                data-ai-hint={module.aiHint}
-              />
-              <div className="absolute top-2 right-2">
-                <div className="bg-background/90 backdrop-blur-sm p-2 rounded-full shadow-sm">
-                  <module.icon className="h-5 w-5 text-primary" />
+          <Card key={module.id} className="flex flex-col overflow-hidden hover:shadow-2xl transition-all duration-500 border-none group rounded-[2rem] bg-white">
+            <div className="relative h-48 w-full p-4">
+              <div className="relative h-full w-full overflow-hidden rounded-3xl">
+                <Image
+                  src={module.imageSrc}
+                  alt={module.title}
+                  fill
+                  style={{ objectFit: 'cover' }}
+                  data-ai-hint={module.aiHint}
+                  className="group-hover:scale-110 transition-transform duration-700"
+                />
+                <div className="absolute inset-0 bg-black/5 group-hover:bg-black/0 transition-colors" />
+                
+                {/* Icon Float */}
+                <div className={`absolute top-3 left-3 ${module.color} p-2.5 rounded-2xl shadow-lg shadow-black/20 text-white`}>
+                  <module.icon className="h-5 w-5" />
+                </div>
+
+                {/* Difficulty Badge */}
+                <div className="absolute top-3 right-3">
+                  <Badge className={`${
+                    module.difficulty === 'Básico' ? 'bg-emerald-500' : 
+                    module.difficulty === 'Intermedio' ? 'bg-amber-500' : 'bg-blue-600'
+                  } border-none text-[10px] px-3 py-1 rounded-xl shadow-lg`}>
+                    {module.difficulty}
+                  </Badge>
                 </div>
               </div>
             </div>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-lg font-headline line-clamp-2">{module.title}</CardTitle>
+
+            <CardHeader className="pt-2 pb-0 px-6">
+              <CardTitle className="text-lg font-headline leading-tight line-clamp-2 min-h-[3rem]">
+                {module.title}
+              </CardTitle>
+              <CardDescription className="text-xs line-clamp-2 mt-2 leading-relaxed">
+                {module.objective}
+              </CardDescription>
             </CardHeader>
-            <CardContent className="flex-1">
-              <div className="space-y-2">
-                <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Objetivo:</p>
-                <p className="text-sm text-muted-foreground line-clamp-3 italic">
-                  "{module.objective}"
-                </p>
+
+            <CardContent className="px-6 pt-6 pb-4 space-y-4">
+              <div className="flex items-center justify-between text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                <div className="flex items-center gap-1.5">
+                  <Clock className="h-3.5 w-3.5" />
+                  {module.lessons} lecciones
+                </div>
+                <div className="flex items-center gap-1.5">
+                  {module.progress}%
+                </div>
               </div>
+              <Progress value={module.progress} className="h-1.5 bg-slate-100" />
             </CardContent>
-            <CardContent className="pt-0">
-              <Button asChild className="w-full bg-primary hover:bg-primary/90 text-primary-foreground">
-                <Link href={`/modulos/${module.id}`}>
-                  Comenzar Módulo <ArrowRight className="ml-2 h-4 w-4" />
+
+            <CardContent className="px-6 pb-6 pt-0 mt-auto">
+              <Button asChild className="w-full h-11 bg-primary hover:bg-primary/90 rounded-2xl shadow-lg shadow-primary/20 text-sm font-bold transition-all hover:translate-y-[-2px]">
+                <Link href={`/modulos/${module.id}`} className="flex items-center justify-center gap-2">
+                  Comenzar módulo <ArrowRight className="h-4 w-4" />
                 </Link>
               </Button>
             </CardContent>
