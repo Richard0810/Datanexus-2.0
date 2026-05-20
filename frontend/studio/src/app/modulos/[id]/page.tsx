@@ -413,17 +413,36 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
 
   const getEmbedUrl = (url: string) => {
     if (!url || !url.startsWith("http")) return "";
+
+    // YouTube
     if (url.includes("youtube.com") || url.includes("youtu.be")) {
       let videoId = "";
       if (url.includes("youtu.be/")) videoId = url.split("youtu.be/")[1].split("?")[0];
       else if (url.includes("v=")) videoId = url.split("v=")[1].split("&")[0];
       return videoId ? `https://www.youtube.com/embed/${videoId}` : url;
     }
+
+    // Gamma App
     if (url.includes("gamma.app/docs/")) return url.replace("gamma.app/docs/", "gamma.app/embed/");
+
+    // Google Slides (Presentaciones)
     if (url.includes("docs.google.com/presentation/d/")) {
       const match = url.match(/\/d\/(.+?)(\/|$)/);
       return match ? `https://docs.google.com/presentation/d/${match[1]}/embed` : url;
     }
+
+    // Google Drive Files (PDFs, Imágenes, etc.)
+    if (url.includes("drive.google.com/file/d/")) {
+      const match = url.match(/\/d\/(.+?)(\/|$)/);
+      return match ? `https://drive.google.com/file/d/${match[1]}/preview` : url;
+    }
+
+    // Google Docs (Documentos)
+    if (url.includes("docs.google.com/document/d/")) {
+      const match = url.match(/\/d\/(.+?)(\/|$)/);
+      return match ? `https://docs.google.com/document/d/${match[1]}/preview` : url;
+    }
+
     return url;
   };
 
@@ -526,7 +545,12 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                     <CardTitle className="text-2xl mb-2">{res.titulo}</CardTitle>
                     <CardDescription className="text-base mb-6">{res.descripcion}</CardDescription>
                     <div className="rounded-xl overflow-hidden border bg-black aspect-video w-full mb-4 shadow-inner">
-                      <iframe src={getEmbedUrl(res.url)} className="w-full h-full border-0" allowFullScreen />
+                      <iframe 
+                        src={getEmbedUrl(res.url)} 
+                        className="w-full h-full border-0" 
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                        allowFullScreen 
+                      />
                     </div>
                   </div>
                 </Card>
