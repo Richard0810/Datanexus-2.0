@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { 
   BookOpen, 
@@ -13,15 +14,17 @@ import {
   PlayCircle,
   ArrowRight,
   Clock,
-  BookOpenCheck
+  BookOpenCheck,
+  Loader2
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import api from "@/lib/api";
 
-export const modules = [
+export const initialModules = [
   {
     id: "1",
     title: "Módulo 1: Fundamentos de Bases de Datos e Investigación",
@@ -30,8 +33,6 @@ export const modules = [
     imageSrc: "https://picsum.photos/seed/mod1/600/400",
     aiHint: "database research",
     difficulty: "Básico",
-    lessons: 5,
-    progress: 0,
     color: "bg-blue-500"
   },
   {
@@ -42,8 +43,6 @@ export const modules = [
     imageSrc: "https://picsum.photos/seed/mod2/600/400",
     aiHint: "library portal",
     difficulty: "Básico",
-    lessons: 4,
-    progress: 15,
     color: "bg-green-500"
   },
   {
@@ -54,8 +53,6 @@ export const modules = [
     imageSrc: "https://picsum.photos/seed/mod3/600/400",
     aiHint: "web search",
     difficulty: "Básico",
-    lessons: 5,
-    progress: 30,
     color: "bg-purple-500"
   },
   {
@@ -66,8 +63,6 @@ export const modules = [
     imageSrc: "https://picsum.photos/seed/mod4/600/400",
     aiHint: "advanced strategy",
     difficulty: "Intermedio",
-    lessons: 6,
-    progress: 40,
     color: "bg-yellow-500"
   },
   {
@@ -78,8 +73,6 @@ export const modules = [
     imageSrc: "https://picsum.photos/seed/mod5/600/400",
     aiHint: "artificial intelligence",
     difficulty: "Intermedio",
-    lessons: 6,
-    progress: 55,
     color: "bg-violet-500"
   },
   {
@@ -90,8 +83,6 @@ export const modules = [
     imageSrc: "https://picsum.photos/seed/mod6/600/400",
     aiHint: "information management",
     difficulty: "Intermedio",
-    lessons: 4,
-    progress: 60,
     color: "bg-emerald-500"
   },
   {
@@ -102,8 +93,6 @@ export const modules = [
     imageSrc: "https://picsum.photos/seed/mod7/600/400",
     aiHint: "quality evaluation",
     difficulty: "Avanzado",
-    lessons: 5,
-    progress: 70,
     color: "bg-sky-500"
   },
   {
@@ -114,8 +103,6 @@ export const modules = [
     imageSrc: "https://picsum.photos/seed/mod8/600/400",
     aiHint: "ethics responsibility",
     difficulty: "Avanzado",
-    lessons: 4,
-    progress: 75,
     color: "bg-orange-500"
   },
   {
@@ -126,13 +113,57 @@ export const modules = [
     imageSrc: "https://picsum.photos/seed/mod9/600/400",
     aiHint: "practical research",
     difficulty: "Avanzado",
-    lessons: 6,
-    progress: 90,
     color: "bg-indigo-600"
   }
 ];
 
 export default function ModulosPage() {
+  const [lessonCounts, setLessonCounts] = useState<Record<string, number>>({});
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchCounts = async () => {
+      try {
+        setLoading(true);
+        // Obtenemos todos los recursos para contar por módulo
+        const [resResponse, actResponse, assResponse] = await Promise.all([
+          api.get("/educational-resources"),
+          api.get("/activities"),
+          api.get("/assessments")
+        ]);
+
+        const counts: Record<string, number> = {};
+
+        // Inicializar counts
+        initialModules.forEach(m => counts[m.id] = 0);
+
+        // Contar Recursos (usan "Módulo X" en el campo unidad)
+        resResponse.data.forEach((r: any) => {
+          const modId = r.unidad?.replace("Módulo ", "");
+          if (counts[modId] !== undefined) counts[modId]++;
+        });
+
+        // Contar Actividades (usan moduloId numérico)
+        actResponse.data.forEach((a: any) => {
+          if (counts[String(a.moduloId)] !== undefined) counts[String(a.moduloId)]++;
+        });
+
+        // Contar Evaluaciones (usan moduloId numérico)
+        assResponse.data.forEach((e: any) => {
+          if (counts[String(e.moduloId)] !== undefined) counts[String(e.moduloId)]++;
+        });
+
+        setLessonCounts(counts);
+      } catch (error) {
+        console.error("Error al obtener conteo de lecciones:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCounts();
+  }, []);
+
   return (
     <div className="space-y-8">
       <div className="flex items-center gap-4 mb-8">
@@ -140,13 +171,13 @@ export default function ModulosPage() {
           <BookOpenCheck className="h-8 w-8 text-primary" />
         </div>
         <div>
-          <h1 className="text-3xl font-headline">Módulos</h1>
-          <p className="text-muted-foreground">Aprende a tu ritmo con nuestra ruta de investigación académica.</p>
+          <h1 className="text-3xl font-headline">Módulos de Aprendizaje</h1>
+          <p className="text-muted-foreground">Explora nuestra ruta de formación y desarrolla tus habilidades investigativas.</p>
         </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-        {modules.map((module) => (
+        {initialModules.map((module) => (
           <Card key={module.id} className="flex flex-col overflow-hidden hover:shadow-2xl transition-all duration-500 border-none group rounded-[2rem] bg-white">
             <div className="relative h-48 w-full p-4">
               <div className="relative h-full w-full overflow-hidden rounded-3xl">
@@ -190,13 +221,17 @@ export default function ModulosPage() {
               <div className="flex items-center justify-between text-[11px] font-bold text-slate-500 uppercase tracking-wider">
                 <div className="flex items-center gap-1.5">
                   <Clock className="h-3.5 w-3.5" />
-                  {module.lessons} lecciones
+                  {loading ? (
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                  ) : (
+                    `${lessonCounts[module.id] || 0} lecciones`
+                  )}
                 </div>
-                <div className="flex items-center gap-1.5">
-                  {module.progress}%
+                <div className="flex items-center gap-1.5 text-primary">
+                  0% completado
                 </div>
               </div>
-              <Progress value={module.progress} className="h-1.5 bg-slate-100" />
+              <Progress value={0} className="h-1.5 bg-slate-100" />
             </CardContent>
 
             <CardContent className="px-6 pb-6 pt-0 mt-auto">

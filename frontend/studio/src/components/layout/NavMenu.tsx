@@ -12,7 +12,6 @@ import {
   UserCircle,
   DatabaseZap,
   Users,
-  Bell,
   type LucideIcon,
 } from 'lucide-react';
 import {
@@ -22,6 +21,7 @@ import {
 } from '@/components/ui/sidebar';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
+import { Avatar, AvatarFallback } from '../ui/avatar';
 
 interface NavItem {
   href: string;
@@ -52,6 +52,11 @@ export function NavMenu() {
     return true;
   });
 
+  const getInitials = (name: string | null | undefined) => {
+    if (!name) return 'U';
+    return name.split(' ').map((n) => n[0]).join('').substring(0, 2).toUpperCase();
+  }
+
   return (
     <div className="flex flex-col h-full">
       <SidebarMenu className="space-y-2">
@@ -79,12 +84,21 @@ export function NavMenu() {
         ))}
       </SidebarMenu>
 
+      {/* Sección inferior con nombre de usuario */}
       <div className="mt-auto pt-8 border-t border-white/10 px-2 pb-4">
-        <SidebarMenuButton className="text-slate-400 hover:text-white hover:bg-white/10 rounded-2xl h-12 px-4 flex items-center gap-3">
-          <div className="bg-destructive h-6 w-6 rounded-full flex items-center justify-center text-[10px] text-white font-bold">N</div>
-          <span className="font-medium">Notificaciones</span>
-          <span className="ml-auto bg-destructive text-white text-[10px] px-2 py-0.5 rounded-full font-bold">3</span>
-        </SidebarMenuButton>
+        {user && (
+          <div className="flex items-center gap-3 px-4 py-3 rounded-2xl bg-white/5 border border-white/5">
+            <Avatar className="h-9 w-9 border border-primary/20 rounded-xl">
+              <AvatarFallback className="rounded-xl bg-primary/20 text-primary text-xs font-bold">
+                {getInitials(user.name)}
+              </AvatarFallback>
+            </Avatar>
+            <div className="flex flex-col min-w-0">
+              <p className="text-sm font-bold text-white truncate">{user.name}</p>
+              <p className="text-[10px] text-slate-400 uppercase tracking-widest truncate">{user.role}</p>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
