@@ -33,7 +33,8 @@ import {
   History,
   MessageSquare,
   GraduationCap as GradeIcon,
-  Save
+  Save,
+  Link2
 } from "lucide-react";
 import Link from "next/link";
 import api from "@/lib/api";
@@ -287,7 +288,6 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
     }));
 
     const rawScore = autoGradableQuestions.length > 0 ? (correctCount / autoGradableQuestions.length) * 5 : 0;
-    // Aseguramos que no pase de 5 por seguridad lógica
     const finalScoreValue = Math.min(5, Math.max(0, rawScore));
 
     const finalScoreObj = { correct: correctCount, total: autoGradableQuestions.length };
@@ -325,7 +325,6 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
   const handleSaveGrade = async () => {
     if (!selectedSubmission) return;
     
-    // Condicional para que no pase de 5
     if (gradingForm.puntaje > 5) {
       toast({
         title: "Puntaje inválido",
@@ -346,7 +345,6 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
 
     setIsProcessing(true);
     try {
-      // Clamping final por seguridad
       const clampedScore = Math.min(5, Math.max(0, gradingForm.puntaje));
       
       await api.patch(`/performance-reports/${selectedSubmission._id}`, {
@@ -433,7 +431,6 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
     try {
       const parsed = JSON.parse(detail);
       
-      // Formato nuevo (Array de {pregunta, respuesta})
       if (Array.isArray(parsed)) {
         return (
           <div className="space-y-4">
@@ -447,7 +444,6 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
         );
       }
       
-      // Formato viejo (Objeto con IDs)
       if (typeof parsed === 'object' && parsed !== null) {
         return (
           <div className="space-y-4">
@@ -567,6 +563,13 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                 <CardContent className="flex-1 space-y-4">
                   <Separator />
                   <p className="text-sm"><strong>Criterios:</strong> {act.criterios_evaluacion}</p>
+                  {act.archivoUrl && (
+                    <Button asChild variant="outline" size="sm" className="w-full">
+                      <a href={act.archivoUrl} target="_blank" rel="noopener noreferrer">
+                        <Link2 className="mr-2 h-4 w-4" /> Ver Material Adjunto
+                      </a>
+                    </Button>
+                  )}
                 </CardContent>
                 <CardFooter>
                   {!isAdmin && <Button variant="default" className="w-full bg-accent hover:bg-accent/90" onClick={() => { setSelectedActivity(act); setIsSubmitActivityOpen(true); }}><Upload className="mr-2 h-4 w-4" /> Entregar Tarea</Button>}
@@ -768,6 +771,14 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
             <div className="grid gap-2"><Label>Título</Label><Input value={activityForm.titulo} onChange={e => setActivityForm({...activityForm, titulo: e.target.value})} /></div>
             <div className="grid gap-2"><Label>Instrucciones</Label><Textarea value={activityForm.descripcion} onChange={e => setActivityForm({...activityForm, descripcion: e.target.value})} rows={4}/></div>
             <div className="grid gap-2"><Label>Criterios de Evaluación</Label><Input value={activityForm.criterios_evaluacion} onChange={e => setActivityForm({...activityForm, criterios_evaluacion: e.target.value})} /></div>
+            <div className="grid gap-2">
+              <Label>URL del Material Adjunto (Opcional)</Label>
+              <Input 
+                placeholder="https://drive.google.com/..." 
+                value={activityForm.archivoUrl} 
+                onChange={e => setActivityForm({...activityForm, archivoUrl: e.target.value})} 
+              />
+            </div>
           </div>
           <DialogFooter><Button onClick={handleSaveActivity} disabled={isProcessing} className="w-full">Guardar Actividad</Button></DialogFooter>
         </DialogContent>
