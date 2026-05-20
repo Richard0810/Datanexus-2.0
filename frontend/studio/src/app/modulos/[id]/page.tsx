@@ -972,7 +972,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                   <SelectContent><SelectItem value="video">Video</SelectItem><SelectItem value="guia">Guía</SelectItem><SelectItem value="articulo">Artículo</SelectItem></SelectContent>
                 </Select>
               </div>
-              <div className="grid gap-2"><Label>Formato</Label><Input value={resourceForm.formato} onChange={e => setResourceForm({...resourceForm, formato: e.target.value})} /></div>
+              <div className="grid gap-2"><Label>Formato</Label><Input value={resourceForm.format} onChange={e => setResourceForm({...resourceForm, formato: e.target.value})} /></div>
             </div>
           </div>
           <DialogFooter><Button onClick={handleSaveResource} disabled={isProcessing} className="w-full">Guardar Recurso</Button></DialogFooter>

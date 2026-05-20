@@ -47,7 +47,8 @@ api.interceptors.response.use(
       data: error.response?.data
     };
     
-    console.error('Error en la llamada a la API:', errorInfo);
+    // Logueamos de forma más detallada para depuración
+    console.error('API Error:', `[${errorInfo.method}] ${errorInfo.url} - Status: ${errorInfo.status}`, errorInfo.data);
     return Promise.reject(error);
   }
 );

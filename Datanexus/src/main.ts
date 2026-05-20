@@ -2,9 +2,14 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
+import { json, urlencoded } from 'express';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+
+  // Aumentamos los límites para permitir subida de archivos Base64 en las actividades
+  app.use(json({ limit: '50mb' }));
+  app.use(urlencoded({ extended: true, limit: '50mb' }));
 
   // CORS configurado para permitir peticiones desde el frontend en Cloud Workstations
   app.enableCors({
