@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useState, use } from "react";
@@ -30,7 +31,9 @@ import {
   Video,
   ShieldCheck,
   History,
-  MessageSquare
+  MessageSquare,
+  GraduationCap as GradeIcon,
+  Save
 } from "lucide-react";
 import Link from "next/link";
 import api from "@/lib/api";
@@ -131,6 +134,7 @@ interface Submission {
   detalleEnvio: string;
   puntaje: number;
   estado: string;
+  recomendaciones?: string;
   createdAt: string;
   moduloId: string;
 }
@@ -139,7 +143,6 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
   const { id } = use(params);
   const { user } = useAuth();
   
-  // Normalizamos el chequeo de admin
   const userRole = user?.role?.trim().toLowerCase();
   const isAdmin = userRole === 'admin' || userRole === 'administrador';
   
@@ -159,7 +162,11 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
   const [isActivityDialogOpen, setIsActivityDialogOpen] = useState(false);
   const [isAssessmentDialogOpen, setIsAssessmentDialogOpen] = useState(false);
   const [isSubmitActivityOpen, setIsSubmitActivityOpen] = useState(false);
+  const [isGradingDialogOpen, setIsGradingDialogOpen] = useState(false);
+  
   const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
+  const [selectedSubmission, setSelectedSubmission] = useState<Submission | null>(null);
+  const [gradingForm, setGradingForm] = useState({ puntaje: 0, recomendaciones: "" });
   const [activitySubmissionText, setActivitySubmissionText] = useState("");
   
   const [editingResource, setEditingResource] = useState<Resource | null>(null);
@@ -203,7 +210,6 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
 
       if (isAdmin) {
         const subResponse = await api.get("/performance-reports");
-        // Filtramos asegurándonos que el moduloId coincida como string
         const filteredSubmissions = subResponse.data.filter((sub: any) => String(sub.moduloId) === String(id));
         setSubmissions(filteredSubmissions);
       }
@@ -279,9 +285,8 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
     setScore(finalScore);
     setShowFeedback(true);
 
-    // Guardar resultado siempre para seguimiento
     try {
-      const response = await api.post("/performance-reports", {
+      await api.post("/performance-reports", {
         usuarioNombre: user?.name || "Estudiante",
         usuarioEmail: user?.email,
         tipoEnvio: "evaluacion",
@@ -289,14 +294,40 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
         tituloContenido: assessmentForm.titulo,
         detalleEnvio: JSON.stringify(userAnswers),
         puntaje: autoGradableQuestions.length > 0 ? (correctCount / autoGradableQuestions.length) * 10 : 0,
-        estado: "completado"
+        estado: "enviado"
       });
-      console.log("Reporte guardado:", response.data);
       toast({ title: "Evaluación enviada", description: "Tus respuestas han sido registradas." });
       if (isAdmin) fetchData();
     } catch (e) {
       console.error("Error saving assessment result:", e);
       toast({ title: "Error al registrar", variant: "destructive" });
+    }
+  };
+
+  const handleOpenGrading = (sub: Submission) => {
+    setSelectedSubmission(sub);
+    setGradingForm({ 
+      puntaje: sub.puntaje || 0, 
+      recomendaciones: sub.recomendaciones || "" 
+    });
+    setIsGradingDialogOpen(true);
+  };
+
+  const handleSaveGrade = async () => {
+    if (!selectedSubmission) return;
+    setIsProcessing(true);
+    try {
+      await api.patch(`/performance-reports/${selectedSubmission._id}`, {
+        ...gradingForm,
+        estado: "calificado"
+      });
+      setIsGradingDialogOpen(false);
+      fetchData();
+      toast({ title: "Calificación guardada", description: "El estudiante podrá ver su nota pronto." });
+    } catch (error) {
+      toast({ title: "Error al calificar", variant: "destructive" });
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -363,6 +394,25 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
       return match ? `https://docs.google.com/presentation/d/${match[1]}/embed` : url;
     }
     return url;
+  };
+
+  const formatSubmissionDetail = (detail: string) => {
+    try {
+      const parsed = JSON.parse(detail);
+      if (typeof parsed === 'object' && parsed !== null) {
+        return (
+          <div className="space-y-4">
+            {Object.entries(parsed).map(([key, value], idx) => (
+              <div key={idx} className="p-3 bg-muted rounded-lg">
+                <p className="text-xs font-bold text-primary uppercase mb-1">Pregunta/ID: {key}</p>
+                <p className="text-sm">{String(value)}</p>
+              </div>
+            ))}
+          </div>
+        );
+      }
+    } catch (e) {}
+    return <div className="p-4 bg-muted rounded-lg text-sm whitespace-pre-wrap">{detail}</div>;
   };
 
   return (
@@ -506,27 +556,43 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                       <TableHead>Tipo</TableHead>
                       <TableHead>Contenido</TableHead>
                       <TableHead>Puntaje</TableHead>
-                      <TableHead>Fecha</TableHead>
+                      <TableHead>Estado</TableHead>
                       <TableHead className="text-right">Acción</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {submissions.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).map((sub) => (
                       <TableRow key={sub._id}>
-                        <TableCell className="font-medium">{sub.usuarioNombre}</TableCell>
+                        <TableCell className="font-medium">
+                          <div className="flex flex-col">
+                            <span>{sub.usuarioNombre}</span>
+                            <span className="text-[10px] text-muted-foreground">{sub.usuarioEmail}</span>
+                          </div>
+                        </TableCell>
                         <TableCell><Badge variant="outline">{sub.tipoEnvio.toUpperCase()}</Badge></TableCell>
-                        <TableCell>{sub.tituloContenido}</TableCell>
-                        <TableCell>{sub.puntaje !== undefined ? <Badge className={cn("px-2", sub.puntaje >= 7 ? "bg-green-100 text-green-700" : "bg-yellow-100 text-yellow-700")}>{sub.puntaje.toFixed(1)}/10</Badge> : "N/A"}</TableCell>
-                        <TableCell className="text-xs text-muted-foreground">{new Date(sub.createdAt).toLocaleDateString()}</TableCell>
+                        <TableCell className="max-w-[200px] truncate">{sub.tituloContenido}</TableCell>
+                        <TableCell>
+                          {sub.puntaje !== undefined ? (
+                             <Badge className={cn("px-2", sub.puntaje >= 7 ? "bg-green-100 text-green-700" : "bg-yellow-100 text-yellow-700")}>
+                               {Number(sub.puntaje).toFixed(1)}/10
+                             </Badge>
+                          ) : <span className="text-muted-foreground italic text-xs">Pendiente</span>}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={sub.estado === "calificado" ? "default" : "secondary"} className="text-[10px]">
+                            {sub.estado.toUpperCase()}
+                          </Badge>
+                        </TableCell>
                         <TableCell className="text-right">
-                          <Button variant="ghost" size="sm" onClick={() => {
-                            let detail = sub.detalleEnvio;
-                            try {
-                              const parsed = JSON.parse(detail);
-                              detail = Object.entries(parsed).map(([k, v]) => `Pregunta: ${k}\nRespuesta: ${v}`).join('\n\n');
-                            } catch(e) {}
-                            alert(`Envío de ${sub.usuarioNombre}:\n\n${detail}`);
-                          }}>Ver Detalle</Button>
+                          <Button 
+                            variant="secondary" 
+                            size="sm" 
+                            className="h-8"
+                            onClick={() => handleOpenGrading(sub)}
+                          >
+                            <GradeIcon className="mr-1 h-3 w-3" />
+                            {sub.estado === "calificado" ? "Revisar" : "Calificar"}
+                          </Button>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -541,7 +607,68 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
         )}
       </Tabs>
 
-      {/* Diálogos de Edición y Envío */}
+      {/* Diálogo de Calificación y Detalle */}
+      <Dialog open={isGradingDialogOpen} onOpenChange={setIsGradingDialogOpen}>
+        <DialogContent className="sm:max-w-[700px] max-h-[85vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <GradeIcon className="h-5 w-5 text-primary" />
+              Revisión de Entrega
+            </DialogTitle>
+            <DialogDescription>
+              Viendo el trabajo de <strong>{selectedSubmission?.usuarioNombre}</strong> para "{selectedSubmission?.tituloContenido}"
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex-1 overflow-y-auto pr-2 py-4 space-y-6">
+            <div className="space-y-2">
+              <Label className="text-xs uppercase text-muted-foreground">Contenido de la Entrega</Label>
+              {selectedSubmission && formatSubmissionDetail(selectedSubmission.detalleEnvio)}
+            </div>
+
+            <Separator />
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="md:col-span-1 space-y-3">
+                <Label htmlFor="puntaje" className="flex items-center gap-2">
+                  Puntaje (0-10)
+                  <Trophy className="h-3 w-3 text-yellow-500" />
+                </Label>
+                <Input 
+                  id="puntaje"
+                  type="number"
+                  min={0}
+                  max={10}
+                  step={0.1}
+                  value={gradingForm.puntaje}
+                  onChange={e => setGradingForm({...gradingForm, puntaje: Number(e.target.value)})}
+                />
+                <p className="text-[10px] text-muted-foreground">La nota se guarda con un decimal (ej: 8.5)</p>
+              </div>
+              <div className="md:col-span-2 space-y-3">
+                <Label htmlFor="recomendaciones">Recomendaciones y Retroalimentación</Label>
+                <Textarea 
+                  id="recomendaciones"
+                  placeholder="Escribe tus observaciones para el estudiante..."
+                  value={gradingForm.recomendaciones}
+                  onChange={e => setGradingForm({...gradingForm, recomendaciones: e.target.value})}
+                  rows={4}
+                />
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter className="mt-2">
+            <Button variant="outline" onClick={() => setIsGradingDialogOpen(false)}>Cancelar</Button>
+            <Button onClick={handleSaveGrade} disabled={isProcessing} className="bg-primary">
+              {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+              Guardar Calificación
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Otros Diálogos de Edición y Envío */}
       <Dialog open={isSubmitActivityOpen} onOpenChange={setIsSubmitActivityOpen}>
         <DialogContent>
           <DialogHeader><DialogTitle>Entregar: {selectedActivity?.titulo}</DialogTitle><DialogDescription>Pega el enlace de tu trabajo (Drive, Gamma, etc.) o escribe tu respuesta.</DialogDescription></DialogHeader>
