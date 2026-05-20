@@ -286,8 +286,12 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
       respuesta: userAnswers[q.id] || "(Sin respuesta)"
     }));
 
-    const finalScore = { correct: correctCount, total: autoGradableQuestions.length };
-    setScore(finalScore);
+    const rawScore = autoGradableQuestions.length > 0 ? (correctCount / autoGradableQuestions.length) * 5 : 0;
+    // Aseguramos que no pase de 5 por seguridad lógica
+    const finalScoreValue = Math.min(5, Math.max(0, rawScore));
+
+    const finalScoreObj = { correct: correctCount, total: autoGradableQuestions.length };
+    setScore(finalScoreObj);
     setShowFeedback(true);
 
     try {
@@ -298,7 +302,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
         moduloId: String(id),
         tituloContenido: assessmentForm.titulo,
         detalleEnvio: JSON.stringify(detailWithQuestions),
-        puntaje: autoGradableQuestions.length > 0 ? (correctCount / autoGradableQuestions.length) * 5 : 0,
+        puntaje: finalScoreValue,
         estado: "enviado"
       });
       toast({ title: "Evaluación enviada", description: "Tus respuestas han sido registradas." });
@@ -320,10 +324,34 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
 
   const handleSaveGrade = async () => {
     if (!selectedSubmission) return;
+    
+    // Condicional para que no pase de 5
+    if (gradingForm.puntaje > 5) {
+      toast({
+        title: "Puntaje inválido",
+        description: "La calificación máxima permitida es 5.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (gradingForm.puntaje < 0) {
+      toast({
+        title: "Puntaje inválido",
+        description: "La calificación mínima permitida es 0.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     setIsProcessing(true);
     try {
+      // Clamping final por seguridad
+      const clampedScore = Math.min(5, Math.max(0, gradingForm.puntaje));
+      
       await api.patch(`/performance-reports/${selectedSubmission._id}`, {
         ...gradingForm,
+        puntaje: clampedScore,
         estado: "calificado"
       });
       setIsGradingDialogOpen(false);
@@ -424,7 +452,6 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
         return (
           <div className="space-y-4">
             {Object.entries(parsed).map(([key, value], idx) => {
-              // Intentar buscar el texto de la pregunta en las evaluaciones del módulo para registros antiguos
               let questionLabel = key;
               for (const ass of assessments) {
                 const foundQuestion = ass.preguntas.find(q => q.id === key);
@@ -500,7 +527,6 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                       {res.tipo === "video" ? <Video className="h-4 w-4 text-red-500" /> : <FileText className="h-4 w-4 text-blue-500" />}
                       <Badge variant="outline" className="uppercase">{res.tipo}</Badge>
                     </div>
-                    <CardTitle className="text-2xl mb-2">{res.titulo}</CardTitle>
                     <CardTitle className="text-2xl mb-2">{res.titulo}</CardTitle>
                     <CardDescription className="text-base mb-6">{res.descripcion}</CardDescription>
                     <div className="rounded-xl overflow-hidden border bg-black aspect-video w-full mb-4 shadow-inner">
@@ -674,9 +700,12 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                   max={5}
                   step={0.1}
                   value={gradingForm.puntaje}
-                  onChange={e => setGradingForm({...gradingForm, puntaje: Number(e.target.value)})}
+                  onChange={e => {
+                    const val = Number(e.target.value);
+                    if (val <= 5) setGradingForm({...gradingForm, puntaje: val});
+                  }}
                 />
-                <p className="text-[10px] text-muted-foreground">La nota se guarda con un decimal (ej: 4.5)</p>
+                <p className="text-[10px] text-muted-foreground">La nota se guarda con un decimal (ej: 4.5). Máximo 5.</p>
               </div>
               <div className="md:col-span-2 space-y-3">
                 <Label htmlFor="recomendaciones">Recomendaciones y Retroalimentación</Label>
