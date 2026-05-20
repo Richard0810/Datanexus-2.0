@@ -71,7 +71,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/select";
+} from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -550,7 +550,9 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
           <div className="space-y-4">
             {parsed.map((item: any, idx) => (
               <div key={idx} className="p-3 bg-muted rounded-lg border-l-4 border-primary">
-                <p className="text-sm font-bold text-primary mb-1">{item.pregunta || `Pregunta ${idx + 1}`}</p>
+                <p className="text-sm font-bold text-primary mb-1">
+                  {item.pregunta || (editingAssessment?.preguntas.find(q => q.id === item.id)?.texto) || `Pregunta ${idx + 1}`}
+                </p>
                 <p className="text-sm">{String(item.respuesta)}</p>
               </div>
             ))}
