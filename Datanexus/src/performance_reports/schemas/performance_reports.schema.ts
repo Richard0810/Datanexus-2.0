@@ -6,9 +6,6 @@ export type PerformanceReportsDocument = HydratedDocument<PerformanceReports>;
 @Schema({ timestamps: true })
 export class PerformanceReports {
   @Prop()
-  id: string;
-
-  @Prop()
   usuarioNombre: string;
 
   @Prop()
@@ -33,7 +30,7 @@ export class PerformanceReports {
   recomendaciones: string;
 
   @Prop()
-  estado: string; // 'enviado' | 'calificado'
+  estado: string; // 'enviado' | 'calificado' | 'completado'
 }
 
 export const PerformanceReportsSchema = SchemaFactory.createForClass(PerformanceReports);

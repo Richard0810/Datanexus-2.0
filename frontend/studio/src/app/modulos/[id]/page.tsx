@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useState, use } from "react";
@@ -133,12 +132,16 @@ interface Submission {
   puntaje: number;
   estado: string;
   createdAt: string;
+  moduloId: string;
 }
 
 export default function ModuloDetallePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const { user } = useAuth();
-  const isAdmin = user?.role === 'admin' || user?.role === 'administrador';
+  
+  // Normalizamos el chequeo de admin
+  const userRole = user?.role?.trim().toLowerCase();
+  const isAdmin = userRole === 'admin' || userRole === 'administrador';
   
   const [resources, setResources] = useState<Resource[]>([]);
   const [activities, setActivities] = useState<Activity[]>([]);
@@ -195,12 +198,14 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
         api.get("/assessments")
       ]);
       setResources(resResponse.data.filter((res: any) => res.unidad === `Módulo ${id}`));
-      setActivities(actResponse.data.filter((act: any) => act.moduloId === id));
-      setAssessments(assResponse.data.filter((ass: any) => ass.moduloId === id));
+      setActivities(actResponse.data.filter((act: any) => String(act.moduloId) === String(id)));
+      setAssessments(assResponse.data.filter((ass: any) => String(ass.moduloId) === String(id)));
 
       if (isAdmin) {
         const subResponse = await api.get("/performance-reports");
-        setSubmissions(subResponse.data.filter((sub: any) => sub.moduloId === id));
+        // Filtramos asegurándonos que el moduloId coincida como string
+        const filteredSubmissions = subResponse.data.filter((sub: any) => String(sub.moduloId) === String(id));
+        setSubmissions(filteredSubmissions);
       }
     } catch (error) {
       console.error("Error fetching data:", error);
@@ -276,16 +281,17 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
 
     // Guardar resultado siempre para seguimiento
     try {
-      await api.post("/performance-reports", {
+      const response = await api.post("/performance-reports", {
         usuarioNombre: user?.name || "Estudiante",
         usuarioEmail: user?.email,
         tipoEnvio: "evaluacion",
-        moduloId: id,
+        moduloId: String(id),
         tituloContenido: assessmentForm.titulo,
         detalleEnvio: JSON.stringify(userAnswers),
         puntaje: autoGradableQuestions.length > 0 ? (correctCount / autoGradableQuestions.length) * 10 : 0,
         estado: "completado"
       });
+      console.log("Reporte guardado:", response.data);
       toast({ title: "Evaluación enviada", description: "Tus respuestas han sido registradas." });
       if (isAdmin) fetchData();
     } catch (e) {
@@ -517,7 +523,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                             let detail = sub.detalleEnvio;
                             try {
                               const parsed = JSON.parse(detail);
-                              detail = Object.entries(parsed).map(([k, v]) => `P:${k} -> R:${v}`).join('\n');
+                              detail = Object.entries(parsed).map(([k, v]) => `Pregunta: ${k}\nRespuesta: ${v}`).join('\n\n');
                             } catch(e) {}
                             alert(`Envío de ${sub.usuarioNombre}:\n\n${detail}`);
                           }}>Ver Detalle</Button>

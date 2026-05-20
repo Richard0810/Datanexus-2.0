@@ -59,11 +59,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             name: firebaseUser.displayName 
           });
           
+          // Normalizamos el rol: quitar espacios y pasar a minúsculas
+          const rawRole = response.data.rol || 'estudiante';
+          const normalizedRole = rawRole.trim().toLowerCase();
+
           setUser({
             uid: firebaseUser.uid,
             email: firebaseUser.email,
             name: response.data.nombre || firebaseUser.displayName || 'Usuario',
-            role: response.data.rol || 'estudiante',
+            role: normalizedRole,
           });
 
           if (['/', '/login', '/register'].includes(pathname)) {

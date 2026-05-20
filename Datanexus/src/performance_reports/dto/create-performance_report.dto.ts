@@ -19,9 +19,12 @@ export class CreatePerformanceReportDto {
   @ApiProperty()
   detalleEnvio: string;
 
-  @Prop()
+  @ApiProperty({ required: false })
   puntaje?: number;
 
-  @ApiProperty()
+  @ApiProperty({ required: false })
   estado?: string;
+
+  @ApiProperty({ required: false })
+  recomendaciones?: string;
 }
