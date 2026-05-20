@@ -25,8 +25,11 @@ export class AuthController {
     try {
       let user = await this.usersService.findOneByFirebaseUid(uid);
       
-      // Si es el admin principal pero no tiene el rol en la DB, lo forzamos
-      if (isMainAdmin && user.rol !== 'admin') {
+      // Normalizamos el rol de la base de datos para comparar
+      const currentRole = (user.rol || '').trim().toLowerCase();
+
+      // Si es el admin principal pero no tiene el rol 'admin' normalizado, lo forzamos
+      if (isMainAdmin && currentRole !== 'admin' && currentRole !== 'administrador') {
         const updatedUser = await this.usersService.update(user.id || (user as any)._id.toString(), { rol: 'admin' });
         return updatedUser || user;
       }

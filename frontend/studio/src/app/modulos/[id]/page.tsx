@@ -567,6 +567,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                       <Badge variant="outline" className="uppercase">{res.tipo}</Badge>
                     </div>
                     <CardTitle className="text-2xl mb-2">{res.titulo}</CardTitle>
+                    <CardTitle className="text-2xl mb-2">{res.titulo}</CardTitle>
                     <CardDescription className="text-base mb-6">{res.descripcion}</CardDescription>
                     <div className="rounded-xl overflow-hidden border bg-black aspect-video w-full mb-4 shadow-inner">
                       <iframe 

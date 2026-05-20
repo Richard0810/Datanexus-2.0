@@ -9,20 +9,17 @@ const getBackendUrl = () => {
     
     // Si estamos en una Cloud Workstation
     if (hostname.includes('cloudworkstations.dev')) {
-      // Reemplazamos el puerto del frontend (cualquiera que sea) por el 3001 del backend
-      // El patrón suele ser: puerto-studio-id.dominio
+      // Reemplazamos el puerto del frontend (9002) por el 3001 del backend
       const portPrefixMatch = hostname.match(/^(\d+)-/);
       if (portPrefixMatch) {
         const currentPort = portPrefixMatch[1];
         return `${protocol}//${hostname.replace(`${currentPort}-`, '3001-')}`;
       }
       
-      // Fallback: búsqueda y reemplazo directo de puertos comunes
       const fallbackHostname = hostname.replace('9002', '3001').replace('9000', '3001').replace('3000', '3001');
       return `${protocol}//${fallbackHostname}`;
     }
   }
-  // Localhost por defecto
   return 'http://localhost:3001';
 };
 
@@ -37,11 +34,16 @@ const api = axios.create({
 api.interceptors.response.use(
   (response) => response,
   (error) => {
+    // Si es un error de red (backend caído o CORS), evitamos JSON.stringify que puede fallar o devolver {}
+    if (!error.response) {
+      console.error('Error de red o servidor no disponible:', error.message);
+      return Promise.reject(error);
+    }
+
     const errorInfo = {
       url: error.config?.url,
-      message: error.message,
+      method: error.config?.method,
       status: error.response?.status,
-      baseURL: error.config?.baseURL,
       data: error.response?.data
     };
     
