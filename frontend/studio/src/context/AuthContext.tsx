@@ -59,7 +59,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             name: firebaseUser.displayName 
           });
           
-          // Normalizamos el rol: quitar espacios y pasar a minúsculas
           const rawRole = response.data.rol || 'estudiante';
           const normalizedRole = rawRole.trim().toLowerCase();
 
@@ -100,9 +99,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       provider.setCustomParameters({ prompt: 'select_account' });
       await signInWithPopup(auth, provider);
     } catch (error: any) {
+      if (error.code === 'auth/popup-blocked') {
+        throw new Error('La ventana emergente de inicio de sesión fue bloqueada por el navegador. Por favor, permite las ventanas emergentes para este sitio o intenta usar el inicio de sesión por correo electrónico.');
+      }
       if (error.code === 'auth/unauthorized-domain') {
         const domain = typeof window !== 'undefined' ? window.location.hostname : 'tu dominio';
-        throw new Error(`Dominio no autorizado. Por favor, añade "${domain}" a la lista de dominios autorizados en la Consola de Firebase (Authentication > Settings > Authorized domains).`);
+        throw new Error(`Dominio no autorizado. Por favor, añade "${domain}" a la lista de dominios autorizados en la Consola de Firebase.`);
       }
       console.error("Error al iniciar sesión con Google:", error);
       throw error;

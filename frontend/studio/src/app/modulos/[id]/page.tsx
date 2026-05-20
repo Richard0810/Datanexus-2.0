@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useState, use, useRef } from "react";
@@ -72,7 +71,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
+} from "@/components/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -224,7 +223,6 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
       setActivities(actResponse.data.filter((act: any) => String(act.moduloId) === String(id)));
       setAssessments(assResponse.data.filter((ass: any) => String(ass.moduloId) === String(id)));
 
-      // Filtrar reportes por módulo y usuario (o todos si es admin)
       const filteredSubmissions = subResponse.data.filter((sub: any) => 
         String(sub.moduloId) === String(id) && 
         (isAdmin || sub.usuarioEmail === user?.email)
@@ -306,7 +304,6 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
     setEditingSubmissionId(sub._id);
     setIsSubmitActivityOpen(true);
     
-    // Cargar contenido en el editor después de un breve delay para asegurar que el DOM esté listo
     setTimeout(() => {
         try {
             const parsed = JSON.parse(sub.detalleEnvio);
@@ -553,7 +550,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
           <div className="space-y-4">
             {parsed.map((item: any, idx) => (
               <div key={idx} className="p-3 bg-muted rounded-lg border-l-4 border-primary">
-                <p className="text-sm font-bold text-primary mb-1">{item.pregunta}</p>
+                <p className="text-sm font-bold text-primary mb-1">{item.pregunta || `Pregunta ${idx + 1}`}</p>
                 <p className="text-sm">{String(item.respuesta)}</p>
               </div>
             ))}
@@ -972,7 +969,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                   <SelectContent><SelectItem value="video">Video</SelectItem><SelectItem value="guia">Guía</SelectItem><SelectItem value="articulo">Artículo</SelectItem></SelectContent>
                 </Select>
               </div>
-              <div className="grid gap-2"><Label>Formato</Label><Input value={resourceForm.format} onChange={e => setResourceForm({...resourceForm, formato: e.target.value})} /></div>
+              <div className="grid gap-2"><Label>Formato</Label><Input value={resourceForm.formato} onChange={e => setResourceForm({...resourceForm, formato: e.target.value})} /></div>
             </div>
           </div>
           <DialogFooter><Button onClick={handleSaveResource} disabled={isProcessing} className="w-full">Guardar Recurso</Button></DialogFooter>
