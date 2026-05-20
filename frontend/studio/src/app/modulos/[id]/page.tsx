@@ -42,7 +42,8 @@ import {
   AlignCenter,
   AlignRight,
   Download,
-  FileUp
+  FileUp,
+  AlertCircle
 } from "lucide-react";
 import Link from "next/link";
 import api from "@/lib/api";
@@ -172,9 +173,11 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
   const [isAssessmentDialogOpen, setIsAssessmentDialogOpen] = useState(false);
   const [isSubmitActivityOpen, setIsSubmitActivityOpen] = useState(false);
   const [isGradingDialogOpen, setIsGradingDialogOpen] = useState(false);
+  const [isViewOwnSubmissionOpen, setIsViewOwnSubmissionOpen] = useState(false);
   
   const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
   const [selectedSubmission, setSelectedSubmission] = useState<Submission | null>(null);
+  const [editingSubmissionId, setEditingSubmissionId] = useState<string | null>(null);
   const [gradingForm, setGradingForm] = useState({ puntaje: 0, recomendaciones: "" });
   
   const editorRef = useRef<HTMLDivElement>(null);
@@ -210,20 +213,24 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [resResponse, actResponse, assResponse] = await Promise.all([
+      const [resResponse, actResponse, assResponse, subResponse] = await Promise.all([
         api.get("/educational-resources"),
         api.get("/activities"),
-        api.get("/assessments")
+        api.get("/assessments"),
+        api.get("/performance-reports")
       ]);
+      
       setResources(resResponse.data.filter((res: any) => res.unidad === `Módulo ${id}`));
       setActivities(actResponse.data.filter((act: any) => String(act.moduloId) === String(id)));
       setAssessments(assResponse.data.filter((ass: any) => String(ass.moduloId) === String(id)));
 
-      if (isAdmin) {
-        const subResponse = await api.get("/performance-reports");
-        const filteredSubmissions = subResponse.data.filter((sub: any) => String(sub.moduloId) === String(id));
-        setSubmissions(filteredSubmissions);
-      }
+      // Filtrar reportes por módulo y usuario (o todos si es admin)
+      const filteredSubmissions = subResponse.data.filter((sub: any) => 
+        String(sub.moduloId) === String(id) && 
+        (isAdmin || sub.usuarioEmail === user?.email)
+      );
+      setSubmissions(filteredSubmissions);
+      
     } catch (error) {
       console.error("Error fetching data:", error);
     } finally {
@@ -232,7 +239,9 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
   };
 
   useEffect(() => {
-    fetchData();
+    if (user) {
+        fetchData();
+    }
   }, [id, user]);
 
   const execCommand = (command: string, value?: string) => {
@@ -292,6 +301,38 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
     }
   };
 
+  const handleOpenEditSubmission = (sub: Submission, act: Activity) => {
+    setSelectedActivity(act);
+    setEditingSubmissionId(sub._id);
+    setIsSubmitActivityOpen(true);
+    
+    // Cargar contenido en el editor después de un breve delay para asegurar que el DOM esté listo
+    setTimeout(() => {
+        try {
+            const parsed = JSON.parse(sub.detalleEnvio);
+            if (editorRef.current) editorRef.current.innerHTML = parsed.text || "";
+            if (parsed.file) setAttachedFile(parsed.file);
+            else setAttachedFile(null);
+        } catch (e) {
+            console.error("Error al cargar entrega para editar", e);
+        }
+    }, 100);
+  };
+
+  const handleDeleteSubmission = async (subId: string) => {
+    if (!confirm("¿Estás seguro de que deseas eliminar tu entrega? Esta acción no se puede deshacer.")) return;
+    setIsProcessing(true);
+    try {
+        await api.delete(`/performance-reports/${subId}`);
+        toast({ title: "Entrega eliminada con éxito" });
+        fetchData();
+    } catch (error) {
+        toast({ title: "Error al eliminar la entrega", variant: "destructive" });
+    } finally {
+        setIsProcessing(false);
+    }
+  };
+
   const handleSubmitActivity = async () => {
     if (!selectedActivity) return;
     const richText = editorRef.current?.innerHTML || "";
@@ -307,7 +348,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
         file: attachedFile
       };
 
-      await api.post("/performance-reports", {
+      const payload = {
         usuarioNombre: user?.name || "Estudiante",
         usuarioEmail: user?.email,
         tipoEnvio: "actividad",
@@ -315,12 +356,21 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
         tituloContenido: selectedActivity.titulo,
         detalleEnvio: JSON.stringify(submissionData),
         estado: "enviado"
-      });
+      };
+
+      if (editingSubmissionId) {
+        await api.patch(`/performance-reports/${editingSubmissionId}`, payload);
+        toast({ title: "Entrega actualizada con éxito" });
+      } else {
+        await api.post("/performance-reports", payload);
+        toast({ title: "Actividad enviada con éxito" });
+      }
+
       setIsSubmitActivityOpen(false);
+      setEditingSubmissionId(null);
       setAttachedFile(null);
       if (editorRef.current) editorRef.current.innerHTML = "";
-      toast({ title: "Actividad enviada con éxito", description: "El docente revisará tu entrega pronto." });
-      if (isAdmin) fetchData();
+      fetchData();
     } catch (error) {
       toast({ title: "Error al enviar", variant: "destructive" });
     } finally {
@@ -359,7 +409,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
         estado: "enviado"
       });
       toast({ title: "Evaluación enviada", description: "Tus respuestas han sido registradas." });
-      if (isAdmin) fetchData();
+      fetchData();
     } catch (e) {
       console.error("Error saving assessment result:", e);
       toast({ title: "Error al registrar", variant: "destructive" });
@@ -593,37 +643,63 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
             )}
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {activities.map((act) => (
-              <Card key={act._id} className="flex flex-col shadow-sm border-t-4 border-t-accent/50 group">
-                <CardHeader>
-                  <div className="flex justify-between items-start">
-                    <Badge variant="secondary">{act.tipo.toUpperCase()}</Badge>
-                    {isAdmin && (
-                      <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setEditingActivity(act); setActivityForm(act); setIsActivityDialogOpen(true); }}><Pencil className="h-4 w-4" /></Button>
-                         <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={async () => { if(confirm('¿Seguro?')) { await api.delete(`/activities/${act._id}`); fetchData(); } }}><Trash2 className="h-4 w-4" /></Button>
+            {activities.map((act) => {
+              const userSub = submissions.find(s => s.tituloContenido === act.titulo && s.usuarioEmail === user?.email);
+              
+              return (
+                <Card key={act._id} className="flex flex-col shadow-sm border-t-4 border-t-accent/50 group">
+                  <CardHeader>
+                    <div className="flex justify-between items-start">
+                      <div className="flex gap-2">
+                        <Badge variant="secondary">{act.tipo.toUpperCase()}</Badge>
+                        {userSub && (
+                          <Badge variant="default" className={cn(userSub.estado === 'calificado' ? 'bg-green-500' : 'bg-blue-500')}>
+                            {userSub.estado === 'calificado' ? 'CALIFICADO' : 'ENTREGADO'}
+                          </Badge>
+                        )}
+                      </div>
+                      {isAdmin && (
+                        <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                           <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setEditingActivity(act); setActivityForm(act); setIsActivityDialogOpen(true); }}><Pencil className="h-4 w-4" /></Button>
+                           <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={async () => { if(confirm('¿Seguro?')) { await api.delete(`/activities/${act._id}`); fetchData(); } }}><Trash2 className="h-4 w-4" /></Button>
+                        </div>
+                      )}
+                    </div>
+                    <CardTitle className="mt-2">{act.titulo}</CardTitle>
+                    <CardDescription>{act.descripcion}</CardDescription>
+                  </CardHeader>
+                  <CardContent className="flex-1 space-y-4">
+                    <Separator />
+                    <p className="text-sm"><strong>Criterios:</strong> {act.criterios_evaluacion}</p>
+                    {act.archivoUrl && (
+                      <Button asChild variant="outline" size="sm" className="w-full">
+                        <a href={getEmbedUrl(act.archivoUrl)} target="_blank" rel="noopener noreferrer">
+                          <Link2 className="mr-2 h-4 w-4" /> Ver Material Adjunto
+                        </a>
+                      </Button>
+                    )}
+                  </CardContent>
+                  <CardFooter className="flex flex-col gap-2">
+                    {!isAdmin && !userSub && (
+                      <Button variant="default" className="w-full bg-accent hover:bg-accent/90" onClick={() => { setSelectedActivity(act); setEditingSubmissionId(null); setAttachedFile(null); setIsSubmitActivityOpen(true); }}><Upload className="mr-2 h-4 w-4" /> Entregar Tarea</Button>
+                    )}
+                    {!isAdmin && userSub && (
+                      <div className="grid grid-cols-3 gap-2 w-full">
+                        <Button variant="outline" size="sm" onClick={() => { setSelectedSubmission(userSub); setIsViewOwnSubmissionOpen(true); }}><Eye className="mr-2 h-4 w-4" /> Ver</Button>
+                        <Button variant="outline" size="sm" disabled={userSub.estado === 'calificado'} onClick={() => handleOpenEditSubmission(userSub, act)}><Pencil className="mr-2 h-4 w-4" /> Editar</Button>
+                        <Button variant="outline" size="sm" className="text-destructive" disabled={userSub.estado === 'calificado'} onClick={() => handleDeleteSubmission(userSub._id)}><Trash2 className="mr-2 h-4 w-4" /> Borrar</Button>
                       </div>
                     )}
-                  </div>
-                  <CardTitle className="mt-2">{act.titulo}</CardTitle>
-                  <CardDescription>{act.descripcion}</CardDescription>
-                </CardHeader>
-                <CardContent className="flex-1 space-y-4">
-                  <Separator />
-                  <p className="text-sm"><strong>Criterios:</strong> {act.criterios_evaluacion}</p>
-                  {act.archivoUrl && (
-                    <Button asChild variant="outline" size="sm" className="w-full">
-                      <a href={getEmbedUrl(act.archivoUrl)} target="_blank" rel="noopener noreferrer">
-                        <Link2 className="mr-2 h-4 w-4" /> Ver Material Adjunto
-                      </a>
-                    </Button>
-                  )}
-                </CardContent>
-                <CardFooter>
-                  {!isAdmin && <Button variant="default" className="w-full bg-accent hover:bg-accent/90" onClick={() => { setSelectedActivity(act); setIsSubmitActivityOpen(true); }}><Upload className="mr-2 h-4 w-4" /> Entregar Tarea</Button>}
-                </CardFooter>
-              </Card>
-            ))}
+                    {userSub?.recomendaciones && (
+                      <div className="w-full p-3 bg-muted rounded-lg border-l-4 border-primary mt-2">
+                        <p className="text-[10px] font-bold uppercase text-muted-foreground mb-1">Retroalimentación:</p>
+                        <p className="text-xs italic">"{userSub.recomendaciones}"</p>
+                      </div>
+                    )}
+                  </CardFooter>
+                </Card>
+              );
+            })}
           </div>
         </TabsContent>
 
@@ -633,22 +709,34 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
             {isAdmin && <Button onClick={() => { setEditingAssessment(null); setAssessmentForm({ titulo: "", descripcion: "", moduloId: id, preguntas: [] }); setViewMode('edit'); setIsAssessmentDialogOpen(true); }} size="sm"><PlusCircle className="mr-2 h-4 w-4" /> Crear Evaluación</Button>}
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {assessments.map((ass) => (
-              <Card key={ass._id} className="hover:border-primary transition-all cursor-pointer group shadow-md relative" onClick={() => { setEditingAssessment(ass); setAssessmentForm(ass); setViewMode(isAdmin ? 'edit' : 'preview'); handleResetPreview(); setIsAssessmentDialogOpen(true); }}>
-                {isAdmin && (
-                  <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">
-                    <Button variant="secondary" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); setEditingAssessment(ass); setAssessmentForm(ass); setViewMode('edit'); setIsAssessmentDialogOpen(true); }}><Pencil className="h-3 w-3" /></Button>
-                    <Button variant="secondary" size="icon" className="h-7 w-7 text-destructive" onClick={async (e) => { e.stopPropagation(); if(confirm('¿Seguro?')) { await api.delete(`/assessments/${ass._id}`); fetchData(); } }}><Trash2 className="h-3 w-3" /></Button>
-                  </div>
-                )}
-                <CardHeader>
-                  <CardTitle className="text-lg">{ass.titulo}</CardTitle>
-                  <CardDescription className="line-clamp-2">{ass.descripcion}</CardDescription>
-                </CardHeader>
-                <CardContent><div className="text-sm text-muted-foreground flex items-center gap-2"><HelpCircle className="h-4 w-4" /> {ass.preguntas.length} Preguntas</div></CardContent>
-                <CardFooter><Button className="w-full" variant="outline">Entrar</Button></CardFooter>
-              </Card>
-            ))}
+            {assessments.map((ass) => {
+              const userSub = submissions.find(s => s.tituloContenido === ass.titulo && s.usuarioEmail === user?.email);
+              
+              return (
+                <Card key={ass._id} className="hover:border-primary transition-all cursor-pointer group shadow-md relative" onClick={() => { setEditingAssessment(ass); setAssessmentForm(ass); setViewMode(isAdmin ? 'edit' : 'preview'); handleResetPreview(); setIsAssessmentDialogOpen(true); }}>
+                  {isAdmin && (
+                    <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                      <Button variant="secondary" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); setEditingAssessment(ass); setAssessmentForm(ass); setViewMode('edit'); setIsAssessmentDialogOpen(true); }}><Pencil className="h-3 w-3" /></Button>
+                      <Button variant="secondary" size="icon" className="h-7 w-7 text-destructive" onClick={async (e) => { e.stopPropagation(); if(confirm('¿Seguro?')) { await api.delete(`/assessments/${ass._id}`); fetchData(); } }}><Trash2 className="h-3 w-3" /></Button>
+                    </div>
+                  )}
+                  <CardHeader>
+                    <div className="flex justify-between items-center mb-1">
+                        <CardTitle className="text-lg">{ass.titulo}</CardTitle>
+                        {userSub && <Badge className="bg-green-500">Realizado</Badge>}
+                    </div>
+                    <CardDescription className="line-clamp-2">{ass.descripcion}</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-sm text-muted-foreground flex items-center gap-2 mb-2"><HelpCircle className="h-4 w-4" /> {ass.preguntas.length} Preguntas</div>
+                    {userSub && userSub.puntaje !== undefined && (
+                        <div className="text-xs font-bold text-primary">Calificación: {Number(userSub.puntaje).toFixed(1)}/5</div>
+                    )}
+                  </CardContent>
+                  <CardFooter><Button className="w-full" variant={userSub ? "secondary" : "default"}>{userSub ? "Ver Resultados" : "Entrar"}</Button></CardFooter>
+                </Card>
+              );
+            })}
           </div>
         </TabsContent>
 
@@ -768,11 +856,36 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
             </div>
           </div>
           <DialogFooter className="mt-2">
-            <Button variant="outline" onClick={() => setIsGradingDialogOpen(false)}>Cancelar</Button>
-            <Button onClick={handleSaveGrade} disabled={isProcessing} className="bg-primary">
-              {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-              Guardar Calificación
-            </Button>
+            <Button variant="outline" onClick={() => setIsGradingDialogOpen(false)}>Cerrar</Button>
+            {isAdmin && (
+                <Button onClick={handleSaveGrade} disabled={isProcessing} className="bg-primary">
+                    {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                    Guardar Calificación
+                </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isViewOwnSubmissionOpen} onOpenChange={setIsViewOwnSubmissionOpen}>
+        <DialogContent className="sm:max-w-[700px] max-h-[80vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle>Mi Entrega</DialogTitle>
+            <DialogDescription>Material enviado para "{selectedSubmission?.tituloContenido}"</DialogDescription>
+          </DialogHeader>
+          <div className="flex-1 overflow-y-auto py-4">
+            {selectedSubmission && formatSubmissionDetail(selectedSubmission.detalleEnvio)}
+            {selectedSubmission?.estado === 'calificado' && (
+                <div className="mt-6 p-4 bg-primary/10 rounded-xl border border-primary/20">
+                    <p className="font-bold text-primary mb-2 flex items-center gap-2"><Trophy className="h-4 w-4"/> Calificación: {selectedSubmission.puntaje}/5</p>
+                    {selectedSubmission.recomendaciones && (
+                        <p className="text-sm italic">"{selectedSubmission.recomendaciones}"</p>
+                    )}
+                </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsViewOwnSubmissionOpen(false)}>Cerrar</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -780,8 +893,10 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
       <Dialog open={isSubmitActivityOpen} onOpenChange={setIsSubmitActivityOpen}>
         <DialogContent className="sm:max-w-[800px] max-h-[90vh] flex flex-col">
           <DialogHeader>
-            <DialogTitle>Entrega: {selectedActivity?.titulo}</DialogTitle>
-            <DialogDescription>Completa tu respuesta y adjunta un archivo si es necesario.</DialogDescription>
+            <DialogTitle>{editingSubmissionId ? "Editar Entrega" : "Realizar Entrega"}: {selectedActivity?.titulo}</DialogTitle>
+            <DialogDescription>
+                {editingSubmissionId ? "Modifica tu respuesta anterior." : "Completa tu respuesta y adjunta un archivo si es necesario."}
+            </DialogDescription>
           </DialogHeader>
           <div className="flex-1 overflow-y-auto pr-2 py-4 space-y-6">
             <div className="space-y-3">
@@ -834,10 +949,10 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsSubmitActivityOpen(false)}>Cancelar</Button>
+            <Button variant="outline" onClick={() => { setIsSubmitActivityOpen(false); setEditingSubmissionId(null); }}>Cancelar</Button>
             <Button onClick={handleSubmitActivity} disabled={isProcessing} className="bg-primary px-8">
                 {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
-                Finalizar Entrega
+                {editingSubmissionId ? "Actualizar Entrega" : "Finalizar Entrega"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -997,7 +1112,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                   </div>
                 </div>
               ))}
-              {!showFeedback ? <Button className="w-full h-12 font-bold" onClick={handleGradeAssessment}>Finalizar y Enviar Evaluación</Button> : <Button variant="outline" className="w-full h-12" onClick={handleResetPreview}>Reintentar (Simulado)</Button>}
+              {!showFeedback ? <Button className="w-full h-12 font-bold" onClick={handleGradeAssessment}>Finalizar y Enviar Evaluación</Button> : <Button variant="outline" className="w-full h-12" onClick={handleResetPreview}>Cerrar</Button>}
             </div>
           )}
         </DialogContent>
