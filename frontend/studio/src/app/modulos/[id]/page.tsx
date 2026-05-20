@@ -177,7 +177,6 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
   const [selectedSubmission, setSelectedSubmission] = useState<Submission | null>(null);
   const [gradingForm, setGradingForm] = useState({ puntaje: 0, recomendaciones: "" });
   
-  // Submission Rich Text States
   const editorRef = useRef<HTMLDivElement>(null);
   const [attachedFile, setAttachedFile] = useState<{ name: string, data: string } | null>(null);
   
@@ -252,6 +251,44 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
         });
       };
       reader.readAsDataURL(file);
+    }
+  };
+
+  const handleSaveResource = async () => {
+    if (!resourceForm.titulo || !resourceForm.url) return;
+    setIsProcessing(true);
+    try {
+      if (editingResource?._id) {
+        await api.patch(`/educational-resources/${editingResource._id}`, resourceForm);
+      } else {
+        await api.post("/educational-resources", resourceForm);
+      }
+      setIsResourceDialogOpen(false);
+      fetchData();
+      toast({ title: "Recurso guardado" });
+    } catch (error) {
+      toast({ title: "Error al guardar el recurso", variant: "destructive" });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleSaveActivity = async () => {
+    if (!activityForm.titulo) return;
+    setIsProcessing(true);
+    try {
+      if (editingActivity?._id) {
+        await api.patch(`/activities/${editingActivity._id}`, activityForm);
+      } else {
+        await api.post("/activities", activityForm);
+      }
+      setIsActivityDialogOpen(false);
+      fetchData();
+      toast({ title: "Actividad guardada" });
+    } catch (error) {
+      toast({ title: "Error al guardar la actividad", variant: "destructive" });
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -340,9 +377,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
 
   const handleSaveGrade = async () => {
     if (!selectedSubmission) return;
-    
     const clampedScore = Math.min(5, Math.max(0, Number(gradingForm.puntaje) || 0));
-
     setIsProcessing(true);
     try {
       await api.patch(`/performance-reports/${selectedSubmission._id}`, {
@@ -376,6 +411,19 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
       opciones: ["Opción A", "Opción B"],
       respuestaCorrecta: ""
     });
+  };
+
+  const handleAddOption = () => {
+    setCurrentQuestion({
+      ...currentQuestion,
+      opciones: [...currentQuestion.opciones, `Opción ${currentQuestion.opciones.length + 1}`]
+    });
+  };
+
+  const handleRemoveOption = (index: number) => {
+    const newOpts = [...currentQuestion.opciones];
+    newOpts.splice(index, 1);
+    setCurrentQuestion({ ...currentQuestion, opciones: newOpts });
   };
 
   const handleSaveAssessment = async () => {
@@ -424,8 +472,6 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
   const formatSubmissionDetail = (detail: string) => {
     try {
       const parsed = JSON.parse(detail);
-      
-      // Actividad con Rich Text y Archivo
       if (parsed.text !== undefined) {
           return (
               <div className="space-y-6">
@@ -452,8 +498,6 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
               </div>
           );
       }
-
-      // Evaluación
       if (Array.isArray(parsed)) {
         return (
           <div className="space-y-4">
@@ -691,9 +735,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
               <Label className="text-xs uppercase text-muted-foreground">Contenido de la Entrega</Label>
               {selectedSubmission && formatSubmissionDetail(selectedSubmission.detalleEnvio)}
             </div>
-
             <Separator />
-
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="md:col-span-1 space-y-3">
                 <Label htmlFor="puntaje" className="flex items-center gap-2">
@@ -725,7 +767,6 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
               </div>
             </div>
           </div>
-
           <DialogFooter className="mt-2">
             <Button variant="outline" onClick={() => setIsGradingDialogOpen(false)}>Cancelar</Button>
             <Button onClick={handleSaveGrade} disabled={isProcessing} className="bg-primary">
@@ -742,9 +783,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
             <DialogTitle>Entrega: {selectedActivity?.titulo}</DialogTitle>
             <DialogDescription>Completa tu respuesta y adjunta un archivo si es necesario.</DialogDescription>
           </DialogHeader>
-          
           <div className="flex-1 overflow-y-auto pr-2 py-4 space-y-6">
-            {/* Rich Text Toolbar */}
             <div className="space-y-3">
                 <Label>Respuesta Escrita</Label>
                 <div className="border rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-primary/50 transition-all">
@@ -765,8 +804,6 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                     />
                 </div>
             </div>
-
-            {/* File Upload */}
             <div className="space-y-3">
                 <Label>Adjuntar Documento (PDF, Word, Imágenes)</Label>
                 <div className={cn(
@@ -796,7 +833,6 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                 </div>
             </div>
           </div>
-
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsSubmitActivityOpen(false)}>Cancelar</Button>
             <Button onClick={handleSubmitActivity} disabled={isProcessing} className="bg-primary px-8">
@@ -807,7 +843,6 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
         </DialogContent>
       </Dialog>
 
-      {/* Resource Dialog */}
       <Dialog open={isResourceDialogOpen} onOpenChange={setIsResourceDialogOpen}>
         <DialogContent className="sm:max-w-[600px]">
           <DialogHeader><DialogTitle>{editingResource ? "Editar" : "Nuevo"} Recurso</DialogTitle></DialogHeader>
@@ -829,7 +864,6 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
         </DialogContent>
       </Dialog>
 
-      {/* Activity Dialog */}
       <Dialog open={isActivityDialogOpen} onOpenChange={setIsActivityDialogOpen}>
         <DialogContent>
           <DialogHeader><DialogTitle>{editingActivity ? "Editar" : "Nueva"} Actividad</DialogTitle></DialogHeader>
@@ -839,11 +873,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
             <div className="grid gap-2"><Label>Criterios de Evaluación</Label><Input value={activityForm.criterios_evaluacion} onChange={e => setActivityForm({...activityForm, criterios_evaluacion: e.target.value})} /></div>
             <div className="grid gap-2">
               <Label>URL del Material Adjunto (Opcional)</Label>
-              <Input 
-                placeholder="https://drive.google.com/..." 
-                value={activityForm.archivoUrl} 
-                onChange={e => setActivityForm({...activityForm, archivoUrl: e.target.value})} 
-              />
+              <Input placeholder="https://drive.google.com/..." value={activityForm.archivoUrl} onChange={e => setActivityForm({...activityForm, archivoUrl: e.target.value})} />
             </div>
           </div>
           <DialogFooter><Button onClick={handleSaveActivity} disabled={isProcessing} className="w-full">Guardar Actividad</Button></DialogFooter>
@@ -910,7 +940,6 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                 )}
                 <Button variant="default" onClick={handleAddQuestion} className="w-full">Agregar Pregunta</Button>
               </div>
-
               {assessmentForm.preguntas.length > 0 && (
                 <div className="space-y-2">
                   <Label>Preguntas actualizadas ({assessmentForm.preguntas.length})</Label>
@@ -924,7 +953,6 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                   </div>
                 </div>
               )}
-
               <DialogFooter><Button onClick={handleSaveAssessment} disabled={isProcessing} className="w-full">Guardar Evaluación Completa</Button></DialogFooter>
             </div>
           ) : (
