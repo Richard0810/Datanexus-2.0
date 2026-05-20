@@ -298,7 +298,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
         moduloId: String(id),
         tituloContenido: assessmentForm.titulo,
         detalleEnvio: JSON.stringify(detailWithQuestions),
-        puntaje: autoGradableQuestions.length > 0 ? (correctCount / autoGradableQuestions.length) * 10 : 0,
+        puntaje: autoGradableQuestions.length > 0 ? (correctCount / autoGradableQuestions.length) * 5 : 0,
         estado: "enviado"
       });
       toast({ title: "Evaluación enviada", description: "Tus respuestas han sido registradas." });
@@ -501,6 +501,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                       <Badge variant="outline" className="uppercase">{res.tipo}</Badge>
                     </div>
                     <CardTitle className="text-2xl mb-2">{res.titulo}</CardTitle>
+                    <CardTitle className="text-2xl mb-2">{res.titulo}</CardTitle>
                     <CardDescription className="text-base mb-6">{res.descripcion}</CardDescription>
                     <div className="rounded-xl overflow-hidden border bg-black aspect-video w-full mb-4 shadow-inner">
                       <iframe src={getEmbedUrl(res.url)} className="w-full h-full border-0" allowFullScreen />
@@ -606,8 +607,8 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                         <TableCell className="max-w-[200px] truncate">{sub.tituloContenido}</TableCell>
                         <TableCell>
                           {sub.puntaje !== undefined ? (
-                             <Badge className={cn("px-2", sub.puntaje >= 7 ? "bg-green-100 text-green-700" : "bg-yellow-100 text-yellow-700")}>
-                               {Number(sub.puntaje).toFixed(1)}/10
+                             <Badge className={cn("px-2", sub.puntaje >= 3.5 ? "bg-green-100 text-green-700" : "bg-yellow-100 text-yellow-700")}>
+                               {Number(sub.puntaje).toFixed(1)}/5
                              </Badge>
                           ) : <span className="text-muted-foreground italic text-xs">Pendiente</span>}
                         </TableCell>
@@ -663,19 +664,19 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="md:col-span-1 space-y-3">
                 <Label htmlFor="puntaje" className="flex items-center gap-2">
-                  Puntaje (0-10)
+                  Puntaje (0-5)
                   <Trophy className="h-3 w-3 text-yellow-500" />
                 </Label>
                 <Input 
                   id="puntaje"
                   type="number"
                   min={0}
-                  max={10}
+                  max={5}
                   step={0.1}
                   value={gradingForm.puntaje}
                   onChange={e => setGradingForm({...gradingForm, puntaje: Number(e.target.value)})}
                 />
-                <p className="text-[10px] text-muted-foreground">La nota se guarda con un decimal (ej: 8.5)</p>
+                <p className="text-[10px] text-muted-foreground">La nota se guarda con un decimal (ej: 4.5)</p>
               </div>
               <div className="md:col-span-2 space-y-3">
                 <Label htmlFor="recomendaciones">Recomendaciones y Retroalimentación</Label>
