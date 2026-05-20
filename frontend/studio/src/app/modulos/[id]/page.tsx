@@ -281,7 +281,6 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
       if (userAnswers[q.id] === q.respuestaCorrecta) correctCount++;
     });
     
-    // Mapeamos las respuestas para incluir el texto de la pregunta para que el docente lo vea claro
     const detailWithQuestions = assessmentForm.preguntas.map(q => ({
       pregunta: q.texto,
       respuesta: userAnswers[q.id] || "(Sin respuesta)"
@@ -424,12 +423,24 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
       if (typeof parsed === 'object' && parsed !== null) {
         return (
           <div className="space-y-4">
-            {Object.entries(parsed).map(([key, value], idx) => (
-              <div key={idx} className="p-3 bg-muted rounded-lg border-l-4 border-primary/30">
-                <p className="text-[10px] font-bold text-primary uppercase mb-1">ID Pregunta: {key}</p>
-                <p className="text-sm">{String(value)}</p>
-              </div>
-            ))}
+            {Object.entries(parsed).map(([key, value], idx) => {
+              // Intentar buscar el texto de la pregunta en las evaluaciones del módulo para registros antiguos
+              let questionLabel = key;
+              for (const ass of assessments) {
+                const foundQuestion = ass.preguntas.find(q => q.id === key);
+                if (foundQuestion) {
+                  questionLabel = foundQuestion.texto;
+                  break;
+                }
+              }
+
+              return (
+                <div key={idx} className="p-3 bg-muted rounded-lg border-l-4 border-primary/40">
+                  <p className="text-sm font-bold text-primary mb-1">{questionLabel}</p>
+                  <p className="text-sm">{String(value)}</p>
+                </div>
+              );
+            })}
           </div>
         );
       }
@@ -629,7 +640,6 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
         )}
       </Tabs>
 
-      {/* Diálogo de Calificación y Detalle */}
       <Dialog open={isGradingDialogOpen} onOpenChange={setIsGradingDialogOpen}>
         <DialogContent className="sm:max-w-[700px] max-h-[85vh] overflow-hidden flex flex-col">
           <DialogHeader>
@@ -690,7 +700,6 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
         </DialogContent>
       </Dialog>
 
-      {/* Otros Diálogos de Edición y Envío */}
       <Dialog open={isSubmitActivityOpen} onOpenChange={setIsSubmitActivityOpen}>
         <DialogContent>
           <DialogHeader><DialogTitle>Entregar: {selectedActivity?.titulo}</DialogTitle><DialogDescription>Pega el enlace de tu trabajo (Drive, Gamma, etc.) o escribe tu respuesta.</DialogDescription></DialogHeader>
