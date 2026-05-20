@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useState, use } from "react";
@@ -254,6 +255,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
       setIsSubmitActivityOpen(false);
       setActivitySubmissionText("");
       toast({ title: "Actividad enviada con éxito", description: "El docente revisará tu entrega pronto." });
+      if (isAdmin) fetchData();
     } catch (error) {
       toast({ title: "Error al enviar", variant: "destructive" });
     } finally {
@@ -272,22 +274,23 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
     setScore(finalScore);
     setShowFeedback(true);
 
-    // Guardar resultado si no es admin probando
-    if (!isAdmin) {
-      try {
-        await api.post("/performance-reports", {
-          usuarioNombre: user?.name || "Estudiante",
-          usuarioEmail: user?.email,
-          tipoEnvio: "evaluacion",
-          moduloId: id,
-          tituloContenido: assessmentForm.titulo,
-          detalleEnvio: JSON.stringify(userAnswers),
-          puntaje: (correctCount / autoGradableQuestions.length) * 10,
-          estado: "completado"
-        });
-      } catch (e) {
-        console.error("Error saving assessment result:", e);
-      }
+    // Guardar resultado siempre para seguimiento
+    try {
+      await api.post("/performance-reports", {
+        usuarioNombre: user?.name || "Estudiante",
+        usuarioEmail: user?.email,
+        tipoEnvio: "evaluacion",
+        moduloId: id,
+        tituloContenido: assessmentForm.titulo,
+        detalleEnvio: JSON.stringify(userAnswers),
+        puntaje: autoGradableQuestions.length > 0 ? (correctCount / autoGradableQuestions.length) * 10 : 0,
+        estado: "completado"
+      });
+      toast({ title: "Evaluación enviada", description: "Tus respuestas han sido registradas." });
+      if (isAdmin) fetchData();
+    } catch (e) {
+      console.error("Error saving assessment result:", e);
+      toast({ title: "Error al registrar", variant: "destructive" });
     }
   };
 
@@ -383,7 +386,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
           <div className="flex justify-between items-center">
             <h2 className="text-xl font-headline">Materiales de Estudio</h2>
             {isAdmin && (
-              <Button onClick={() => { setEditingResource(null); setIsResourceDialogOpen(true); }} size="sm">
+              <Button onClick={() => { setEditingResource(null); setResourceForm({ titulo: "", descripcion: "", url: "", unidad: `Módulo ${id}`, tipo: "guia", formato: "URL" }); setIsResourceDialogOpen(true); }} size="sm">
                 <PlusCircle className="mr-2 h-4 w-4" /> Añadir Recurso
               </Button>
             )}
@@ -398,7 +401,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                         <DropdownMenuTrigger asChild><Button variant="secondary" size="icon" className="h-8 w-8 rounded-full shadow-md"><MoreVertical className="h-4 w-4" /></Button></DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem onClick={() => { setEditingResource(res); setResourceForm(res); setIsResourceDialogOpen(true); }}><Pencil className="mr-2 h-4 w-4" /> Editar</DropdownMenuItem>
-                          <DropdownMenuItem onClick={async () => { await api.delete(`/educational-resources/${res._id}`); fetchData(); }} className="text-destructive"><Trash2 className="mr-2 h-4 w-4" /> Eliminar</DropdownMenuItem>
+                          <DropdownMenuItem onClick={async () => { if(confirm('¿Seguro?')) { await api.delete(`/educational-resources/${res._id}`); fetchData(); } }} className="text-destructive"><Trash2 className="mr-2 h-4 w-4" /> Eliminar</DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </div>
@@ -424,7 +427,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
           <div className="flex justify-between items-center">
             <h2 className="text-xl font-headline">Actividades Prácticas</h2>
             {isAdmin && (
-              <Button onClick={() => { setEditingActivity(null); setIsActivityDialogOpen(true); }} size="sm" className="bg-accent hover:bg-accent/90">
+              <Button onClick={() => { setEditingActivity(null); setActivityForm({ titulo: "", descripcion: "", tipo: "individual", criterios_evaluacion: "", moduloId: id, archivoUrl: "" }); setIsActivityDialogOpen(true); }} size="sm" className="bg-accent hover:bg-accent/90">
                 <PlusCircle className="mr-2 h-4 w-4" /> Nueva Actividad
               </Button>
             )}
@@ -438,7 +441,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                     {isAdmin && (
                       <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setEditingActivity(act); setActivityForm(act); setIsActivityDialogOpen(true); }}><Pencil className="h-4 w-4" /></Button>
-                         <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={async () => { await api.delete(`/activities/${act._id}`); fetchData(); }}><Trash2 className="h-4 w-4" /></Button>
+                         <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={async () => { if(confirm('¿Seguro?')) { await api.delete(`/activities/${act._id}`); fetchData(); } }}><Trash2 className="h-4 w-4" /></Button>
                       </div>
                     )}
                   </div>
@@ -460,11 +463,17 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
         <TabsContent value="evaluaciones" className="space-y-6">
           <div className="flex justify-between items-center">
             <h2 className="text-xl font-headline">Evaluaciones</h2>
-            {isAdmin && <Button onClick={() => { setEditingAssessment(null); setViewMode('edit'); setIsAssessmentDialogOpen(true); }} size="sm"><PlusCircle className="mr-2 h-4 w-4" /> Crear Evaluación</Button>}
+            {isAdmin && <Button onClick={() => { setEditingAssessment(null); setAssessmentForm({ titulo: "", descripcion: "", moduloId: id, preguntas: [] }); setViewMode('edit'); setIsAssessmentDialogOpen(true); }} size="sm"><PlusCircle className="mr-2 h-4 w-4" /> Crear Evaluación</Button>}
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {assessments.map((ass) => (
-              <Card key={ass._id} className="hover:border-primary transition-all cursor-pointer group shadow-md" onClick={() => { setEditingAssessment(ass); setAssessmentForm(ass); setViewMode(isAdmin ? 'edit' : 'preview'); handleResetPreview(); setIsAssessmentDialogOpen(true); }}>
+              <Card key={ass._id} className="hover:border-primary transition-all cursor-pointer group shadow-md relative" onClick={() => { setEditingAssessment(ass); setAssessmentForm(ass); setViewMode(isAdmin ? 'edit' : 'preview'); handleResetPreview(); setIsAssessmentDialogOpen(true); }}>
+                {isAdmin && (
+                  <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                    <Button variant="secondary" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); setEditingAssessment(ass); setAssessmentForm(ass); setViewMode('edit'); setIsAssessmentDialogOpen(true); }}><Pencil className="h-3 w-3" /></Button>
+                    <Button variant="secondary" size="icon" className="h-7 w-7 text-destructive" onClick={async (e) => { e.stopPropagation(); if(confirm('¿Seguro?')) { await api.delete(`/assessments/${ass._id}`); fetchData(); } }}><Trash2 className="h-3 w-3" /></Button>
+                  </div>
+                )}
                 <CardHeader>
                   <CardTitle className="text-lg">{ass.titulo}</CardTitle>
                   <CardDescription className="line-clamp-2">{ass.descripcion}</CardDescription>
@@ -496,16 +505,21 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {submissions.map((sub) => (
+                    {submissions.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).map((sub) => (
                       <TableRow key={sub._id}>
                         <TableCell className="font-medium">{sub.usuarioNombre}</TableCell>
                         <TableCell><Badge variant="outline">{sub.tipoEnvio.toUpperCase()}</Badge></TableCell>
                         <TableCell>{sub.tituloContenido}</TableCell>
-                        <TableCell>{sub.puntaje !== undefined ? <Badge className="bg-green-100 text-green-700">{sub.puntaje}/10</Badge> : "N/A"}</TableCell>
+                        <TableCell>{sub.puntaje !== undefined ? <Badge className={cn("px-2", sub.puntaje >= 7 ? "bg-green-100 text-green-700" : "bg-yellow-100 text-yellow-700")}>{sub.puntaje.toFixed(1)}/10</Badge> : "N/A"}</TableCell>
                         <TableCell className="text-xs text-muted-foreground">{new Date(sub.createdAt).toLocaleDateString()}</TableCell>
                         <TableCell className="text-right">
                           <Button variant="ghost" size="sm" onClick={() => {
-                            toast({ title: "Detalle del envío", description: sub.detalleEnvio });
+                            let detail = sub.detalleEnvio;
+                            try {
+                              const parsed = JSON.parse(detail);
+                              detail = Object.entries(parsed).map(([k, v]) => `P:${k} -> R:${v}`).join('\n');
+                            } catch(e) {}
+                            alert(`Envío de ${sub.usuarioNombre}:\n\n${detail}`);
                           }}>Ver Detalle</Button>
                         </TableCell>
                       </TableRow>
@@ -614,9 +628,33 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                     <Button variant="outline" size="sm" onClick={handleAddOption} className="w-full">Agregar Opción</Button>
                   </div>
                 )}
+                {currentQuestion.tipo === 'verdadero-falso' && (
+                  <div className="space-y-3">
+                    <Label>Respuesta Correcta</Label>
+                    <RadioGroup value={currentQuestion.respuestaCorrecta} onValueChange={v => setCurrentQuestion({...currentQuestion, respuestaCorrecta: v})}>
+                      <div className="flex items-center gap-2"><RadioGroupItem value="Verdadero" /><Label>Verdadero</Label></div>
+                      <div className="flex items-center gap-2"><RadioGroupItem value="Falso" /><Label>Falso</Label></div>
+                    </RadioGroup>
+                  </div>
+                )}
                 <Button variant="default" onClick={handleAddQuestion} className="w-full">Agregar Pregunta</Button>
               </div>
-              <DialogFooter><Button onClick={handleSaveAssessment} disabled={isProcessing} className="w-full">Guardar Evaluación</Button></DialogFooter>
+
+              {assessmentForm.preguntas.length > 0 && (
+                <div className="space-y-2">
+                  <Label>Preguntas actualizadas ({assessmentForm.preguntas.length})</Label>
+                  <div className="space-y-2">
+                    {assessmentForm.preguntas.map((q, i) => (
+                      <div key={q.id} className="flex items-center justify-between p-2 border rounded text-sm">
+                        <span>{i+1}. {q.texto} ({q.tipo})</span>
+                        <Button variant="ghost" size="icon" onClick={() => setAssessmentForm({...assessmentForm, preguntas: assessmentForm.preguntas.filter(item => item.id !== q.id)})}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <DialogFooter><Button onClick={handleSaveAssessment} disabled={isProcessing} className="w-full">Guardar Evaluación Completa</Button></DialogFooter>
             </div>
           ) : (
             <div className="py-6 space-y-8">
@@ -644,14 +682,23 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                     {q.tipo === 'verdadero-falso' && (
                       <div className="flex gap-4">
                          {['Verdadero', 'Falso'].map(val => (
-                           <Button key={val} variant={userAnswers[q.id] === val ? 'default' : 'outline'} className="flex-1" onClick={() => !showFeedback && setUserAnswers({...userAnswers, [q.id]: val})} disabled={showFeedback}>{val}</Button>
+                           <Button key={val} variant={userAnswers[q.id] === val ? 'default' : 'outline'} className={cn("flex-1", showFeedback && q.respuestaCorrecta === val ? "bg-green-500 text-white" : showFeedback && userAnswers[q.id] === val ? "bg-red-500 text-white" : "")} onClick={() => !showFeedback && setUserAnswers({...userAnswers, [q.id]: val})} disabled={showFeedback}>{val}</Button>
                          ))}
                       </div>
+                    )}
+                    {q.tipo === 'escrita' && (
+                      <Textarea 
+                        placeholder="Escribe tu respuesta aquí..." 
+                        value={userAnswers[q.id] || ""} 
+                        onChange={e => !showFeedback && setUserAnswers({...userAnswers, [q.id]: e.target.value})}
+                        disabled={showFeedback}
+                        rows={4}
+                      />
                     )}
                   </div>
                 </div>
               ))}
-              {!showFeedback ? <Button className="w-full h-12 font-bold" onClick={handleGradeAssessment}>Finalizar Evaluación</Button> : <Button variant="outline" className="w-full h-12" onClick={handleResetPreview}>Reintentar</Button>}
+              {!showFeedback ? <Button className="w-full h-12 font-bold" onClick={handleGradeAssessment}>Finalizar y Enviar Evaluación</Button> : <Button variant="outline" className="w-full h-12" onClick={handleResetPreview}>Reintentar (Simulado)</Button>}
             </div>
           )}
         </DialogContent>
