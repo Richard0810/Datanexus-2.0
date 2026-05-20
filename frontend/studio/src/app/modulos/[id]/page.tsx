@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useEffect, useState, use } from "react";
+import { useEffect, useState, use, useRef } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { 
@@ -34,7 +34,15 @@ import {
   MessageSquare,
   GraduationCap as GradeIcon,
   Save,
-  Link2
+  Link2,
+  Bold,
+  Italic,
+  Underline,
+  AlignLeft,
+  AlignCenter,
+  AlignRight,
+  Download,
+  FileUp
 } from "lucide-react";
 import Link from "next/link";
 import api from "@/lib/api";
@@ -168,7 +176,10 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
   const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
   const [selectedSubmission, setSelectedSubmission] = useState<Submission | null>(null);
   const [gradingForm, setGradingForm] = useState({ puntaje: 0, recomendaciones: "" });
-  const [activitySubmissionText, setActivitySubmissionText] = useState("");
+  
+  // Submission Rich Text States
+  const editorRef = useRef<HTMLDivElement>(null);
+  const [attachedFile, setAttachedFile] = useState<{ name: string, data: string } | null>(null);
   
   const [editingResource, setEditingResource] = useState<Resource | null>(null);
   const [editingActivity, setEditingActivity] = useState<Activity | null>(null);
@@ -225,47 +236,52 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
     fetchData();
   }, [id, user]);
 
-  const handleSaveResource = async () => {
-    if (!resourceForm.titulo || !resourceForm.url) return;
-    setIsProcessing(true);
-    try {
-      if (editingResource?._id) await api.patch(`/educational-resources/${editingResource._id}`, resourceForm);
-      else await api.post("/educational-resources", resourceForm);
-      setIsResourceDialogOpen(false);
-      fetchData();
-      toast({ title: "Recurso guardado" });
-    } catch (error) { toast({ title: "Error", variant: "destructive" }); }
-    finally { setIsProcessing(false); }
+  const execCommand = (command: string, value?: string) => {
+    document.execCommand(command, false, value);
+    editorRef.current?.focus();
   };
 
-  const handleSaveActivity = async () => {
-    if (!activityForm.titulo) return;
-    setIsProcessing(true);
-    try {
-      if (editingActivity?._id) await api.patch(`/activities/${editingActivity._id}`, activityForm);
-      else await api.post("/activities", activityForm);
-      setIsActivityDialogOpen(false);
-      fetchData();
-      toast({ title: "Actividad guardada" });
-    } catch (error) { toast({ title: "Error", variant: "destructive" }); }
-    finally { setIsProcessing(false); }
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        setAttachedFile({
+          name: file.name,
+          data: event.target?.result as string
+        });
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   const handleSubmitActivity = async () => {
-    if (!selectedActivity || !activitySubmissionText) return;
+    if (!selectedActivity) return;
+    const richText = editorRef.current?.innerHTML || "";
+    if (!richText && !attachedFile) {
+        toast({ title: "Atención", description: "Debes escribir algo o adjuntar un archivo.", variant: "destructive" });
+        return;
+    }
+
     setIsProcessing(true);
     try {
+      const submissionData = {
+        text: richText,
+        file: attachedFile
+      };
+
       await api.post("/performance-reports", {
         usuarioNombre: user?.name || "Estudiante",
         usuarioEmail: user?.email,
         tipoEnvio: "actividad",
         moduloId: id,
         tituloContenido: selectedActivity.titulo,
-        detalleEnvio: activitySubmissionText,
+        detalleEnvio: JSON.stringify(submissionData),
         estado: "enviado"
       });
       setIsSubmitActivityOpen(false);
-      setActivitySubmissionText("");
+      setAttachedFile(null);
+      if (editorRef.current) editorRef.current.innerHTML = "";
       toast({ title: "Actividad enviada con éxito", description: "El docente revisará tu entrega pronto." });
       if (isAdmin) fetchData();
     } catch (error) {
@@ -325,28 +341,10 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
   const handleSaveGrade = async () => {
     if (!selectedSubmission) return;
     
-    if (gradingForm.puntaje > 5) {
-      toast({
-        title: "Puntaje inválido",
-        description: "La calificación máxima permitida es 5.",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    if (gradingForm.puntaje < 0) {
-      toast({
-        title: "Puntaje inválido",
-        description: "La calificación mínima permitida es 0.",
-        variant: "destructive"
-      });
-      return;
-    }
+    const clampedScore = Math.min(5, Math.max(0, Number(gradingForm.puntaje) || 0));
 
     setIsProcessing(true);
     try {
-      const clampedScore = Math.min(5, Math.max(0, gradingForm.puntaje));
-      
       await api.patch(`/performance-reports/${selectedSubmission._id}`, {
         ...gradingForm,
         puntaje: clampedScore,
@@ -354,7 +352,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
       });
       setIsGradingDialogOpen(false);
       fetchData();
-      toast({ title: "Calificación guardada", description: "El estudiante podrá ver su nota pronto." });
+      toast({ title: "Calificación guardada" });
     } catch (error) {
       toast({ title: "Error al calificar", variant: "destructive" });
     } finally {
@@ -364,7 +362,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
 
   const handleAddQuestion = () => {
     if (!currentQuestion.texto) {
-      toast({ title: "Atención", description: "Escribe el enunciado de la pregunta.", variant: "destructive" });
+      toast({ title: "Atención", description: "Escribe el enunciado.", variant: "destructive" });
       return;
     }
     setAssessmentForm({
@@ -378,18 +376,6 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
       opciones: ["Opción A", "Opción B"],
       respuestaCorrecta: ""
     });
-  };
-
-  const handleAddOption = () => {
-    setCurrentQuestion({
-      ...currentQuestion,
-      opciones: [...currentQuestion.opciones, `Opción ${String.fromCharCode(65 + currentQuestion.opciones.length)}`]
-    });
-  };
-
-  const handleRemoveOption = (index: number) => {
-    const newOptions = currentQuestion.opciones.filter((_, i) => i !== index);
-    setCurrentQuestion({ ...currentQuestion, opciones: newOptions });
   };
 
   const handleSaveAssessment = async () => {
@@ -413,36 +399,25 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
 
   const getEmbedUrl = (url: string) => {
     if (!url || !url.startsWith("http")) return "";
-
-    // YouTube
     if (url.includes("youtube.com") || url.includes("youtu.be")) {
       let videoId = "";
       if (url.includes("youtu.be/")) videoId = url.split("youtu.be/")[1].split("?")[0];
       else if (url.includes("v=")) videoId = url.split("v=")[1].split("&")[0];
       return videoId ? `https://www.youtube.com/embed/${videoId}` : url;
     }
-
-    // Gamma App
     if (url.includes("gamma.app/docs/")) return url.replace("gamma.app/docs/", "gamma.app/embed/");
-
-    // Google Slides (Presentaciones)
     if (url.includes("docs.google.com/presentation/d/")) {
       const match = url.match(/\/d\/(.+?)(\/|$)/);
       return match ? `https://docs.google.com/presentation/d/${match[1]}/embed` : url;
     }
-
-    // Google Drive Files (PDFs, Imágenes, etc.)
     if (url.includes("drive.google.com/file/d/")) {
       const match = url.match(/\/d\/(.+?)(\/|$)/);
       return match ? `https://drive.google.com/file/d/${match[1]}/preview` : url;
     }
-
-    // Google Docs (Documentos)
     if (url.includes("docs.google.com/document/d/")) {
       const match = url.match(/\/d\/(.+?)(\/|$)/);
       return match ? `https://docs.google.com/document/d/${match[1]}/preview` : url;
     }
-
     return url;
   };
 
@@ -450,6 +425,35 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
     try {
       const parsed = JSON.parse(detail);
       
+      // Actividad con Rich Text y Archivo
+      if (parsed.text !== undefined) {
+          return (
+              <div className="space-y-6">
+                  <div className="p-5 border rounded-xl bg-background shadow-sm">
+                      <p className="text-xs font-bold text-muted-foreground uppercase mb-4">Texto de la Entrega:</p>
+                      <div className="prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: parsed.text }} />
+                  </div>
+                  {parsed.file && (
+                      <div className="flex items-center justify-between p-4 bg-primary/5 border border-primary/20 rounded-xl">
+                          <div className="flex items-center gap-3">
+                              <FileText className="h-8 w-8 text-primary" />
+                              <div>
+                                  <p className="font-bold text-sm">{parsed.file.name}</p>
+                                  <p className="text-[10px] text-muted-foreground uppercase">Archivo Adjunto</p>
+                              </div>
+                          </div>
+                          <Button asChild variant="outline" size="sm">
+                              <a href={parsed.file.data} download={parsed.file.name}>
+                                  <Download className="mr-2 h-4 w-4" /> Descargar
+                              </a>
+                          </Button>
+                      </div>
+                  )}
+              </div>
+          );
+      }
+
+      // Evaluación
       if (Array.isArray(parsed)) {
         return (
           <div className="space-y-4">
@@ -459,30 +463,6 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                 <p className="text-sm">{String(item.respuesta)}</p>
               </div>
             ))}
-          </div>
-        );
-      }
-      
-      if (typeof parsed === 'object' && parsed !== null) {
-        return (
-          <div className="space-y-4">
-            {Object.entries(parsed).map(([key, value], idx) => {
-              let questionLabel = key;
-              for (const ass of assessments) {
-                const foundQuestion = ass.preguntas.find(q => q.id === key);
-                if (foundQuestion) {
-                  questionLabel = foundQuestion.texto;
-                  break;
-                }
-              }
-
-              return (
-                <div key={idx} className="p-3 bg-muted rounded-lg border-l-4 border-primary/40">
-                  <p className="text-sm font-bold text-primary mb-1">{questionLabel}</p>
-                  <p className="text-sm">{String(value)}</p>
-                </div>
-              );
-            })}
           </div>
         );
       }
@@ -589,7 +569,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                   <p className="text-sm"><strong>Criterios:</strong> {act.criterios_evaluacion}</p>
                   {act.archivoUrl && (
                     <Button asChild variant="outline" size="sm" className="w-full">
-                      <a href={act.archivoUrl} target="_blank" rel="noopener noreferrer">
+                      <a href={getEmbedUrl(act.archivoUrl)} target="_blank" rel="noopener noreferrer">
                         <Link2 className="mr-2 h-4 w-4" /> Ver Material Adjunto
                       </a>
                     </Button>
@@ -695,7 +675,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
       </Tabs>
 
       <Dialog open={isGradingDialogOpen} onOpenChange={setIsGradingDialogOpen}>
-        <DialogContent className="sm:max-w-[700px] max-h-[85vh] overflow-hidden flex flex-col">
+        <DialogContent className="sm:max-w-[800px] max-h-[85vh] overflow-hidden flex flex-col">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <GradeIcon className="h-5 w-5 text-primary" />
@@ -732,7 +712,6 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                     if (val <= 5) setGradingForm({...gradingForm, puntaje: val});
                   }}
                 />
-                <p className="text-[10px] text-muted-foreground">La nota se guarda con un decimal (ej: 4.5). Máximo 5.</p>
               </div>
               <div className="md:col-span-2 space-y-3">
                 <Label htmlFor="recomendaciones">Recomendaciones y Retroalimentación</Label>
@@ -758,15 +737,77 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
       </Dialog>
 
       <Dialog open={isSubmitActivityOpen} onOpenChange={setIsSubmitActivityOpen}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>Entregar: {selectedActivity?.titulo}</DialogTitle><DialogDescription>Pega el enlace de tu trabajo (Drive, Gamma, etc.) o escribe tu respuesta.</DialogDescription></DialogHeader>
-          <div className="py-4 space-y-4">
-            <Textarea placeholder="Escribe aquí tu respuesta o enlace..." value={activitySubmissionText} onChange={e => setActivitySubmissionText(e.target.value)} rows={6} />
+        <DialogContent className="sm:max-w-[800px] max-h-[90vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle>Entrega: {selectedActivity?.titulo}</DialogTitle>
+            <DialogDescription>Completa tu respuesta y adjunta un archivo si es necesario.</DialogDescription>
+          </DialogHeader>
+          
+          <div className="flex-1 overflow-y-auto pr-2 py-4 space-y-6">
+            {/* Rich Text Toolbar */}
+            <div className="space-y-3">
+                <Label>Respuesta Escrita</Label>
+                <div className="border rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-primary/50 transition-all">
+                    <div className="bg-muted p-1 border-b flex flex-wrap gap-1">
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => execCommand('bold')}><Bold className="h-4 w-4" /></Button>
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => execCommand('italic')}><Italic className="h-4 w-4" /></Button>
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => execCommand('underline')}><Underline className="h-4 w-4" /></Button>
+                        <Separator orientation="vertical" className="h-8 mx-1" />
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => execCommand('justifyLeft')}><AlignLeft className="h-4 w-4" /></Button>
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => execCommand('justifyCenter')}><AlignCenter className="h-4 w-4" /></Button>
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => execCommand('justifyRight')}><AlignRight className="h-4 w-4" /></Button>
+                    </div>
+                    <div 
+                        ref={editorRef}
+                        contentEditable
+                        className="p-4 min-h-[250px] bg-background outline-none prose prose-sm max-w-none"
+                        placeholder="Escribe tu entrega aquí..."
+                    />
+                </div>
+            </div>
+
+            {/* File Upload */}
+            <div className="space-y-3">
+                <Label>Adjuntar Documento (PDF, Word, Imágenes)</Label>
+                <div className={cn(
+                    "relative border-2 border-dashed rounded-xl p-6 transition-all",
+                    attachedFile ? "border-primary bg-primary/5" : "border-muted-foreground/20 hover:border-primary/50"
+                )}>
+                    <input 
+                        type="file" 
+                        onChange={handleFileChange}
+                        className="absolute inset-0 opacity-0 cursor-pointer"
+                    />
+                    <div className="flex flex-col items-center justify-center text-center">
+                        {attachedFile ? (
+                            <>
+                                <CheckCircle2 className="h-8 w-8 text-primary mb-2" />
+                                <p className="font-bold text-sm">{attachedFile.name}</p>
+                                <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); setAttachedFile(null); }} className="mt-2 text-destructive">Quitar archivo</Button>
+                            </>
+                        ) : (
+                            <>
+                                <FileUp className="h-8 w-8 text-muted-foreground mb-2" />
+                                <p className="text-sm font-medium">Arrastra o haz clic para subir un archivo</p>
+                                <p className="text-xs text-muted-foreground mt-1">Soportado: PDF, DOCX, JPG, PNG (Max 5MB)</p>
+                            </>
+                        )}
+                    </div>
+                </div>
+            </div>
           </div>
-          <DialogFooter><Button onClick={handleSubmitActivity} disabled={isProcessing} className="w-full">{isProcessing ? <Loader2 className="animate-spin" /> : "Enviar Entrega"}</Button></DialogFooter>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsSubmitActivityOpen(false)}>Cancelar</Button>
+            <Button onClick={handleSubmitActivity} disabled={isProcessing} className="bg-primary px-8">
+                {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
+                Finalizar Entrega
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
+      {/* Resource Dialog */}
       <Dialog open={isResourceDialogOpen} onOpenChange={setIsResourceDialogOpen}>
         <DialogContent className="sm:max-w-[600px]">
           <DialogHeader><DialogTitle>{editingResource ? "Editar" : "Nuevo"} Recurso</DialogTitle></DialogHeader>
@@ -788,6 +829,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
         </DialogContent>
       </Dialog>
 
+      {/* Activity Dialog */}
       <Dialog open={isActivityDialogOpen} onOpenChange={setIsActivityDialogOpen}>
         <DialogContent>
           <DialogHeader><DialogTitle>{editingActivity ? "Editar" : "Nueva"} Actividad</DialogTitle></DialogHeader>
