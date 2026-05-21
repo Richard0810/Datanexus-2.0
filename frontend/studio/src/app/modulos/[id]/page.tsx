@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useState, use, useRef } from "react";
@@ -494,13 +495,23 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
 
   const getEmbedUrl = (url: string) => {
     if (!url || !url.startsWith("http")) return "";
+    
+    // YouTube
     if (url.includes("youtube.com") || url.includes("youtu.be")) {
       let videoId = "";
       if (url.includes("youtu.be/")) videoId = url.split("youtu.be/")[1].split("?")[0];
       else if (url.includes("v=")) videoId = url.split("v=")[1].split("&")[0];
       return videoId ? `https://www.youtube.com/embed/${videoId}` : url;
     }
+    
+    // Gamma
     if (url.includes("gamma.app/docs/")) return url.replace("gamma.app/docs/", "gamma.app/embed/");
+    
+    // Prezi
+    if (url.includes("prezi.com/view/")) return url.replace("prezi.com/view/", "prezi.com/embed/");
+    if (url.includes("prezi.com/p/")) return url.replace("prezi.com/p/", "prezi.com/embed/");
+    
+    // Google Presentation/Drive
     if (url.includes("docs.google.com/presentation/d/")) {
       const match = url.match(/\/d\/(.+?)(\/|$)/);
       return match ? `https://docs.google.com/presentation/d/${match[1]}/embed` : url;
@@ -513,6 +524,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
       const match = url.match(/\/d\/(.+?)(\/|$)/);
       return match ? `https://docs.google.com/document/d/${match[1]}/preview` : url;
     }
+    
     return url;
   };
 
@@ -601,6 +613,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
             <div className="grid grid-cols-1 gap-8">
               {resources.map((res) => {
                 const isGamma = res.url.includes("gamma.app");
+                const isPrezi = res.url.includes("prezi.com");
                 
                 return (
                   <Card key={res._id} className="overflow-hidden group relative shadow-md">
@@ -628,6 +641,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                           </a>
                         </Button>
                       </div>
+                      <CardTitle className="text-2xl mb-2">{res.titulo}</CardTitle>
                       <CardTitle className="text-2xl mb-2">{res.titulo}</CardTitle>
                       <CardDescription className="text-base mb-6">{res.descripcion}</CardDescription>
                       
