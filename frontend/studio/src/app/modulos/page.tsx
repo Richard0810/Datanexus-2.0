@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
@@ -25,6 +26,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import api from "@/lib/api";
 import { useSearch } from "@/context/SearchContext";
+import placeholderImages from "../lib/placeholder-images.json";
 
 export const initialModules = [
   {
@@ -32,8 +34,8 @@ export const initialModules = [
     title: "Módulo 1: Fundamentos de Bases de Datos e Investigación",
     objective: "Comprender los conceptos básicos de bases de datos y su importancia en la investigación académica.",
     icon: Database,
-    imageSrc: "https://picsum.photos/seed/mod1/600/400",
-    aiHint: "database research",
+    imageSrc: placeholderImages.images.find(img => img.id === "mod1")?.url || "https://picsum.photos/seed/dn-mod1-db/600/400",
+    aiHint: "database technology",
     difficulty: "Básico",
     color: "bg-blue-500"
   },
@@ -42,8 +44,8 @@ export const initialModules = [
     title: "Módulo 2: Acceso e Identificación de Recursos",
     objective: "Aprender a acceder a las bases de datos institucionales.",
     icon: GraduationCap,
-    imageSrc: "https://picsum.photos/seed/mod2/600/400",
-    aiHint: "library portal",
+    imageSrc: placeholderImages.images.find(img => img.id === "mod2")?.url || "https://picsum.photos/seed/dn-mod2-lib/600/400",
+    aiHint: "digital library",
     difficulty: "Básico",
     color: "bg-green-500"
   },
@@ -52,8 +54,8 @@ export const initialModules = [
     title: "Módulo 3: Navegación y Búsqueda Básica",
     objective: "Realizar búsquedas simples en bases de datos.",
     icon: SearchIcon,
-    imageSrc: "https://picsum.photos/seed/mod3/600/400",
-    aiHint: "web search",
+    imageSrc: placeholderImages.images.find(img => img.id === "mod3")?.url || "https://picsum.photos/seed/dn-mod3-browser/600/400",
+    aiHint: "web browser",
     difficulty: "Básico",
     color: "bg-purple-500"
   },
@@ -62,8 +64,8 @@ export const initialModules = [
     title: "Módulo 4: Estrategias de Búsqueda Avanzada",
     objective: "Aplicar técnicas avanzadas para mejorar resultados de búsqueda.",
     icon: PlayCircle,
-    imageSrc: "https://picsum.photos/seed/mod4/600/400",
-    aiHint: "advanced strategy",
+    imageSrc: placeholderImages.images.find(img => img.id === "mod4")?.url || "https://picsum.photos/seed/dn-mod4-logic/600/400",
+    aiHint: "boolean logic",
     difficulty: "Intermedio",
     color: "bg-yellow-500"
   },
@@ -72,8 +74,8 @@ export const initialModules = [
     title: "Módulo 5: Inteligencia Artificial en la Búsqueda",
     objective: "Utilizar herramientas de IA para optimizar la búsqueda académica.",
     icon: BrainCircuit,
-    imageSrc: "https://picsum.photos/seed/mod5/600/400",
-    aiHint: "artificial intelligence",
+    imageSrc: placeholderImages.images.find(img => img.id === "mod5")?.url || "https://picsum.photos/seed/dn-mod5-ai/600/400",
+    aiHint: "ai robot",
     difficulty: "Intermedio",
     color: "bg-violet-500"
   },
@@ -82,8 +84,8 @@ export const initialModules = [
     title: "Módulo 6: Gestión de la Información",
     objective: "Organizar y almacenar información recuperada.",
     icon: BookMarked,
-    imageSrc: "https://picsum.photos/seed/mod6/600/400",
-    aiHint: "information management",
+    imageSrc: placeholderImages.images.find(img => img.id === "mod6")?.url || "https://picsum.photos/seed/dn-mod6-org/600/400",
+    aiHint: "data organization",
     difficulty: "Intermedio",
     color: "bg-emerald-500"
   },
@@ -92,8 +94,8 @@ export const initialModules = [
     title: "Módulo 7: Evaluación y Selección de Fuentes",
     objective: "Evaluar la calidad de la información académica.",
     icon: CheckSquare,
-    imageSrc: "https://picsum.photos/seed/mod7/600/400",
-    aiHint: "quality evaluation",
+    imageSrc: placeholderImages.images.find(img => img.id === "mod7")?.url || "https://picsum.photos/seed/dn-mod7-check/600/400",
+    aiHint: "source evaluation",
     difficulty: "Avanzado",
     color: "bg-sky-500"
   },
@@ -102,8 +104,8 @@ export const initialModules = [
     title: "Módulo 8: Ética y Uso Responsable de la Información",
     objective: "Aplicar principios éticos en el uso de información.",
     icon: ShieldCheck,
-    imageSrc: "https://picsum.photos/seed/mod8/600/400",
-    aiHint: "ethics responsibility",
+    imageSrc: placeholderImages.images.find(img => img.id === "mod8")?.url || "https://picsum.photos/seed/dn-mod8-law/600/400",
+    aiHint: "ethics law",
     difficulty: "Avanzado",
     color: "bg-orange-500"
   },
@@ -112,8 +114,8 @@ export const initialModules = [
     title: "Módulo 9: Aplicación Práctica en Investigación",
     objective: "Integrar todos los conocimientos en un ejercicio completo.",
     icon: BookOpen,
-    imageSrc: "https://picsum.photos/seed/mod9/600/400",
-    aiHint: "practical research",
+    imageSrc: placeholderImages.images.find(img => img.id === "mod9")?.url || "https://picsum.photos/seed/dn-mod9-grad/600/400",
+    aiHint: "academic research",
     difficulty: "Avanzado",
     color: "bg-indigo-600"
   }
