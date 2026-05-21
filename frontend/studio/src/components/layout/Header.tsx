@@ -19,6 +19,7 @@ import { useSearch } from '@/context/SearchContext';
 import { Avatar, AvatarFallback } from '../ui/avatar';
 import { useRouter, usePathname } from 'next/navigation';
 import { Input } from '../ui/input';
+import { cn } from '@/lib/utils';
 
 export function Header() {
   const { user, signOut } = useAuth();
@@ -44,7 +45,7 @@ export function Header() {
   };
 
   return (
-    <header className="sticky top-0 z-10 flex h-20 items-center gap-2 md:gap-4 border-b border-slate-100 bg-white/80 backdrop-blur-md px-4 md:px-8">
+    <header className="sticky top-0 z-10 flex h-20 items-center gap-2 md:gap-4 border-b border-slate-100 bg-white/80 backdrop-blur-md px-8 md:px-12">
       <SidebarTrigger className="md:hidden" />
       
       <div className="flex flex-1 items-center max-w-xs md:max-w-md relative group">
