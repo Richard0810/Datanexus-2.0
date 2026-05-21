@@ -611,9 +611,17 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                     </div>
                    )}
                   <div className="p-6">
-                    <div className="flex items-center gap-2 mb-3">
-                      {res.tipo === "video" ? <Video className="h-4 w-4 text-red-500" /> : <FileText className="h-4 w-4 text-blue-500" />}
-                      <Badge variant="outline" className="uppercase">{res.tipo}</Badge>
+                    <div className="flex items-center justify-between gap-4 mb-3">
+                      <div className="flex items-center gap-2">
+                        {res.tipo === "video" ? <Video className="h-4 w-4 text-red-500" /> : <FileText className="h-4 w-4 text-blue-500" />}
+                        <Badge variant="outline" className="uppercase">{res.tipo}</Badge>
+                      </div>
+                      <Button asChild variant="outline" size="sm" className="h-8">
+                        <a href={res.url} target="_blank" rel="noopener noreferrer">
+                          <ExternalLink className="mr-2 h-3 w-3" />
+                          Ver en ventana completa
+                        </a>
+                      </Button>
                     </div>
                     <CardTitle className="text-2xl mb-2">{res.titulo}</CardTitle>
                     <CardDescription className="text-base mb-6">{res.descripcion}</CardDescription>
@@ -829,7 +837,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                   Puntaje (0-5)
                   <Trophy className="h-3 w-3 text-yellow-500" />
                 </Label>
-                <Input 
+                <input 
                   id="puntaje"
                   type="number"
                   min={0}
@@ -840,6 +848,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                     const val = Number(e.target.value);
                     if (val <= 5) setGradingForm({...gradingForm, puntaje: val});
                   }}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                 />
               </div>
               <div className="md:col-span-2 space-y-3">
