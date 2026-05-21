@@ -62,7 +62,9 @@ export default function LoginPage() {
           <div className="flex justify-center mb-4">
             <LogoIcon className="h-12 w-12 text-primary" />
           </div>
-          <CardTitle className="text-2xl font-headline">Bienvenido a DataNexus</CardTitle>
+          <CardTitle className="text-2xl font-headline">
+            Bienvenido a <span className="text-slate-900">Data</span><span className="text-primary">nexus</span>
+          </CardTitle>
           <CardDescription>Inicia sesión para acceder a tu panel de aprendizaje</CardDescription>
         </CardHeader>
         <CardContent>
