@@ -49,42 +49,40 @@ export function Header() {
     }
   };
 
-  if (!mounted) {
-    return <header className="sticky top-0 z-10 flex h-20 items-center border-b border-slate-100 bg-white/80 backdrop-blur-md px-8 md:px-12"></header>;
-  }
-
   return (
-    <header className="sticky top-0 z-10 flex h-20 items-center gap-2 md:gap-4 border-b border-slate-100 bg-white/80 backdrop-blur-md px-8 md:px-12">
-      <SidebarTrigger className="md:hidden" />
-      
-      <div className="flex flex-1 items-center max-w-xs md:max-w-md relative group">
-        <Search className="absolute left-3 md:left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-primary transition-colors" />
-        <Input 
-          placeholder="Buscar módulo..." 
-          className="w-full pl-9 md:pl-11 pr-10 h-10 md:h-11 bg-slate-50 border-none rounded-2xl focus-visible:ring-primary/20 placeholder:text-slate-400 text-sm"
-          value={searchQuery}
-          onChange={handleSearchChange}
-        />
-        {searchQuery && (
-          <button 
-            onClick={() => setSearchQuery('')}
-            className="absolute right-3 md:right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        )}
+    <header className="sticky top-0 z-10 flex h-20 items-center justify-between gap-4 border-b border-slate-100 bg-white/80 backdrop-blur-md px-8 md:px-12 w-full">
+      <div className="flex items-center gap-4 flex-1">
+        <SidebarTrigger className="md:hidden" />
+        
+        <div className="flex-1 max-w-xs md:max-w-md relative group">
+          <Search className="absolute left-3 md:left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-primary transition-colors" />
+          <Input 
+            placeholder="Buscar módulo..." 
+            className="w-full pl-9 md:pl-11 pr-10 h-10 md:h-11 bg-slate-50 border-none rounded-2xl focus-visible:ring-primary/20 placeholder:text-slate-400 text-sm"
+            value={searchQuery}
+            onChange={handleSearchChange}
+          />
+          {searchQuery && (
+            <button 
+              onClick={() => setSearchQuery('')}
+              className="absolute right-3 md:right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
+        </div>
       </div>
 
-      <div className="flex items-center justify-end gap-1 md:gap-3 shrink-0">
+      <div className="flex items-center gap-1 md:gap-3 shrink-0">
         <Button variant="ghost" size="icon" className="hidden sm:flex rounded-2xl bg-slate-50 text-slate-500 relative h-9 w-9 md:h-10 md:w-10">
-          <Bell className="h-4 w-4 md:h-5 md:h-5" />
-          <span className="absolute top-2 right-2 h-2 w-2 bg-destructive border-2 border-white rounded-full"></span>
+          <Bell className="h-4 w-4 md:h-5" />
+          <span className="absolute top-2.5 right-2.5 h-2 w-2 bg-destructive border-2 border-white rounded-full"></span>
         </Button>
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon" className="hidden sm:flex rounded-2xl bg-slate-50 text-slate-500 h-9 w-9 md:h-10 md:w-10">
-              <Accessibility className="h-4 w-4 md:h-5 md:h-5" />
+              <Accessibility className="h-4 w-4 md:h-5" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="rounded-2xl">
@@ -103,7 +101,7 @@ export function Header() {
 
         <div className="h-8 w-[1px] bg-slate-100 mx-1 md:mx-2 hidden sm:block"></div>
 
-        {user && (
+        {mounted && user ? (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="relative flex items-center gap-2 md:gap-3 h-10 md:h-12 px-1 md:px-2 hover:bg-slate-50 rounded-2xl transition-all">
@@ -129,6 +127,8 @@ export function Header() {
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+        ) : (
+          <div className="h-10 w-10 md:h-12 md:w-32 bg-slate-50 animate-pulse rounded-2xl" />
         )}
       </div>
     </header>

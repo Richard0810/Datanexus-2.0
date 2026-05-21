@@ -1,24 +1,13 @@
 
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 
 interface LogoIconProps {
   className?: string;
 }
 
 const LogoIcon: React.FC<LogoIconProps> = ({ className }) => {
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  if (!mounted) {
-    // Marcador de posición con las mismas dimensiones para evitar saltos visuales e hidratación incorrecta
-    return <div className={className} />;
-  }
-
   return (
     <div className={className}>
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500" className="w-full h-full">

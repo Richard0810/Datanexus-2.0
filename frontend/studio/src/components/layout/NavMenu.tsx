@@ -1,6 +1,7 @@
 
 "use client";
 
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
@@ -47,9 +48,14 @@ const navItems: NavItem[] = [
 export function NavMenu() {
   const pathname = usePathname();
   const { user } = useAuth();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const filteredItems = navItems.filter(item => {
-    if (item.adminOnly && user?.role !== 'admin') return false;
+    if (item.adminOnly && (!mounted || user?.role !== 'admin')) return false;
     return true;
   });
 
@@ -86,10 +92,10 @@ export function NavMenu() {
       </SidebarMenu>
 
       <div className="mt-auto pt-8 border-t border-white/10 px-2 pb-4">
-        {user && (
+        {mounted && user ? (
           <div className="flex items-center gap-3 px-4 py-3 rounded-2xl bg-white/5 border border-white/5 shadow-inner">
             <Avatar className="h-10 w-10 border-2 border-primary/20 rounded-xl overflow-hidden">
-              <AvatarFallback className="rounded-xl bg-primary/20 text-primary text-xs font-bold">
+              <AvatarFallback className="rounded-xl bg-primary/10 text-primary text-xs font-bold">
                 {getInitials(user.name)}
               </AvatarFallback>
             </Avatar>
@@ -100,6 +106,8 @@ export function NavMenu() {
               </p>
             </div>
           </div>
+        ) : (
+          <div className="h-14 w-full bg-white/5 animate-pulse rounded-2xl" />
         )}
       </div>
     </div>

@@ -3,91 +3,91 @@
   "images": [
     {
       "id": "online-learning",
-      "url": "https://picsum.photos/seed/online1/600/400",
+      "url": "https://picsum.photos/seed/dn-online-edu/600/400",
       "width": 600,
       "height": 400,
       "aiHint": "online learning"
     },
     {
       "id": "study-guide",
-      "url": "https://picsum.photos/seed/guide1/600/400",
+      "url": "https://picsum.photos/seed/dn-study-res/600/400",
       "width": 600,
       "height": 400,
       "aiHint": "study guide"
     },
     {
       "id": "data-search",
-      "url": "https://picsum.photos/seed/search1/600/400",
+      "url": "https://picsum.photos/seed/dn-search-data/600/400",
       "width": 600,
       "height": 400,
       "aiHint": "data search"
     },
     {
       "id": "ai-ethics",
-      "url": "https://picsum.photos/seed/ethics1/600/400",
+      "url": "https://picsum.photos/seed/dn-ai-tech/600/400",
       "width": 600,
       "height": 400,
       "aiHint": "artificial intelligence"
     },
     {
       "id": "mod1",
-      "url": "https://picsum.photos/seed/mod1-db-tech/600/400",
+      "url": "https://picsum.photos/seed/dn-mod1-server/600/400",
       "width": 600,
       "height": 400,
       "aiHint": "database technology"
     },
     {
       "id": "mod2",
-      "url": "https://picsum.photos/seed/mod2-library/600/400",
+      "url": "https://picsum.photos/seed/dn-mod2-books/600/400",
       "width": 600,
       "height": 400,
       "aiHint": "digital library"
     },
     {
       "id": "mod3",
-      "url": "https://picsum.photos/seed/mod3-browser/600/400",
+      "url": "https://picsum.photos/seed/dn-mod3-web/600/400",
       "width": 600,
       "height": 400,
       "aiHint": "web browser"
     },
     {
       "id": "mod4",
-      "url": "https://picsum.photos/seed/mod4-boolean/600/400",
+      "url": "https://picsum.photos/seed/dn-mod4-logic/600/400",
       "width": 600,
       "height": 400,
       "aiHint": "boolean logic"
     },
     {
       "id": "mod5",
-      "url": "https://picsum.photos/seed/mod5-ai-robot/600/400",
+      "url": "https://picsum.photos/seed/dn-mod5-brain/600/400",
       "width": 600,
       "height": 400,
       "aiHint": "ai robot"
     },
     {
       "id": "mod6",
-      "url": "https://picsum.photos/seed/mod6-organization/600/400",
+      "url": "https://picsum.photos/seed/dn-mod6-files/600/400",
       "width": 600,
       "height": 400,
       "aiHint": "data organization"
     },
     {
       "id": "mod7",
-      "url": "https://picsum.photos/seed/mod7-check/600/400",
+      "url": "https://picsum.photos/seed/dn-mod7-magnify/600/400",
       "width": 600,
       "height": 400,
       "aiHint": "source evaluation"
     },
     {
       "id": "mod8",
-      "url": "https://picsum.photos/seed/mod8-ethics-law/600/400",
+      "url": "https://picsum.photos/seed/dn-mod8-balance/600/400",
       "width": 600,
       "height": 400,
       "aiHint": "ethics law"
     },
     {
       "id": "mod9",
-      "url": "https://picsum.photos/seed/mod9-graduation/600/400",
+      "url": "https://picsum.photos/seed/dn-mod9-cap/600/400",
       "width": 600,
       "height": 400,
       "aiHint": "academic research"
