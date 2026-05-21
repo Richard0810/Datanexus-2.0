@@ -57,15 +57,17 @@ export default function LoginPage() {
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-background p-4">
-      <Card className="w-full max-w-md shadow-xl">
+      <Card className="w-full max-w-md shadow-xl border-none">
         <CardHeader className="text-center">
-          <div className="flex justify-center mb-4">
-            <LogoIcon className="h-12 w-12 text-primary" />
+          <div className="flex justify-center mb-6">
+            <div className="bg-slate-50 p-4 rounded-3xl shadow-inner">
+              <LogoIcon className="h-16 w-16" />
+            </div>
           </div>
-          <CardTitle className="text-2xl font-headline">
-            Bienvenido a <span className="text-slate-900">Data</span><span className="text-primary">nexus</span>
+          <CardTitle className="text-3xl font-headline font-bold">
+            <span className="text-slate-900">Data</span><span className="text-primary">nexus</span>
           </CardTitle>
-          <CardDescription>Inicia sesión para acceder a tu panel de aprendizaje</CardDescription>
+          <CardDescription>Tu portal de investigación académica</CardDescription>
         </CardHeader>
         <CardContent>
           {error && (
@@ -89,6 +91,7 @@ export default function LoginPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 disabled={isLoggingIn || isGoogleLoading}
+                className="rounded-xl h-11"
               />
             </div>
             <div className="space-y-2">
@@ -100,26 +103,27 @@ export default function LoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 disabled={isLoggingIn || isGoogleLoading}
+                className="rounded-xl h-11"
               />
             </div>
-            <Button type="submit" className="w-full" disabled={isLoggingIn || isGoogleLoading}>
+            <Button type="submit" className="w-full h-11 rounded-xl font-bold bg-primary hover:bg-primary/90" disabled={isLoggingIn || isGoogleLoading}>
               {isLoggingIn ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
               Iniciar Sesión
             </Button>
           </form>
 
-          <div className="relative my-6">
+          <div className="relative my-8">
             <div className="absolute inset-0 flex items-center">
               <span className="w-full border-t" />
             </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-card px-2 text-muted-foreground">O continuar con</span>
+            <div className="relative flex justify-center text-[10px] uppercase tracking-widest font-bold">
+              <span className="bg-white px-4 text-muted-foreground">O continuar con</span>
             </div>
           </div>
 
           <Button 
             variant="outline" 
-            className="w-full" 
+            className="w-full h-11 rounded-xl border-slate-200" 
             onClick={handleGoogleLogin}
             disabled={isLoggingIn || isGoogleLoading}
           >
@@ -148,9 +152,9 @@ export default function LoginPage() {
             Google
           </Button>
 
-          <div className="mt-6 text-center text-sm">
+          <div className="mt-8 text-center text-sm text-slate-500">
             ¿No tienes una cuenta?{' '}
-            <Link href="/register" className="font-semibold text-primary hover:underline">
+            <Link href="/register" className="font-bold text-primary hover:underline">
               Regístrate gratis
             </Link>
           </div>
