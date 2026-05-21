@@ -18,7 +18,6 @@ import Link from 'next/link';
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
 
-  // Rutas que deben mostrarse sin el Sidebar ni el Header (pantalla completa)
   const isAuthRoute = pathname === '/login' || pathname === '/register';
 
   if (isAuthRoute) {
@@ -37,7 +36,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <SidebarHeader className="p-8">
           <Link href="/inicio" className="flex items-center gap-3 group">
             <div className="bg-primary/20 p-2 rounded-xl group-hover:scale-110 transition-transform">
-              <LogoIcon className="h-8 w-8 text-primary" />
+              <LogoIcon className="h-8 w-8" />
             </div>
             <span className="font-headline text-2xl font-bold tracking-tight">
               <span className="text-white">Data</span>

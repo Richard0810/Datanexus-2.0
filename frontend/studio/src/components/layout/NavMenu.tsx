@@ -84,18 +84,20 @@ export function NavMenu() {
         ))}
       </SidebarMenu>
 
-      {/* Sección inferior con nombre de usuario */}
+      {/* Sección inferior con nombre de usuario y rol */}
       <div className="mt-auto pt-8 border-t border-white/10 px-2 pb-4">
         {user && (
-          <div className="flex items-center gap-3 px-4 py-3 rounded-2xl bg-white/5 border border-white/5">
-            <Avatar className="h-9 w-9 border border-primary/20 rounded-xl">
+          <div className="flex items-center gap-3 px-4 py-3 rounded-2xl bg-white/5 border border-white/5 shadow-inner">
+            <Avatar className="h-10 w-10 border-2 border-primary/20 rounded-xl overflow-hidden">
               <AvatarFallback className="rounded-xl bg-primary/20 text-primary text-xs font-bold">
                 {getInitials(user.name)}
               </AvatarFallback>
             </Avatar>
             <div className="flex flex-col min-w-0">
-              <p className="text-sm font-bold text-white truncate">{user.name}</p>
-              <p className="text-[10px] text-slate-400 uppercase tracking-widest truncate">{user.role}</p>
+              <p className="text-sm font-bold text-white truncate leading-tight">{user.name || 'Usuario'}</p>
+              <p className="text-[10px] text-primary font-bold uppercase tracking-widest mt-0.5 truncate">
+                {user.role === 'admin' ? 'Administrador' : 'Estudiante'}
+              </p>
             </div>
           </div>
         )}

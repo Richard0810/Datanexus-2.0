@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
@@ -165,7 +164,6 @@ export default function ModulosPage() {
   const filteredModules = useMemo(() => {
     if (!searchQuery) return initialModules;
     
-    // Función para normalizar texto eliminando acentos y convirtiendo a minúsculas
     const normalize = (str: string) => 
       str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 
@@ -203,9 +201,9 @@ export default function ModulosPage() {
       {filteredModules.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {filteredModules.map((module) => (
-            <Card key={module.id} className="flex flex-col overflow-hidden hover:shadow-2xl transition-all duration-500 border-none group rounded-[2rem] bg-white">
-              <div className="relative h-48 w-full p-4">
-                <div className="relative h-full w-full overflow-hidden rounded-3xl">
+            <Card key={module.id} className="flex flex-col overflow-hidden hover:shadow-2xl transition-all duration-500 border-none group rounded-[2.5rem] bg-white shadow-xl shadow-slate-200/50">
+              <div className="relative h-56 w-full p-4">
+                <div className="relative h-full w-full overflow-hidden rounded-[2rem]">
                   <Image
                     src={module.imageSrc}
                     alt={module.title}
@@ -214,36 +212,36 @@ export default function ModulosPage() {
                     data-ai-hint={module.aiHint}
                     className="group-hover:scale-110 transition-transform duration-700"
                   />
-                  <div className="absolute inset-0 bg-black/5 group-hover:bg-black/0 transition-colors" />
+                  <div className="absolute inset-0 bg-black/10 group-hover:bg-black/0 transition-colors" />
                   
-                  <div className={`absolute top-3 left-3 ${module.color} p-2.5 rounded-2xl shadow-lg shadow-black/20 text-white`}>
-                    <module.icon className="h-5 w-5" />
+                  <div className={`absolute top-4 left-4 ${module.color} p-3 rounded-2xl shadow-lg shadow-black/20 text-white`}>
+                    <module.icon className="h-6 w-6" />
                   </div>
 
-                  <div className="absolute top-3 right-3">
+                  <div className="absolute top-4 right-4">
                     <Badge className={`${
                       module.difficulty === 'Básico' ? 'bg-emerald-500' : 
                       module.difficulty === 'Intermedio' ? 'bg-amber-500' : 'bg-blue-600'
-                    } border-none text-[10px] px-3 py-1 rounded-xl shadow-lg`}>
+                    } border-none text-[11px] font-bold px-4 py-1.5 rounded-2xl shadow-lg`}>
                       {module.difficulty}
                     </Badge>
                   </div>
                 </div>
               </div>
 
-              <CardHeader className="pt-2 pb-0 px-6">
-                <CardTitle className="text-lg font-headline leading-tight line-clamp-2 min-h-[3rem]">
+              <CardHeader className="pt-2 pb-0 px-8">
+                <CardTitle className="text-xl font-headline leading-tight line-clamp-2 min-h-[3.5rem]">
                   {module.title}
                 </CardTitle>
-                <CardDescription className="text-xs line-clamp-2 mt-2 leading-relaxed">
+                <CardDescription className="text-sm line-clamp-2 mt-2 leading-relaxed">
                   {module.objective}
                 </CardDescription>
               </CardHeader>
 
-              <CardContent className="px-6 pt-6 pb-4 space-y-4">
-                <div className="flex items-center justify-between text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-                  <div className="flex items-center gap-1.5">
-                    <Clock className="h-3.5 w-3.5" />
+              <CardContent className="px-8 pt-8 pb-4 space-y-4">
+                <div className="flex items-center justify-between text-[11px] font-bold text-slate-500 uppercase tracking-widest">
+                  <div className="flex items-center gap-2">
+                    <Clock className="h-4 w-4 text-primary" />
                     {loading ? (
                       <Loader2 className="h-3 w-3 animate-spin" />
                     ) : (
@@ -254,13 +252,13 @@ export default function ModulosPage() {
                     0% completado
                   </div>
                 </div>
-                <Progress value={0} className="h-1.5 bg-slate-100" />
+                <Progress value={0} className="h-2 bg-slate-100 rounded-full" />
               </CardContent>
 
-              <CardContent className="px-6 pb-6 pt-0 mt-auto">
-                <Button asChild className="w-full h-11 bg-primary hover:bg-primary/90 rounded-2xl shadow-lg shadow-primary/20 text-sm font-bold transition-all hover:translate-y-[-2px]">
+              <CardContent className="px-8 pb-8 pt-0 mt-auto">
+                <Button asChild className="w-full h-12 bg-primary hover:bg-primary/90 rounded-2xl shadow-lg shadow-primary/20 text-base font-bold transition-all hover:translate-y-[-2px]">
                   <Link href={`/modulos/${module.id}`} className="flex items-center justify-center gap-2">
-                    Comenzar módulo <ArrowRight className="h-4 w-4" />
+                    Comenzar módulo <ArrowRight className="h-5 w-5" />
                   </Link>
                 </Button>
               </CardContent>
@@ -268,11 +266,11 @@ export default function ModulosPage() {
           ))}
         </div>
       ) : (
-        <div className="flex flex-col items-center justify-center py-20 bg-white rounded-[2rem] shadow-sm border border-dashed">
-          <FileQuestion className="h-16 w-16 text-slate-300 mb-4" />
-          <h3 className="text-xl font-headline font-bold">No encontramos coincidencias</h3>
-          <p className="text-muted-foreground mt-1">Intenta con otros términos o números de módulo.</p>
-          <Button variant="outline" className="mt-6 rounded-xl" onClick={() => setSearchQuery('')}>
+        <div className="flex flex-col items-center justify-center py-24 bg-white rounded-[3rem] shadow-sm border border-dashed border-slate-200">
+          <FileQuestion className="h-20 w-20 text-slate-200 mb-6" />
+          <h3 className="text-2xl font-headline font-bold text-slate-800">No encontramos coincidencias</h3>
+          <p className="text-muted-foreground mt-2 text-lg">Intenta con otros términos o números de módulo.</p>
+          <Button variant="outline" className="mt-8 rounded-2xl px-8 h-12 text-base" onClick={() => setSearchQuery('')}>
             Ver todos los módulos
           </Button>
         </div>

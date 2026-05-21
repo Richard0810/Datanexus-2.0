@@ -57,21 +57,21 @@ export default function LoginPage() {
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-background p-4">
-      <Card className="w-full max-w-md shadow-xl border-none">
-        <CardHeader className="text-center">
+      <Card className="w-full max-w-md shadow-xl border-none overflow-hidden rounded-[2.5rem]">
+        <CardHeader className="text-center pt-10">
           <div className="flex justify-center mb-6">
-            <div className="bg-slate-50 p-4 rounded-3xl shadow-inner">
-              <LogoIcon className="h-16 w-16" />
+            <div className="bg-slate-50 p-6 rounded-[2rem] shadow-inner">
+              <LogoIcon className="h-20 w-20" />
             </div>
           </div>
-          <CardTitle className="text-3xl font-headline font-bold">
+          <CardTitle className="text-4xl font-headline font-bold">
             <span className="text-slate-900">Data</span><span className="text-primary">nexus</span>
           </CardTitle>
-          <CardDescription>Tu portal de investigación académica</CardDescription>
+          <CardDescription className="text-lg">Tu portal de investigación académica</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="px-8 pb-10">
           {error && (
-            <Alert variant="destructive" className="mb-6">
+            <Alert variant="destructive" className="mb-6 rounded-2xl">
               <AlertCircle className="h-4 w-4" />
               <AlertTitle>Atención</AlertTitle>
               <AlertDescription className="text-xs">
@@ -91,7 +91,7 @@ export default function LoginPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 disabled={isLoggingIn || isGoogleLoading}
-                className="rounded-xl h-11"
+                className="rounded-2xl h-12"
               />
             </div>
             <div className="space-y-2">
@@ -103,11 +103,11 @@ export default function LoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 disabled={isLoggingIn || isGoogleLoading}
-                className="rounded-xl h-11"
+                className="rounded-2xl h-12"
               />
             </div>
-            <Button type="submit" className="w-full h-11 rounded-xl font-bold bg-primary hover:bg-primary/90" disabled={isLoggingIn || isGoogleLoading}>
-              {isLoggingIn ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+            <Button type="submit" className="w-full h-12 rounded-2xl font-bold bg-primary hover:bg-primary/90 text-lg shadow-lg shadow-primary/20" disabled={isLoggingIn || isGoogleLoading}>
+              {isLoggingIn ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : null}
               Iniciar Sesión
             </Button>
           </form>
@@ -123,14 +123,14 @@ export default function LoginPage() {
 
           <Button 
             variant="outline" 
-            className="w-full h-11 rounded-xl border-slate-200" 
+            className="w-full h-12 rounded-2xl border-slate-200" 
             onClick={handleGoogleLogin}
             disabled={isLoggingIn || isGoogleLoading}
           >
             {isGoogleLoading ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              <Loader2 className="mr-2 h-5 w-5 animate-spin" />
             ) : (
-              <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
+              <svg className="mr-2 h-5 w-5" viewBox="0 0 24 24">
                 <path
                   d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
                   fill="#4285F4"
