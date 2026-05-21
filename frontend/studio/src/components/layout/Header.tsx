@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -48,7 +49,7 @@ export function Header() {
     }
   };
 
-  if (!mounted) return <header className="sticky top-0 z-10 flex h-20 border-b border-slate-100 bg-white/80 backdrop-blur-md px-8 md:px-12 w-full" />;
+  if (!mounted) return <header className="sticky top-0 z-10 flex h-20 items-center border-b border-slate-100 bg-white/80 backdrop-blur-md px-8 md:px-12 w-full" />;
 
   return (
     <header className="sticky top-0 z-10 flex h-20 items-center justify-between gap-4 border-b border-slate-100 bg-white/80 backdrop-blur-md px-8 md:px-12 w-full">

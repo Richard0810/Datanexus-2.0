@@ -583,7 +583,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-3xl font-headline">
-                <span className="text-slate-900">Data</span><span className="text-primary">nexus</span> | {moduleInfo.title}
+                <span className="text-slate-900 font-bold">Data</span><span className="text-primary font-bold">nexus</span> | {moduleInfo.title}
               </h1>
               {isAdmin && <Badge className="bg-primary/20 text-primary border-primary/30">Modo Docente</Badge>}
             </div>
@@ -613,7 +613,6 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
             <div className="grid grid-cols-1 gap-8">
               {resources.map((res) => {
                 const isGamma = res.url.includes("gamma.app");
-                const isPrezi = res.url.includes("prezi.com");
                 
                 return (
                   <Card key={res._id} className="overflow-hidden group relative shadow-md">
@@ -642,10 +641,8 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                         </Button>
                       </div>
                       <CardTitle className="text-2xl mb-2">{res.titulo}</CardTitle>
-                      <CardTitle className="text-2xl mb-2">{res.titulo}</CardTitle>
                       <CardDescription className="text-base mb-6">{res.descripcion}</CardDescription>
                       
-                      {/* Contenedor adaptativo: Especial para Gamma en móviles */}
                       <div className={cn(
                         "rounded-xl overflow-hidden border bg-black w-full mb-4 shadow-inner",
                         isGamma ? "aspect-[3/4] md:aspect-video" : "aspect-video"
@@ -838,7 +835,6 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
         )}
       </Tabs>
 
-      {/* DIÁLOGOS Y FORMULARIOS */}
       <Dialog open={isGradingDialogOpen} onOpenChange={setIsGradingDialogOpen}>
         <DialogContent className="sm:max-w-[800px] max-h-[85vh] overflow-hidden flex flex-col">
           <DialogHeader>
