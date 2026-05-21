@@ -570,7 +570,9 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
           <Button asChild variant="ghost" size="icon"><Link href="/modulos"><ArrowLeft className="h-5 w-5" /></Link></Button>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-3xl font-headline">{moduleInfo.title}</h1>
+              <h1 className="text-3xl font-headline">
+                <span className="text-slate-900">Data</span><span className="text-primary">nexus</span> | {moduleInfo.title}
+              </h1>
               {isAdmin && <Badge className="bg-primary/20 text-primary border-primary/30">Modo Docente</Badge>}
             </div>
             <p className="text-muted-foreground mt-1 flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-primary" />{moduleInfo.objective}</p>
@@ -597,45 +599,54 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
           </div>
           {loading ? <div className="py-20 flex justify-center"><Loader2 className="animate-spin" /></div> : resources.length > 0 ? (
             <div className="grid grid-cols-1 gap-8">
-              {resources.map((res) => (
-                <Card key={res._id} className="overflow-hidden group relative shadow-md">
-                   {isAdmin && (
-                     <div className="absolute top-4 right-4 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild><Button variant="secondary" size="icon" className="h-8 w-8 rounded-full shadow-md"><MoreVertical className="h-4 w-4" /></Button></DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => { setEditingResource(res); setResourceForm(res); setIsResourceDialogOpen(true); }}><Pencil className="mr-2 h-4 w-4" /> Editar</DropdownMenuItem>
-                          <DropdownMenuItem onClick={async () => { if(confirm('¿Seguro?')) { await api.delete(`/educational-resources/${res._id}`); fetchData(); } }} className="text-destructive"><Trash2 className="mr-2 h-4 w-4" /> Eliminar</DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-                   )}
-                  <div className="p-6">
-                    <div className="flex items-center justify-between gap-4 mb-3">
-                      <div className="flex items-center gap-2">
-                        {res.tipo === "video" ? <Video className="h-4 w-4 text-red-500" /> : <FileText className="h-4 w-4 text-blue-500" />}
-                        <Badge variant="outline" className="uppercase">{res.tipo}</Badge>
+              {resources.map((res) => {
+                const isGamma = res.url.includes("gamma.app");
+                
+                return (
+                  <Card key={res._id} className="overflow-hidden group relative shadow-md">
+                    {isAdmin && (
+                      <div className="absolute top-4 right-4 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild><Button variant="secondary" size="icon" className="h-8 w-8 rounded-full shadow-md"><MoreVertical className="h-4 w-4" /></Button></DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => { setEditingResource(res); setResourceForm(res); setIsResourceDialogOpen(true); }}><Pencil className="mr-2 h-4 w-4" /> Editar</DropdownMenuItem>
+                            <DropdownMenuItem onClick={async () => { if(confirm('¿Seguro?')) { await api.delete(`/educational-resources/${res._id}`); fetchData(); } }} className="text-destructive"><Trash2 className="mr-2 h-4 w-4" /> Eliminar</DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
-                      <Button asChild variant="outline" size="sm" className="h-8">
-                        <a href={res.url} target="_blank" rel="noopener noreferrer">
-                          <ExternalLink className="mr-2 h-3 w-3" />
-                          Ver en ventana completa
-                        </a>
-                      </Button>
+                    )}
+                    <div className="p-6">
+                      <div className="flex flex-wrap items-center justify-between gap-4 mb-3">
+                        <div className="flex items-center gap-2">
+                          {res.tipo === "video" ? <Video className="h-4 w-4 text-red-500" /> : <FileText className="h-4 w-4 text-blue-500" />}
+                          <Badge variant="outline" className="uppercase">{res.tipo}</Badge>
+                        </div>
+                        <Button asChild variant="default" size="sm" className="h-8 bg-slate-900 hover:bg-slate-800 text-white font-bold">
+                          <a href={res.url} target="_blank" rel="noopener noreferrer">
+                            <ExternalLink className="mr-2 h-3 w-3" />
+                            Ver en ventana completa
+                          </a>
+                        </Button>
+                      </div>
+                      <CardTitle className="text-2xl mb-2">{res.titulo}</CardTitle>
+                      <CardDescription className="text-base mb-6">{res.descripcion}</CardDescription>
+                      
+                      {/* Contenedor adaptativo: Especial para Gamma en móviles */}
+                      <div className={cn(
+                        "rounded-xl overflow-hidden border bg-black w-full mb-4 shadow-inner",
+                        isGamma ? "aspect-[3/4] md:aspect-video" : "aspect-video"
+                      )}>
+                        <iframe 
+                          src={getEmbedUrl(res.url)} 
+                          className="w-full h-full border-0" 
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen" 
+                          allowFullScreen 
+                        />
+                      </div>
                     </div>
-                    <CardTitle className="text-2xl mb-2">{res.titulo}</CardTitle>
-                    <CardDescription className="text-base mb-6">{res.descripcion}</CardDescription>
-                    <div className="rounded-xl overflow-hidden border bg-black aspect-video w-full mb-4 shadow-inner">
-                      <iframe 
-                        src={getEmbedUrl(res.url)} 
-                        className="w-full h-full border-0" 
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
-                        allowFullScreen 
-                      />
-                    </div>
-                  </div>
-                </Card>
-              ))}
+                  </Card>
+                );
+              })}
             </div>
           ) : <p className="text-center py-10 text-muted-foreground italic">No hay recursos disponibles.</p>}
         </TabsContent>
@@ -813,6 +824,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
         )}
       </Tabs>
 
+      {/* DIÁLOGOS Y FORMULARIOS */}
       <Dialog open={isGradingDialogOpen} onOpenChange={setIsGradingDialogOpen}>
         <DialogContent className="sm:max-w-[800px] max-h-[85vh] overflow-hidden flex flex-col">
           <DialogHeader>
