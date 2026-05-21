@@ -123,7 +123,7 @@ export const initialModules = [
 export default function ModulosPage() {
   const [lessonCounts, setLessonCounts] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
-  const { searchQuery } = useSearch();
+  const { searchQuery, setSearchQuery } = useSearch();
 
   useEffect(() => {
     const fetchCounts = async () => {
@@ -165,12 +165,23 @@ export default function ModulosPage() {
   const filteredModules = useMemo(() => {
     if (!searchQuery) return initialModules;
     
-    const query = searchQuery.toLowerCase().trim();
-    return initialModules.filter(module => 
-      module.title.toLowerCase().includes(query) || 
-      module.id.includes(query) ||
-      module.objective.toLowerCase().includes(query)
-    );
+    // Función para normalizar texto eliminando acentos y convirtiendo a minúsculas
+    const normalize = (str: string) => 
+      str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+
+    const normalizedQuery = normalize(searchQuery);
+    
+    return initialModules.filter(module => {
+      const normalizedTitle = normalize(module.title);
+      const normalizedObjective = normalize(module.objective);
+      const normalizedId = normalize(module.id);
+      
+      return (
+        normalizedTitle.includes(normalizedQuery) || 
+        normalizedId.includes(normalizedQuery) ||
+        normalizedObjective.includes(normalizedQuery)
+      );
+    });
   }, [searchQuery]);
 
   return (
@@ -261,7 +272,7 @@ export default function ModulosPage() {
           <FileQuestion className="h-16 w-16 text-slate-300 mb-4" />
           <h3 className="text-xl font-headline font-bold">No encontramos coincidencias</h3>
           <p className="text-muted-foreground mt-1">Intenta con otros términos o números de módulo.</p>
-          <Button variant="outline" className="mt-6 rounded-xl" onClick={() => useSearch().setSearchQuery('')}>
+          <Button variant="outline" className="mt-6 rounded-xl" onClick={() => setSearchQuery('')}>
             Ver todos los módulos
           </Button>
         </div>
