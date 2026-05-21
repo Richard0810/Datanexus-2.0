@@ -1,6 +1,7 @@
 
 "use client";
 
+import { useState, useEffect } from 'react';
 import {
   SidebarTrigger,
 } from '@/components/ui/sidebar';
@@ -19,13 +20,17 @@ import { useSearch } from '@/context/SearchContext';
 import { Avatar, AvatarFallback } from '../ui/avatar';
 import { useRouter, usePathname } from 'next/navigation';
 import { Input } from '../ui/input';
-import { cn } from '@/lib/utils';
 
 export function Header() {
   const { user, signOut } = useAuth();
   const { searchQuery, setSearchQuery } = useSearch();
   const router = useRouter();
   const pathname = usePathname();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const handleLogout = async () => {
     await signOut();
@@ -43,6 +48,10 @@ export function Header() {
       router.push('/modulos');
     }
   };
+
+  if (!mounted) {
+    return <header className="sticky top-0 z-10 flex h-20 items-center border-b border-slate-100 bg-white/80 backdrop-blur-md px-8 md:px-12"></header>;
+  }
 
   return (
     <header className="sticky top-0 z-10 flex h-20 items-center gap-2 md:gap-4 border-b border-slate-100 bg-white/80 backdrop-blur-md px-8 md:px-12">
