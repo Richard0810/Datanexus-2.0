@@ -5,6 +5,7 @@ import './globals.css';
 import { AppShell } from '@/components/layout/AppShell';
 import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from '@/context/AuthContext';
+import { SearchProvider } from '@/context/SearchContext';
 
 const ptSans = PT_Sans({
   subsets: ['latin'],
@@ -30,13 +31,12 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="es" className={`${ptSans.variable} ${spaceGrotesk.variable}`}>
-      <head>
-        {/* Keep existing Google Font links if any, or rely on next/font */}
-      </head>
       <body className="font-body">
         <AuthProvider>
-          <AppShell>{children}</AppShell>
-          <Toaster />
+          <SearchProvider>
+            <AppShell>{children}</AppShell>
+            <Toaster />
+          </SearchProvider>
         </AuthProvider>
       </body>
     </html>

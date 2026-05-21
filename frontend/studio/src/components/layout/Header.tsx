@@ -1,3 +1,4 @@
+
 "use client";
 
 import {
@@ -12,17 +13,18 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Accessibility, Contrast, Text, Volume2, LogOut, User, Search, Bell } from 'lucide-react';
-import LogoIcon from '@/components/icons/LogoIcon';
-import Link from 'next/link';
+import { Accessibility, Contrast, Text, LogOut, User, Search, Bell, X } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
+import { useSearch } from '@/context/SearchContext';
 import { Avatar, AvatarFallback } from '../ui/avatar';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { Input } from '../ui/input';
 
 export function Header() {
   const { user, signOut } = useAuth();
+  const { searchQuery, setSearchQuery } = useSearch();
   const router = useRouter();
+  const pathname = usePathname();
 
   const handleLogout = async () => {
     await signOut();
@@ -34,6 +36,14 @@ export function Header() {
     return name.split(' ').map((n) => n[0]).join('').substring(0, 2).toUpperCase();
   }
 
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchQuery(e.target.value);
+    // Si no estamos en la página de módulos, redirigir allí al empezar a escribir
+    if (e.target.value.length > 0 && pathname !== '/modulos') {
+      router.push('/modulos');
+    }
+  };
+
   return (
     <header className="sticky top-0 z-10 flex h-20 items-center gap-4 border-b border-slate-100 bg-white/80 backdrop-blur-md px-6 md:px-8">
       <SidebarTrigger className="md:hidden" />
@@ -42,8 +52,18 @@ export function Header() {
         <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-primary transition-colors" />
         <Input 
           placeholder="Buscar módulo..." 
-          className="w-full pl-11 h-11 bg-slate-50 border-none rounded-2xl focus-visible:ring-primary/20 placeholder:text-slate-400"
+          className="w-full pl-11 pr-10 h-11 bg-slate-50 border-none rounded-2xl focus-visible:ring-primary/20 placeholder:text-slate-400"
+          value={searchQuery}
+          onChange={handleSearchChange}
         />
+        {searchQuery && (
+          <button 
+            onClick={() => setSearchQuery('')}
+            className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        )}
       </div>
 
       <div className="flex w-full md:w-auto items-center justify-end gap-3">
