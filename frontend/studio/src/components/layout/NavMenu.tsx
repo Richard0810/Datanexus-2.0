@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from 'next/link';
@@ -84,7 +85,6 @@ export function NavMenu() {
         ))}
       </SidebarMenu>
 
-      {/* Sección inferior con nombre de usuario y rol */}
       <div className="mt-auto pt-8 border-t border-white/10 px-2 pb-4">
         {user && (
           <div className="flex items-center gap-3 px-4 py-3 rounded-2xl bg-white/5 border border-white/5 shadow-inner">
