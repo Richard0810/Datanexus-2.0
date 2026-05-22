@@ -210,14 +210,15 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
     respuestaCorrecta: ""
   });
 
-  // Función robusta para obtener el ID de un recurso de MongoDB
   const getResourceId = (res: any) => {
     if (!res) return '';
-    // Maneja el formato { _id: { $oid: "..." } }
-    if (res._id && typeof res._id === 'object' && res._id.$oid) return res._id.$oid;
-    // Maneja el formato { _id: "..." }
-    if (res._id && typeof res._id === 'string') return res._id;
-    // Fallback para campos manuales
+    if (res._id) {
+      if (typeof res._id === 'string') return res._id;
+      if (typeof res._id === 'object') {
+        if (res._id.$oid) return res._id.$oid;
+        if (typeof res._id.toString === 'function') return res._id.toString();
+      }
+    }
     return res.id || '';
   };
 
@@ -295,6 +296,8 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
 
   const handleDeleteResource = async (res: any) => {
     const resourceId = getResourceId(res);
+    console.log("ID del recurso a eliminar:", resourceId);
+
     if (!resourceId) {
       toast({ title: "Error", description: "No se pudo identificar el ID del recurso.", variant: "destructive" });
       return;
@@ -532,7 +535,6 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
   const getEmbedUrl = (url: string) => {
     if (!url || !url.startsWith("http")) return "";
     
-    // YouTube
     if (url.includes("youtube.com") || url.includes("youtu.be")) {
       let videoId = "";
       if (url.includes("youtu.be/")) videoId = url.split("youtu.be/")[1].split("?")[0];
@@ -540,10 +542,8 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
       return videoId ? `https://www.youtube.com/embed/${videoId}` : url;
     }
     
-    // Gamma
     if (url.includes("gamma.app/docs/")) return url.replace("gamma.app/docs/", "gamma.app/embed/");
     
-    // Google Presentation/Drive
     if (url.includes("docs.google.com/presentation/d/")) {
       const match = url.match(/\/d\/(.+?)(\/|$)/);
       return match ? `https://docs.google.com/presentation/d/${match[1]}/embed` : url;
@@ -653,8 +653,8 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild><Button variant="secondary" size="icon" className="h-8 w-8 rounded-full shadow-md"><MoreVertical className="h-4 w-4" /></Button></DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => { setEditingResource(res); setResourceForm(res); setIsResourceDialogOpen(true); }}><Pencil className="mr-2 h-4 w-4" /> Editar</DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleDeleteResource(res)} className="text-destructive"><Trash2 className="mr-2 h-4 w-4" /> Eliminar</DropdownMenuItem>
+                            <DropdownMenuItem onSelect={() => { setEditingResource(res); setResourceForm(res); setIsResourceDialogOpen(true); }}><Pencil className="mr-2 h-4 w-4" /> Editar</DropdownMenuItem>
+                            <DropdownMenuItem onSelect={() => handleDeleteResource(res)} className="text-destructive"><Trash2 className="mr-2 h-4 w-4" /> Eliminar</DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </div>
