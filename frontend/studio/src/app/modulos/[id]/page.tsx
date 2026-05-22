@@ -540,18 +540,6 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
       return videoId ? `https://www.youtube.com/embed/${videoId}` : url;
     }
     
-    // Prezi - Limpieza robusta de tokens para inserción correcta
-    if (url.includes("prezi.com/view/")) {
-      const parts = url.split("/view/");
-      const preziId = parts[1].split("/")[0].split("?")[0];
-      return `https://prezi.com/embed/${preziId}/`;
-    }
-    if (url.includes("prezi.com/p/")) {
-      const parts = url.split("/p/");
-      const preziId = parts[1].split("/")[0].split("?")[0];
-      return `https://prezi.com/embed/${preziId}/`;
-    }
-    
     // Gamma
     if (url.includes("gamma.app/docs/")) return url.replace("gamma.app/docs/", "gamma.app/embed/");
     
