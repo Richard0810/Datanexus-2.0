@@ -100,7 +100,7 @@ const modulesData = {
 };
 
 interface Resource {
-  _id?: string;
+  _id?: any;
   titulo: string;
   descripcion: string;
   url: string;
@@ -110,7 +110,7 @@ interface Resource {
 }
 
 interface Activity {
-  _id?: string;
+  _id?: any;
   titulo: string;
   descripcion: string;
   tipo: string;
@@ -128,7 +128,7 @@ interface Question {
 }
 
 interface Assessment {
-  _id?: string;
+  _id?: any;
   titulo: string;
   descripcion: string;
   moduloId: string;
@@ -210,6 +210,13 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
     respuestaCorrecta: ""
   });
 
+  const getResourceId = (res: any) => {
+    if (!res) return '';
+    if (res._id && typeof res._id === 'object' && res._id.$oid) return res._id.$oid;
+    if (typeof res._id === 'string') return res._id;
+    return res.id || '';
+  };
+
   const fetchData = async () => {
     try {
       setLoading(true);
@@ -266,8 +273,9 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
     if (!resourceForm.titulo || !resourceForm.url) return;
     setIsProcessing(true);
     try {
-      if (editingResource?._id) {
-        await api.patch(`/educational-resources/${editingResource._id}`, resourceForm);
+      const resourceId = getResourceId(editingResource);
+      if (resourceId) {
+        await api.patch(`/educational-resources/${resourceId}`, resourceForm);
       } else {
         await api.post("/educational-resources", resourceForm);
       }
@@ -281,12 +289,35 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
     }
   };
 
+  const handleDeleteResource = async (res: any) => {
+    const resourceId = getResourceId(res);
+    if (!resourceId) {
+      toast({ title: "Error", description: "No se pudo identificar el recurso.", variant: "destructive" });
+      return;
+    }
+
+    if (!confirm('¿Estás seguro de que deseas eliminar este recurso?')) return;
+    
+    setIsProcessing(true);
+    try {
+      await api.delete(`/educational-resources/${resourceId}`);
+      toast({ title: "Recurso eliminado con éxito" });
+      fetchData();
+    } catch (error) {
+      console.error("Error al eliminar recurso:", error);
+      toast({ title: "Error al eliminar el recurso", variant: "destructive" });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   const handleSaveActivity = async () => {
     if (!activityForm.titulo) return;
     setIsProcessing(true);
     try {
-      if (editingActivity?._id) {
-        await api.patch(`/activities/${editingActivity._id}`, activityForm);
+      const activityId = getResourceId(editingActivity);
+      if (activityId) {
+        await api.patch(`/activities/${activityId}`, activityForm);
       } else {
         await api.post("/activities", activityForm);
       }
@@ -478,7 +509,8 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
     if (!assessmentForm.titulo || assessmentForm.preguntas.length === 0) return;
     setIsProcessing(true);
     try {
-      if (editingAssessment?._id) await api.patch(`/assessments/${editingAssessment._id}`, assessmentForm);
+      const assessmentId = getResourceId(editingAssessment);
+      if (assessmentId) await api.patch(`/assessments/${assessmentId}`, assessmentForm);
       else await api.post("/assessments", assessmentForm);
       setIsAssessmentDialogOpen(false);
       fetchData();
@@ -504,12 +536,20 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
       return videoId ? `https://www.youtube.com/embed/${videoId}` : url;
     }
     
+    // Prezi - Robust handling for insertion with token removal
+    if (url.includes("prezi.com/view/")) {
+      const parts = url.split("/view/");
+      const preziId = parts[1].split("/")[0].split("?")[0];
+      return `https://prezi.com/embed/${preziId}/`;
+    }
+    if (url.includes("prezi.com/p/")) {
+      const parts = url.split("/p/");
+      const preziId = parts[1].split("/")[0].split("?")[0];
+      return `https://prezi.com/embed/${preziId}/`;
+    }
+    
     // Gamma
     if (url.includes("gamma.app/docs/")) return url.replace("gamma.app/docs/", "gamma.app/embed/");
-    
-    // Prezi
-    if (url.includes("prezi.com/view/")) return url.replace("prezi.com/view/", "prezi.com/embed/");
-    if (url.includes("prezi.com/p/")) return url.replace("prezi.com/p/", "prezi.com/embed/");
     
     // Google Presentation/Drive
     if (url.includes("docs.google.com/presentation/d/")) {
@@ -563,7 +603,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
             {parsed.map((item: any, idx) => (
               <div key={idx} className="p-3 bg-muted rounded-lg border-l-4 border-primary">
                 <p className="text-sm font-bold text-primary mb-1">
-                  {item.pregunta || (editingAssessment?.preguntas.find(q => q.id === item.id)?.texto) || `Pregunta ${idx + 1}`}
+                  {item.pregunta || `Pregunta ${idx + 1}`}
                 </p>
                 <p className="text-sm">{String(item.respuesta)}</p>
               </div>
@@ -615,14 +655,14 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                 const isGamma = res.url.includes("gamma.app");
                 
                 return (
-                  <Card key={res._id} className="overflow-hidden group relative shadow-md">
+                  <Card key={getResourceId(res)} className="overflow-hidden group relative shadow-md">
                     {isAdmin && (
                       <div className="absolute top-4 right-4 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild><Button variant="secondary" size="icon" className="h-8 w-8 rounded-full shadow-md"><MoreVertical className="h-4 w-4" /></Button></DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
                             <DropdownMenuItem onClick={() => { setEditingResource(res); setResourceForm(res); setIsResourceDialogOpen(true); }}><Pencil className="mr-2 h-4 w-4" /> Editar</DropdownMenuItem>
-                            <DropdownMenuItem onClick={async () => { if(confirm('¿Seguro?')) { await api.delete(`/educational-resources/${res._id}`); fetchData(); } }} className="text-destructive"><Trash2 className="mr-2 h-4 w-4" /> Eliminar</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleDeleteResource(res)} className="text-destructive"><Trash2 className="mr-2 h-4 w-4" /> Eliminar</DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </div>
@@ -674,9 +714,10 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {activities.map((act) => {
               const userSub = submissions.find(s => s.tituloContenido === act.titulo && s.usuarioEmail === user?.email);
+              const activityId = getResourceId(act);
               
               return (
-                <Card key={act._id} className="flex flex-col shadow-sm border-t-4 border-t-accent/50 group">
+                <Card key={activityId} className="flex flex-col shadow-sm border-t-4 border-t-accent/50 group">
                   <CardHeader>
                     <div className="flex justify-between items-start">
                       <div className="flex gap-2">
@@ -690,7 +731,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                       {isAdmin && (
                         <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setEditingActivity(act); setActivityForm(act); setIsActivityDialogOpen(true); }}><Pencil className="h-4 w-4" /></Button>
-                           <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={async () => { if(confirm('¿Seguro?')) { await api.delete(`/activities/${act._id}`); fetchData(); } }}><Trash2 className="h-4 w-4" /></Button>
+                           <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={async () => { if(confirm('¿Seguro?')) { await api.delete(`/activities/${activityId}`); fetchData(); } }}><Trash2 className="h-4 w-4" /></Button>
                         </div>
                       )}
                     </div>
@@ -740,13 +781,14 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {assessments.map((ass) => {
               const userSub = submissions.find(s => s.tituloContenido === ass.titulo && s.usuarioEmail === user?.email);
+              const assessmentId = getResourceId(ass);
               
               return (
-                <Card key={ass._id} className="hover:border-primary transition-all cursor-pointer group shadow-md relative" onClick={() => { setEditingAssessment(ass); setAssessmentForm(ass); setViewMode(isAdmin ? 'edit' : 'preview'); handleResetPreview(); setIsAssessmentDialogOpen(true); }}>
+                <Card key={assessmentId} className="hover:border-primary transition-all cursor-pointer group shadow-md relative" onClick={() => { setEditingAssessment(ass); setAssessmentForm(ass); setViewMode(isAdmin ? 'edit' : 'preview'); handleResetPreview(); setIsAssessmentDialogOpen(true); }}>
                   {isAdmin && (
                     <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">
                       <Button variant="secondary" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); setEditingAssessment(ass); setAssessmentForm(ass); setViewMode('edit'); setIsAssessmentDialogOpen(true); }}><Pencil className="h-3 w-3" /></Button>
-                      <Button variant="secondary" size="icon" className="h-7 w-7 text-destructive" onClick={async (e) => { e.stopPropagation(); if(confirm('¿Seguro?')) { await api.delete(`/assessments/${ass._id}`); fetchData(); } }}><Trash2 className="h-3 w-3" /></Button>
+                      <Button variant="secondary" size="icon" className="h-7 w-7 text-destructive" onClick={async (e) => { e.stopPropagation(); if(confirm('¿Seguro?')) { await api.delete(`/assessments/${assessmentId}`); fetchData(); } }}><Trash2 className="h-3 w-3" /></Button>
                     </div>
                   )}
                   <CardHeader>
