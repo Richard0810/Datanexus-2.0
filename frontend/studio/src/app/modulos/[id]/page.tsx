@@ -210,10 +210,14 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
     respuestaCorrecta: ""
   });
 
+  // Función robusta para obtener el ID de un recurso de MongoDB
   const getResourceId = (res: any) => {
     if (!res) return '';
+    // Maneja el formato { _id: { $oid: "..." } }
     if (res._id && typeof res._id === 'object' && res._id.$oid) return res._id.$oid;
-    if (typeof res._id === 'string') return res._id;
+    // Maneja el formato { _id: "..." }
+    if (res._id && typeof res._id === 'string') return res._id;
+    // Fallback para campos manuales
     return res.id || '';
   };
 
@@ -292,20 +296,20 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
   const handleDeleteResource = async (res: any) => {
     const resourceId = getResourceId(res);
     if (!resourceId) {
-      toast({ title: "Error", description: "No se pudo identificar el recurso.", variant: "destructive" });
+      toast({ title: "Error", description: "No se pudo identificar el ID del recurso.", variant: "destructive" });
       return;
     }
 
-    if (!confirm('¿Estás seguro de que deseas eliminar este recurso?')) return;
+    if (!confirm('¿Estás seguro de que deseas eliminar este recurso de la base de datos?')) return;
     
     setIsProcessing(true);
     try {
       await api.delete(`/educational-resources/${resourceId}`);
-      toast({ title: "Recurso eliminado con éxito" });
+      toast({ title: "Recurso eliminado correctamente" });
       fetchData();
     } catch (error) {
       console.error("Error al eliminar recurso:", error);
-      toast({ title: "Error al eliminar el recurso", variant: "destructive" });
+      toast({ title: "Error al intentar eliminar el recurso", variant: "destructive" });
     } finally {
       setIsProcessing(false);
     }
@@ -536,7 +540,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
       return videoId ? `https://www.youtube.com/embed/${videoId}` : url;
     }
     
-    // Prezi - Robust handling for insertion with token removal
+    // Prezi - Limpieza robusta de tokens para inserción correcta
     if (url.includes("prezi.com/view/")) {
       const parts = url.split("/view/");
       const preziId = parts[1].split("/")[0].split("?")[0];
@@ -667,7 +671,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                         </DropdownMenu>
                       </div>
                     )}
-                    <div className="p-6">
+                    <CardHeader className="p-6 pb-0">
                       <div className="flex flex-wrap items-center justify-between gap-4 mb-3">
                         <div className="flex items-center gap-2">
                           {res.tipo === "video" ? <Video className="h-4 w-4 text-red-500" /> : <FileText className="h-4 w-4 text-blue-500" />}
@@ -681,10 +685,11 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                         </Button>
                       </div>
                       <CardTitle className="text-2xl mb-2">{res.titulo}</CardTitle>
-                      <CardDescription className="text-base mb-6">{res.descripcion}</CardDescription>
-                      
+                      <CardDescription className="text-base mb-4">{res.descripcion}</CardDescription>
+                    </CardHeader>
+                    <CardContent className="p-6 pt-0">
                       <div className={cn(
-                        "rounded-xl overflow-hidden border bg-black w-full mb-4 shadow-inner",
+                        "rounded-xl overflow-hidden border bg-black w-full shadow-inner",
                         isGamma ? "aspect-[3/4] md:aspect-video" : "aspect-video"
                       )}>
                         <iframe 
@@ -694,7 +699,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                           allowFullScreen 
                         />
                       </div>
-                    </div>
+                    </CardContent>
                   </Card>
                 );
               })}
