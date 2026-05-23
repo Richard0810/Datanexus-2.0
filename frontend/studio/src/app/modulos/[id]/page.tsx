@@ -665,8 +665,11 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                               <Pencil className="mr-2 h-4 w-4" /> Editar
                             </DropdownMenuItem>
                             <DropdownMenuItem 
-                              onSelect={() => {
-                                setTimeout(() => handleDeleteResource(res), 150);
+                              onSelect={(e) => {
+                                // Dejamos que el menú se cierre naturalmente antes de mostrar la alerta bloqueante
+                                setTimeout(() => {
+                                  handleDeleteResource(res);
+                                }, 300);
                               }} 
                               className="text-destructive cursor-pointer"
                             >

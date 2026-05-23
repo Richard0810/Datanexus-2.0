@@ -26,11 +26,6 @@ export function Header() {
   const { searchQuery, setSearchQuery } = useSearch();
   const router = useRouter();
   const pathname = usePathname();
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   const handleLogout = async () => {
     await signOut();
@@ -48,8 +43,6 @@ export function Header() {
       router.push('/modulos');
     }
   };
-
-  if (!mounted) return <header className="sticky top-0 z-10 flex h-20 items-center border-b border-slate-100 bg-white/80 backdrop-blur-md px-8 md:px-12 w-full" />;
 
   return (
     <header className="sticky top-0 z-10 flex h-20 items-center justify-between gap-4 border-b border-slate-100 bg-white/80 backdrop-blur-md px-8 md:px-12 w-full">
