@@ -101,6 +101,7 @@ const modulesData = {
 
 interface Resource {
   _id?: any;
+  id?: string;
   titulo: string;
   descripcion: string;
   url: string;
@@ -169,6 +170,9 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
   const [score, setScore] = useState<{ correct: number; total: number } | null>(null);
 
   const [isResourceDialogOpen, setIsResourceDialogOpen] = useState(false);
+  const [isDeleteResourceDialogOpen, setIsDeleteResourceDialogOpen] = useState(false);
+  const [resourceToDelete, setResourceToDelete] = useState<Resource | null>(null);
+  
   const [isActivityDialogOpen, setIsActivityDialogOpen] = useState(false);
   const [isAssessmentDialogOpen, setIsAssessmentDialogOpen] = useState(false);
   const [isSubmitActivityOpen, setIsSubmitActivityOpen] = useState(false);
@@ -294,21 +298,16 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
     }
   };
 
-  const handleDeleteResource = async (res: any) => {
-    const resourceId = getResourceId(res);
-    console.log("Intentando eliminar ID:", resourceId);
-
-    if (!resourceId) {
-      toast({ title: "Error", description: "No se pudo identificar el ID del recurso.", variant: "destructive" });
-      return;
-    }
-
-    if (!window.confirm('¿Estás seguro de que deseas eliminar este recurso de la base de datos?')) return;
+  const confirmDeleteResource = async () => {
+    if (!resourceToDelete) return;
+    const resourceId = getResourceId(resourceToDelete);
     
     setIsProcessing(true);
     try {
       await api.delete(`/educational-resources/${resourceId}`);
       toast({ title: "Recurso eliminado correctamente" });
+      setIsDeleteResourceDialogOpen(false);
+      setResourceToDelete(null);
       fetchData();
     } catch (error) {
       console.error("Error al eliminar recurso:", error);
@@ -666,10 +665,8 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                             </DropdownMenuItem>
                             <DropdownMenuItem 
                               onSelect={() => {
-                                // Permitimos que el menú se cierre y la interfaz se limpie antes de bloquear con confirm()
-                                setTimeout(() => {
-                                  handleDeleteResource(res);
-                                }, 300);
+                                setResourceToDelete(res);
+                                setIsDeleteResourceDialogOpen(true);
                               }} 
                               className="text-destructive cursor-pointer"
                             >
@@ -901,6 +898,29 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
           </TabsContent>
         )}
       </Tabs>
+
+      <Dialog open={isDeleteResourceDialogOpen} onOpenChange={setIsDeleteResourceDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <Trash2 className="h-5 w-5" />
+              ¿Estás seguro de eliminar este recurso?
+            </DialogTitle>
+            <DialogDescription className="py-2">
+              Esta acción eliminará permanentemente el recurso <strong>{resourceToDelete?.titulo}</strong> de la base de datos de DataNexus. No se puede deshacer.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex flex-col sm:flex-row gap-2">
+            <Button variant="outline" onClick={() => setIsDeleteResourceDialogOpen(false)} disabled={isProcessing}>
+              Cancelar
+            </Button>
+            <Button variant="destructive" onClick={confirmDeleteResource} disabled={isProcessing}>
+              {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
+              Eliminar Permanentemente
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={isGradingDialogOpen} onOpenChange={setIsGradingDialogOpen}>
         <DialogContent className="sm:max-w-[800px] max-h-[85vh] overflow-hidden flex flex-col">
