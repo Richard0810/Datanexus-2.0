@@ -533,7 +533,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
   };
 
   const getEmbedUrl = (url: string) => {
-    if (!url || !url.startsWith("http")) return "";
+    if (!url || typeof url !== 'string' || !url.startsWith("http")) return null;
     
     if (url.includes("youtube.com") || url.includes("youtu.be")) {
       let videoId = "";
@@ -648,6 +648,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
             <div className="grid grid-cols-1 gap-8">
               {resources.map((res) => {
                 const resourceId = getResourceId(res);
+                const embedUrl = getEmbedUrl(res.url);
                 return (
                   <Card key={resourceId} className="overflow-hidden group relative shadow-md">
                     {isAdmin && (
@@ -692,14 +693,20 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                       <CardDescription className="text-base mb-4">{res.descripcion}</CardDescription>
                     </CardHeader>
                     <CardContent className="p-6 pt-0">
-                      <div className="rounded-xl overflow-hidden border bg-black w-full shadow-inner aspect-video">
-                        <iframe 
-                          src={getEmbedUrl(res.url)} 
-                          className="w-full h-full border-0" 
-                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen" 
-                          allowFullScreen 
-                        />
-                      </div>
+                      {embedUrl ? (
+                        <div className="rounded-xl overflow-hidden border bg-black w-full shadow-inner aspect-video">
+                          <iframe 
+                            src={embedUrl} 
+                            className="w-full h-full border-0" 
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen" 
+                            allowFullScreen 
+                          />
+                        </div>
+                      ) : (
+                        <div className="rounded-xl border bg-muted w-full flex items-center justify-center p-12 aspect-video">
+                          <ExternalLink className="h-12 w-12 text-muted-foreground opacity-20" />
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
                 );
@@ -761,7 +768,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                     <p className="text-sm"><strong>Criterios:</strong> {act.criterios_evaluacion}</p>
                     {act.archivoUrl && (
                       <Button asChild variant="outline" size="sm" className="w-full">
-                        <a href={getEmbedUrl(act.archivoUrl)} target="_blank" rel="noopener noreferrer">
+                        <a href={act.archivoUrl} target="_blank" rel="noopener noreferrer">
                           <Link2 className="mr-2 h-4 w-4" /> Ver Material Adjunto
                         </a>
                       </Button>
