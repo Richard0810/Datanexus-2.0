@@ -310,7 +310,6 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
         formData.append("formato", "URL");
       }
 
-      // NO configuramos headers manualmente para que Axios gestione el boundary de multipart/form-data
       if (resourceId) {
         await api.patch(`/educational-resources/${resourceId}`, formData);
       } else {
@@ -351,6 +350,44 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
       toast({ title: "Error al intentar eliminar el recurso", variant: "destructive" });
     } finally {
       setIsProcessing(false);
+    }
+  };
+
+  const handleViewFull = (url: string) => {
+    if (!url) return;
+    
+    if (url.startsWith('data:')) {
+      try {
+        const parts = url.split(',');
+        const mime = parts[0].match(/:(.*?);/)?.[1] || 'application/octet-stream';
+        const b64Data = parts[1];
+        
+        const byteCharacters = atob(b64Data);
+        const byteArrays = [];
+        
+        for (let offset = 0; offset < byteCharacters.length; offset += 512) {
+          const slice = byteCharacters.slice(offset, offset + 512);
+          const byteNumbers = new Array(slice.length);
+          for (let i = 0; i < slice.length; i++) {
+            byteNumbers[i] = slice.charCodeAt(i);
+          }
+          const byteArray = new Uint8Array(byteNumbers);
+          byteArrays.push(byteArray);
+        }
+        
+        const blob = new Blob(byteArrays, { type: mime });
+        const blobUrl = URL.createObjectURL(blob);
+        window.open(blobUrl, '_blank');
+      } catch (e) {
+        console.error("Error opening data URI:", e);
+        // Fallback: si falla la conversión, intentamos abrir directo (puede ser bloqueado por el navegador)
+        const newWindow = window.open();
+        if (newWindow) {
+          newWindow.document.write(`<iframe src="${url}" frameborder="0" style="border:0; top:0px; left:0px; bottom:0px; right:0px; width:100%; height:100%;" allowfullscreen></iframe>`);
+        }
+      }
+    } else {
+      window.open(url, '_blank');
     }
   };
 
@@ -731,11 +768,14 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                           <Badge variant="outline" className="uppercase">{res.tipo}</Badge>
                         </div>
                         {res.url && (
-                          <Button asChild variant="default" size="sm" className="h-8 bg-slate-900 hover:bg-slate-800 text-white font-bold">
-                            <a href={res.url} target="_blank" rel="noopener noreferrer">
-                              <ExternalLink className="mr-2 h-3 w-3" />
-                              Ver en ventana completa
-                            </a>
+                          <Button 
+                            variant="default" 
+                            size="sm" 
+                            className="h-8 bg-slate-900 hover:bg-slate-800 text-white font-bold"
+                            onClick={() => handleViewFull(res.url)}
+                          >
+                            <ExternalLink className="mr-2 h-3 w-3" />
+                            Ver en ventana completa
                           </Button>
                         )}
                       </div>
@@ -762,11 +802,18 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                         <div className="rounded-xl overflow-hidden border bg-black w-full shadow-inner flex justify-center items-center p-4">
                            <img src={res.url} alt={res.titulo} className="max-w-full max-h-[500px] object-contain" />
                         </div>
+                      ) : res.url && res.url.startsWith('data:application/pdf') ? (
+                        <div className="rounded-xl overflow-hidden border bg-background w-full shadow-inner aspect-[3/4] md:aspect-video">
+                          <iframe 
+                            src={res.url} 
+                            className="w-full h-full border-0" 
+                          />
+                        </div>
                       ) : (
                         <div className="rounded-xl border bg-muted w-full flex items-center justify-center p-12 aspect-video">
                           <div className="text-center">
                              <FileText className="h-12 w-12 text-muted-foreground opacity-20 mx-auto mb-4" />
-                             <p className="text-xs text-muted-foreground">Vista previa no disponible para este formato.</p>
+                             <p className="text-xs text-muted-foreground">Vista previa no disponible para este formato. Usa el botón superior para ver el contenido.</p>
                           </div>
                         </div>
                       )}
@@ -1368,3 +1415,4 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
     </div>
   );
 }
+
