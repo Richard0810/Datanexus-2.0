@@ -296,7 +296,6 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
     try {
       const resourceId = getResourceId(editingResource);
       
-      // Creamos un FormData para manejar tanto campos de texto como archivos
       const formData = new FormData();
       formData.append("titulo", resourceForm.titulo);
       formData.append("descripcion", resourceForm.descripcion);
@@ -311,14 +310,11 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
         formData.append("formato", "URL");
       }
 
-      const config = {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      };
-
+      // NO configuramos headers manualmente para que Axios gestione el boundary de multipart/form-data
       if (resourceId) {
-        await api.patch(`/educational-resources/${resourceId}`, formData, config);
+        await api.patch(`/educational-resources/${resourceId}`, formData);
       } else {
-        await api.post("/educational-resources", formData, config);
+        await api.post("/educational-resources", formData);
       }
 
       setIsResourceDialogOpen(false);

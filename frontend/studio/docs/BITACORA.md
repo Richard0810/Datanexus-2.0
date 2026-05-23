@@ -1,4 +1,5 @@
 
+
 # Bitácora de Desarrollo - DataNexus
 
 Este documento registra los hitos técnicos y cambios estructurales realizados en la plataforma para facilitar el mantenimiento y la resolución de problemas futuros.
@@ -32,6 +33,7 @@ Este documento registra los hitos técnicos y cambios estructurales realizados e
 ### 5. Correcciones de Estabilidad
 - **Iframe Empty Src**: Se corrigió el error que pasaba una cadena vacía al atributo `src` de los iframes, lo cual provocaba recargas de página innecesarias.
 - **Script de Inicio**: Corrección en el `package.json` raíz para usar `npm run dev` en el frontend.
+- **Solución Network Error**: Se eliminó la configuración manual de encabezados `multipart/form-data` en las peticiones de Axios, permitiendo que el navegador asigne el boundary correcto y evitando errores de red.
 
 ### 6. Responsividad y Archivos
 - **Diálogo Auto-ajustable**: Se ha optimizado el diálogo de recursos para pantallas pequeñas usando scroll interno y grids adaptables.
