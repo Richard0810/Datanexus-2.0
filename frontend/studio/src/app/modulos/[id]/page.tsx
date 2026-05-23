@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useState, use, useRef } from "react";
@@ -295,7 +296,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
 
   const handleDeleteResource = async (res: any) => {
     const resourceId = getResourceId(res);
-    console.log("ID del recurso a eliminar:", resourceId);
+    console.log("Intentando eliminar ID:", resourceId);
 
     if (!resourceId) {
       toast({ title: "Error", description: "No se pudo identificar el ID del recurso.", variant: "destructive" });
@@ -657,7 +658,15 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                           <DropdownMenuTrigger asChild><Button variant="secondary" size="icon" className="h-8 w-8 rounded-full shadow-md"><MoreVertical className="h-4 w-4" /></Button></DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
                             <DropdownMenuItem onSelect={() => { setEditingResource(res); setResourceForm(res); setIsResourceDialogOpen(true); }}><Pencil className="mr-2 h-4 w-4" /> Editar</DropdownMenuItem>
-                            <DropdownMenuItem onSelect={() => handleDeleteResource(res)} className="text-destructive"><Trash2 className="mr-2 h-4 w-4" /> Eliminar</DropdownMenuItem>
+                            <DropdownMenuItem 
+                              onSelect={(e) => {
+                                e.preventDefault();
+                                setTimeout(() => handleDeleteResource(res), 100);
+                              }} 
+                              className="text-destructive"
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" /> Eliminar
+                            </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </div>
@@ -727,7 +736,19 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                       {isAdmin && (
                         <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setEditingActivity(act); setActivityForm(act); setIsActivityDialogOpen(true); }}><Pencil className="h-4 w-4" /></Button>
-                           <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={async () => { if(confirm('¿Seguro?')) { await api.delete(`/activities/${activityId}`); fetchData(); } }}><Trash2 className="h-4 w-4" /></Button>
+                           <Button 
+                             variant="ghost" 
+                             size="icon" 
+                             className="h-8 w-8 text-destructive" 
+                             onClick={async () => { 
+                               if(confirm('¿Seguro?')) { 
+                                 await api.delete(`/activities/${activityId}`); 
+                                 fetchData(); 
+                               } 
+                             }}
+                           >
+                             <Trash2 className="h-4 w-4" />
+                           </Button>
                         </div>
                       )}
                     </div>
