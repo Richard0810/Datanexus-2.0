@@ -665,8 +665,8 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                               <Pencil className="mr-2 h-4 w-4" /> Editar
                             </DropdownMenuItem>
                             <DropdownMenuItem 
-                              onSelect={(e) => {
-                                // Dejamos que el menú se cierre naturalmente antes de mostrar la alerta bloqueante
+                              onSelect={() => {
+                                // Permitimos que el menú se cierre y la interfaz se limpie antes de bloquear con confirm()
                                 setTimeout(() => {
                                   handleDeleteResource(res);
                                 }, 300);
