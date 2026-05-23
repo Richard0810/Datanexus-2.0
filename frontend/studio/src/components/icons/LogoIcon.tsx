@@ -1,13 +1,20 @@
-
 'use client';
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 
 interface LogoIconProps {
   className?: string;
 }
 
 const LogoIcon: React.FC<LogoIconProps> = ({ className }) => {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) return <div className={className} />;
+
   return (
     <div className={className}>
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500" className="w-full h-full">

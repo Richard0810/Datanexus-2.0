@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useState, use, useRef } from "react";
@@ -345,6 +344,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
     
     setTimeout(() => {
         try {
+            if (!sub.detalleEnvio) return;
             const parsed = JSON.parse(sub.detalleEnvio);
             if (editorRef.current) editorRef.current.innerHTML = parsed.text || "";
             if (parsed.file) setAttachedFile(parsed.file);
@@ -562,6 +562,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
 
   const formatSubmissionDetail = (detail: string) => {
     try {
+      if (!detail) return null;
       const parsed = JSON.parse(detail);
       if (parsed.text !== undefined) {
           return (
@@ -603,7 +604,9 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
           </div>
         );
       }
-    } catch (e) {}
+    } catch (e) {
+        console.error("Error parsing submission detail", e);
+    }
     return <div className="p-4 bg-muted rounded-lg text-sm whitespace-pre-wrap">{detail}</div>;
   };
 
@@ -824,7 +827,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {submissions.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).map((sub) => (
+                    {[...submissions].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).map((sub) => (
                       <TableRow key={sub._id}>
                         <TableCell className="font-medium">
                           <div className="flex flex-col">
