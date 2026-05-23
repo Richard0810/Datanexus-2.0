@@ -42,7 +42,13 @@ import {
   AlignRight,
   Download,
   FileUp,
-  AlertCircle
+  AlertCircle,
+  Plus,
+  PlayCircle,
+  BookOpen,
+  Monitor,
+  Database,
+  MoreHorizontal
 } from "lucide-react";
 import Link from "next/link";
 import api from "@/lib/api";
@@ -189,6 +195,11 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
   const [editingResource, setEditingResource] = useState<Resource | null>(null);
   const [editingActivity, setEditingActivity] = useState<Activity | null>(null);
   const [editingAssessment, setEditingAssessment] = useState<Assessment | null>(null);
+
+  // Nuevos estados para recursos con archivos
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [sourceTab, setSourceTab] = useState<"url" | "file">("url");
+  const [isDragging, setIsDragging] = useState(false);
   
   const { toast } = useToast();
   const moduleInfo = modulesData[id as keyof typeof modulesData] || { title: `Módulo ${id}`, objective: "" };
@@ -213,7 +224,6 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
     respuestaCorrecta: ""
   });
 
-  // Función infalible para extraer el ID de MongoDB
   const getResourceId = (res: any) => {
     if (!res) return '';
     if (res._id) {
@@ -279,16 +289,38 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
   };
 
   const handleSaveResource = async () => {
-    if (!resourceForm.titulo || !resourceForm.url) return;
+    if (!resourceForm.titulo) return;
+    if (sourceTab === "url" && !resourceForm.url && !uploadedFile) return;
     setIsProcessing(true);
+
     try {
       const resourceId = getResourceId(editingResource);
-      if (resourceId) {
-        await api.patch(`/educational-resources/${resourceId}`, resourceForm);
+
+      if (uploadedFile && sourceTab === "file") {
+        const formData = new FormData();
+        formData.append("file", uploadedFile);
+        formData.append("titulo", resourceForm.titulo);
+        formData.append("descripcion", resourceForm.descripcion);
+        formData.append("unidad", resourceForm.unidad);
+        formData.append("tipo", resourceForm.tipo);
+        formData.append("formato", uploadedFile.name.split(".").pop() || "file");
+
+        if (resourceId) {
+          await api.patch(`/educational-resources/${resourceId}`, formData);
+        } else {
+          await api.post("/educational-resources", formData);
+        }
       } else {
-        await api.post("/educational-resources", resourceForm);
+        if (resourceId) {
+          await api.patch(`/educational-resources/${resourceId}`, resourceForm);
+        } else {
+          await api.post("/educational-resources", resourceForm);
+        }
       }
+
       setIsResourceDialogOpen(false);
+      setUploadedFile(null);
+      setSourceTab("url");
       fetchData();
       toast({ title: "Recurso guardado" });
     } catch (error) {
@@ -296,6 +328,11 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
     } finally {
       setIsProcessing(false);
     }
+  };
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
 
   const confirmDeleteResource = async () => {
@@ -639,7 +676,13 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
           <div className="flex justify-between items-center">
             <h2 className="text-xl font-headline">Materiales de Estudio</h2>
             {isAdmin && (
-              <Button onClick={() => { setEditingResource(null); setResourceForm({ titulo: "", descripcion: "", url: "", unidad: `Módulo ${id}`, tipo: "guia", formato: "URL" }); setIsResourceDialogOpen(true); }} size="sm">
+              <Button onClick={() => { 
+                setEditingResource(null); 
+                setResourceForm({ titulo: "", descripcion: "", url: "", unidad: `Módulo ${id}`, tipo: "guia", formato: "URL" }); 
+                setUploadedFile(null);
+                setSourceTab("url");
+                setIsResourceDialogOpen(true); 
+              }} size="sm">
                 <PlusCircle className="mr-2 h-4 w-4" /> Añadir Recurso
               </Button>
             )}
@@ -660,7 +703,12 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem onSelect={() => { setEditingResource(res); setResourceForm(res); setIsResourceDialogOpen(true); }} className="cursor-pointer">
+                            <DropdownMenuItem onSelect={() => { 
+                              setEditingResource(res); 
+                              setResourceForm(res); 
+                              setSourceTab(res.url ? "url" : "file");
+                              setIsResourceDialogOpen(true); 
+                            }} className="cursor-pointer">
                               <Pencil className="mr-2 h-4 w-4" /> Editar
                             </DropdownMenuItem>
                             <DropdownMenuItem 
@@ -1078,163 +1126,228 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
         </DialogContent>
       </Dialog>
 
-      <Dialog open={isResourceDialogOpen} onOpenChange={setIsResourceDialogOpen}>
-        <DialogContent className="sm:max-w-[600px]">
-          <DialogHeader><DialogTitle>{editingResource ? "Editar" : "Nuevo"} Recurso</DialogTitle></DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2"><Label>Título</Label><Input value={resourceForm.titulo} onChange={e => setResourceForm({...resourceForm, titulo: e.target.value})} /></div>
-            <div className="grid gap-2"><Label>Descripción</Label><Textarea value={resourceForm.descripcion} onChange={e => setResourceForm({...resourceForm, descripcion: e.target.value})} /></div>
-            <div className="grid gap-2"><Label>URL</Label><Input value={resourceForm.url} onChange={e => setResourceForm({...resourceForm, url: e.target.value})} /></div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="grid gap-2"><Label>Tipo</Label>
-                <Select value={resourceForm.tipo} onValueChange={v => setResourceForm({...resourceForm, tipo: v})}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent><SelectItem value="video">Video</SelectItem><SelectItem value="guia">Guía</SelectItem><SelectItem value="articulo">Artículo</SelectItem></SelectContent>
-                </Select>
+      <Dialog
+        open={isResourceDialogOpen}
+        onOpenChange={(open) => {
+          setIsResourceDialogOpen(open);
+          if (!open) {
+            setUploadedFile(null);
+            setSourceTab("url");
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-[600px] p-0 overflow-hidden rounded-2xl">
+          <div className="bg-[#1a2744] px-6 py-5 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-lg bg-blue-500/20 flex items-center justify-center">
+                <Plus className="w-5 h-5 text-blue-400" />
               </div>
-              <div className="grid gap-2"><Label>Formato</Label><Input value={resourceForm.formato} onChange={e => setResourceForm({...resourceForm, formato: e.target.value})} /></div>
+              <div>
+                <DialogTitle className="text-white text-base font-medium">
+                  {editingResource ? "Editar recurso" : "Nuevo recurso"}
+                </DialogTitle>
+                <p className="text-slate-400 text-xs mt-0.5">
+                  Módulo {id}
+                </p>
+              </div>
             </div>
           </div>
-          <DialogFooter><Button onClick={handleSaveResource} disabled={isProcessing} className="w-full">Guardar Recurso</Button></DialogFooter>
-        </DialogContent>
-      </Dialog>
 
-      <Dialog open={isActivityDialogOpen} onOpenChange={setIsActivityDialogOpen}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>{editingActivity ? "Editar" : "Nueva"} Actividad</DialogTitle></DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2"><Label>Título</Label><Input value={activityForm.titulo} onChange={e => setActivityForm({...activityForm, titulo: e.target.value})} /></div>
-            <div className="grid gap-2"><Label>Instrucciones</Label><Textarea value={activityForm.descripcion} onChange={e => setActivityForm({...activityForm, descripcion: e.target.value})} rows={4}/></div>
-            <div className="grid gap-2"><Label>Criterios de Evaluación</Label><Input value={activityForm.criterios_evaluacion} onChange={e => setActivityForm({...activityForm, criterios_evaluacion: e.target.value})} /></div>
-            <div className="grid gap-2">
-              <Label>URL del Material Adjunto (Opcional)</Label>
-              <Input placeholder="https://drive.google.com/..." value={activityForm.archivoUrl} onChange={e => setActivityForm({...activityForm, archivoUrl: e.target.value})} />
+          <div className="p-6 flex flex-col gap-5">
+            <div className="flex flex-col gap-1.5">
+              <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                Título <span className="text-red-500">*</span>
+              </Label>
+              <Input
+                value={resourceForm.titulo}
+                onChange={(e) =>
+                  setResourceForm({ ...resourceForm, titulo: e.target.value })
+                }
+                placeholder="Ej: Introducción a SQL"
+                maxLength={80}
+                className="focus-visible:ring-blue-500"
+              />
+              <span className="text-xs text-muted-foreground text-right">
+                {resourceForm.titulo.length}/80
+              </span>
             </div>
-          </div>
-          <DialogFooter><Button onClick={handleSaveActivity} disabled={isProcessing} className="w-full">Guardar Actividad</Button></DialogFooter>
-        </DialogContent>
-      </Dialog>
 
-      <Dialog open={isAssessmentDialogOpen} onOpenChange={setIsAssessmentDialogOpen}>
-        <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <div className="flex items-center justify-between pr-8">
-              <DialogTitle className="text-2xl font-headline">{viewMode === 'edit' ? 'Gestor de Examen' : 'Evaluación'}</DialogTitle>
-              {isAdmin && (
-                <div className="flex gap-2">
-                  <Button variant={viewMode === 'edit' ? 'default' : 'outline'} size="sm" onClick={() => setViewMode('edit')}><Settings2 className="mr-2 h-4 w-4" /> Editar</Button>
-                  <Button variant={viewMode === 'preview' ? 'default' : 'outline'} size="sm" onClick={() => { setViewMode('preview'); handleResetPreview(); }}><Eye className="mr-2 h-4 w-4" /> Previsualizar</Button>
+            <div className="flex flex-col gap-1.5">
+              <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                Descripción
+              </Label>
+              <Textarea
+                value={resourceForm.descripcion}
+                onChange={(e) =>
+                  setResourceForm({ ...resourceForm, descripcion: e.target.value })
+                }
+                placeholder="Breve descripción del recurso..."
+                className="resize-none min-h-[80px] focus-visible:ring-blue-500"
+              />
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                Tipo de recurso
+              </Label>
+              <div className="grid grid-cols-3 gap-2">
+                {[
+                  { value: "video", label: "Video", icon: PlayCircle },
+                  { value: "guia", label: "Guía", icon: BookOpen },
+                  { value: "articulo", label: "Artículo", icon: FileText },
+                  { value: "presentacion", label: "Presentación", icon: Monitor },
+                  { value: "dataset", label: "Dataset", icon: Database },
+                  { value: "otro", label: "Otro", icon: MoreHorizontal },
+                ].map(({ value, label, icon: Icon }) => (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() =>
+                      setResourceForm({ ...resourceForm, tipo: value })
+                    }
+                    className={`flex flex-col items-center gap-1.5 p-3 rounded-lg border transition-all text-sm
+                      ${
+                        resourceForm.tipo === value
+                          ? "border-blue-500 bg-blue-500/10 text-blue-600"
+                          : "border-border bg-muted/40 text-muted-foreground hover:border-blue-400 hover:bg-blue-500/5"
+                      }`}
+                  >
+                    <Icon className="w-5 h-5" />
+                    <span className="text-xs font-medium">{label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                Fuente del recurso
+              </Label>
+              <div className="flex gap-1 p-1 bg-muted rounded-lg">
+                <button
+                  type="button"
+                  onClick={() => setSourceTab("url")}
+                  className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-md text-xs font-medium transition-all
+                    ${sourceTab === "url"
+                      ? "bg-background text-blue-600 shadow-sm"
+                      : "text-muted-foreground hover:text-foreground"
+                    }`}
+                >
+                  <LinkIcon className="w-3.5 h-3.5" />
+                  URL externa
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSourceTab("file")}
+                  className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-md text-xs font-medium transition-all
+                    ${sourceTab === "file"
+                      ? "bg-background text-blue-600 shadow-sm"
+                      : "text-muted-foreground hover:text-foreground"
+                    }`}
+                >
+                  <Upload className="w-3.5 h-3.5" />
+                  Subir archivo
+                </button>
+              </div>
+
+              {sourceTab === "url" ? (
+                <Input
+                  value={resourceForm.url}
+                  onChange={(e) =>
+                    setResourceForm({ ...resourceForm, url: e.target.value })
+                  }
+                  placeholder="https://..."
+                  className="focus-visible:ring-blue-500"
+                />
+              ) : (
+                <div className="flex flex-col gap-2">
+                  <div
+                    onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+                    onDragLeave={() => setIsDragging(false)}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      setIsDragging(false);
+                      const file = e.dataTransfer.files[0];
+                      if (file) setUploadedFile(file);
+                    }}
+                    onClick={() => document.getElementById("fileInput")?.click()}
+                    className={`border-2 border-dashed rounded-xl p-6 flex flex-col items-center justify-center gap-2 cursor-pointer transition-all
+                      ${isDragging
+                        ? "border-blue-500 bg-blue-500/5"
+                        : "border-border hover:border-blue-400 hover:bg-blue-500/5"
+                      }`}
+                  >
+                    <input
+                      id="fileInput"
+                      type="file"
+                      className="hidden"
+                      accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.mp4,.png,.jpg,.jpeg,.zip"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) setUploadedFile(file);
+                      }}
+                    />
+                    <Upload className="w-7 h-7 text-blue-500" />
+                    <p className="text-sm text-muted-foreground text-center">
+                      Arrastra tu archivo aquí o{" "}
+                      <span className="text-blue-500 font-medium">selecciona uno</span>
+                    </p>
+                    <span className="text-xs text-muted-foreground">
+                      PDF, Word, PPT, Excel, MP4, imágenes · máx. 50 MB
+                    </span>
+                  </div>
+
+                  {uploadedFile && (
+                    <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg border">
+                      <div className="w-8 h-8 rounded-md bg-blue-500/15 flex items-center justify-center flex-shrink-0">
+                        <FileText className="w-4 h-4 text-blue-500" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{uploadedFile.name}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {formatFileSize(uploadedFile.size)}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setUploadedFile(null)}
+                        className="text-muted-foreground hover:text-destructive transition-colors"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
-          </DialogHeader>
+          </div>
 
-          {viewMode === 'edit' ? (
-            <div className="grid gap-6 py-4">
-              <div className="grid grid-cols-2 gap-4">
-                 <div className="grid gap-2"><Label>Título</Label><Input value={assessmentForm.titulo} onChange={e => setAssessmentForm({...assessmentForm, titulo: e.target.value})} /></div>
-                 <div className="grid gap-2"><Label>Descripción</Label><Input value={assessmentForm.descripcion} onChange={e => setAssessmentForm({...assessmentForm, descripcion: e.target.value})} /></div>
-              </div>
-              <Separator />
-              <div className="p-5 border rounded-2xl bg-muted/20 space-y-4">
-                <h3 className="font-bold flex items-center gap-2 text-primary"><PlusCircle className="h-5 w-5" /> Nueva Pregunta</h3>
-                <div className="grid gap-2"><Label>Enunciado</Label><Input value={currentQuestion.texto} onChange={e => setCurrentQuestion({...currentQuestion, texto: e.target.value})} /></div>
-                <div className="grid gap-2">
-                  <Label>Tipo</Label>
-                  <Select value={currentQuestion.tipo} onValueChange={(v: any) => setCurrentQuestion({...currentQuestion, tipo: v, opciones: v === 'opcion-multiple' ? ["Opción A", "Opción B"] : [], respuestaCorrecta: ""})}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent><SelectItem value="opcion-multiple">Opción Múltiple</SelectItem><SelectItem value="verdadero-falso">Verdadero o Falso</SelectItem><SelectItem value="escrita">Abierta</SelectItem></SelectContent>
-                  </Select>
-                </div>
-                {currentQuestion.tipo === 'opcion-multiple' && (
-                  <div className="space-y-3">
-                    <RadioGroup value={currentQuestion.respuestaCorrecta} onValueChange={v => setCurrentQuestion({...currentQuestion, respuestaCorrecta: v})}>
-                      {currentQuestion.opciones.map((opt, idx) => (
-                        <div key={idx} className="flex items-center gap-3">
-                          <RadioGroupItem value={opt} />
-                          <Input value={opt} onChange={e => {
-                              const newOpts = [...currentQuestion.opciones];
-                              newOpts[idx] = e.target.value;
-                              setCurrentQuestion({...currentQuestion, opciones: newOpts});
-                          }} className="flex-1" />
-                          <Button variant="ghost" size="icon" onClick={() => handleRemoveOption(idx)} disabled={currentQuestion.opciones.length <= 2}><X className="h-4 w-4" /></Button>
-                        </div>
-                      ))}
-                    </RadioGroup>
-                    <Button variant="outline" size="sm" onClick={handleAddOption} className="w-full">Agregar Opción</Button>
-                  </div>
-                )}
-                {currentQuestion.tipo === 'verdadero-falso' && (
-                  <div className="space-y-3">
-                    <Label>Respuesta Correcta</Label>
-                    <RadioGroup value={currentQuestion.respuestaCorrecta} onValueChange={v => setCurrentQuestion({...currentQuestion, respuestaCorrecta: v})}>
-                      <div className="flex items-center gap-2"><RadioGroupItem value="Verdadero" /><Label>Verdadero</Label></div>
-                      <div className="flex items-center gap-2"><RadioGroupItem value="Falso" /><Label>Falso</Label></div>
-                    </RadioGroup>
-                  </div>
-                )}
-                <Button variant="default" onClick={handleAddQuestion} className="w-full">Agregar Pregunta</Button>
-              </div>
-              {assessmentForm.preguntas.length > 0 && (
-                <div className="space-y-2">
-                  <Label>Preguntas actualizadas ({assessmentForm.preguntas.length})</Label>
-                  <div className="space-y-2">
-                    {assessmentForm.preguntas.map((q, i) => (
-                      <div key={q.id} className="flex items-center justify-between p-2 border rounded text-sm">
-                        <span>{i+1}. {q.texto} ({q.tipo})</span>
-                        <Button variant="ghost" size="icon" onClick={() => setAssessmentForm({...assessmentForm, preguntas: assessmentForm.preguntas.filter(item => item.id !== q.id)})}><Trash2 className="h-4 w-4 text-destructive" /></Button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+          <div className="px-6 py-4 border-t flex gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setIsResourceDialogOpen(false)}
+              className="flex-shrink-0"
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleSaveResource}
+              disabled={isProcessing}
+              className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
+            >
+              {isProcessing ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                  Guardando...
+                </>
+              ) : (
+                <>
+                  <Save className="w-4 h-4 mr-2" />
+                  Guardar recurso
+                </>
               )}
-              <DialogFooter><Button onClick={handleSaveAssessment} disabled={isProcessing} className="w-full">Guardar Evaluación Completa</Button></DialogFooter>
-            </div>
-          ) : (
-            <div className="py-6 space-y-8">
-              <div className="border-b pb-6">
-                 <h2 className="text-2xl font-bold text-primary">{assessmentForm.titulo}</h2>
-                 <p className="text-muted-foreground">{assessmentForm.descripcion}</p>
-                 {score && <div className="mt-4 p-4 bg-primary/10 rounded-xl flex items-center justify-between"><span className="font-bold">Resultado:</span><Badge className="text-lg px-4">{score.correct} / {score.total}</Badge></div>}
-              </div>
-              {assessmentForm.preguntas.map((q, idx) => (
-                <div key={q.id} className="space-y-4">
-                  <p className="text-lg font-bold">{idx + 1}. {q.texto}</p>
-                  <div className="pl-4">
-                    {q.tipo === 'opcion-multiple' && (
-                      <RadioGroup value={userAnswers[q.id]} onValueChange={v => !showFeedback && setUserAnswers({...userAnswers, [q.id]: v})} className="space-y-2">
-                        {q.opciones.map((opt, i) => (
-                          <div key={i} className={cn("flex items-center space-x-3 p-3 border rounded-xl", 
-                            showFeedback && q.respuestaCorrecta === opt ? "bg-green-100 border-green-500" : 
-                            showFeedback && userAnswers[q.id] === opt && q.respuestaCorrecta !== opt ? "bg-red-100 border-red-500" : "hover:bg-muted/50")}>
-                            <RadioGroupItem value={opt} id={`q${idx}o${i}`} disabled={showFeedback} />
-                            <Label htmlFor={`q${idx}o${i}`} className="flex-1 cursor-pointer">{opt}</Label>
-                          </div>
-                        ))}
-                      </RadioGroup>
-                    )}
-                    {q.tipo === 'verdadero-falso' && (
-                      <div className="flex gap-4">
-                         {['Verdadero', 'Falso'].map(val => (
-                           <Button key={val} variant={userAnswers[q.id] === val ? 'default' : 'outline'} className={cn("flex-1", showFeedback && q.respuestaCorrecta === val ? "bg-green-500 text-white" : showFeedback && userAnswers[q.id] === val ? "bg-red-500 text-white" : "")} onClick={() => !showFeedback && setUserAnswers({...userAnswers, [q.id]: val})} disabled={showFeedback}>{val}</Button>
-                         ))}
-                      </div>
-                    )}
-                    {q.tipo === 'escrita' && (
-                      <Textarea 
-                        placeholder="Escribe tu respuesta aquí..." 
-                        value={userAnswers[q.id] || ""} 
-                        onChange={e => !showFeedback && setUserAnswers({...userAnswers, [q.id]: e.target.value})}
-                        disabled={showFeedback}
-                        rows={4}
-                      />
-                    )}
-                  </div>
-                </div>
-              ))}
-              {!showFeedback ? <Button className="w-full h-12 font-bold" onClick={handleGradeAssessment}>Finalizar y Enviar Evaluación</Button> : <Button variant="outline" className="w-full h-12" onClick={handleResetPreview}>Cerrar</Button>}
-            </div>
-          )}
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
