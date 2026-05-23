@@ -1,3 +1,4 @@
+
 # Bitácora de Desarrollo - DataNexus
 
 Este documento registra los hitos técnicos y cambios estructurales realizados en la plataforma para facilitar el mantenimiento y la resolución de problemas futuros.
@@ -31,6 +32,10 @@ Este documento registra los hitos técnicos y cambios estructurales realizados e
 ### 5. Correcciones de Estabilidad
 - **Iframe Empty Src**: Se corrigió el error que pasaba una cadena vacía al atributo `src` de los iframes, lo cual provocaba recargas de página innecesarias.
 - **Script de Inicio**: Corrección en el `package.json` raíz para usar `npm run dev` en el frontend.
+
+### 6. Responsividad y Archivos
+- **Diálogo Auto-ajustable**: Se ha optimizado el diálogo de recursos para pantallas pequeñas usando scroll interno y grids adaptables.
+- **Subida de Archivos**: Integración de soporte para subir archivos físicos (PDF, Word, MP4) mediante `FormData` y pestañas de fuente de datos.
 
 ---
 *Última actualización: Mayo 2026*

@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useState, use, useRef } from "react";
@@ -196,7 +197,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
   const [editingActivity, setEditingActivity] = useState<Activity | null>(null);
   const [editingAssessment, setEditingAssessment] = useState<Assessment | null>(null);
 
-  // Nuevos estados para recursos con archivos
+  // Estados para recursos con archivos y responsividad
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [sourceTab, setSourceTab] = useState<"url" | "file">("url");
   const [isDragging, setIsDragging] = useState(false);
@@ -1136,8 +1137,8 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
           }
         }}
       >
-        <DialogContent className="sm:max-w-[600px] p-0 overflow-hidden rounded-2xl">
-          <div className="bg-[#1a2744] px-6 py-5 flex items-center justify-between">
+        <DialogContent className="sm:max-w-[600px] p-0 overflow-hidden rounded-2xl max-h-[95vh] flex flex-col">
+          <div className="bg-[#1a2744] px-6 py-5 flex items-center justify-between flex-shrink-0">
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 rounded-lg bg-blue-500/20 flex items-center justify-center">
                 <Plus className="w-5 h-5 text-blue-400" />
@@ -1153,7 +1154,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
             </div>
           </div>
 
-          <div className="p-6 flex flex-col gap-5">
+          <div className="p-6 flex flex-col gap-5 overflow-y-auto flex-1">
             <div className="flex flex-col gap-1.5">
               <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                 Título <span className="text-red-500">*</span>
@@ -1190,7 +1191,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
               <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                 Tipo de recurso
               </Label>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                 {[
                   { value: "video", label: "Video", icon: PlayCircle },
                   { value: "guia", label: "Guía", icon: BookOpen },
@@ -1271,7 +1272,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                       if (file) setUploadedFile(file);
                     }}
                     onClick={() => document.getElementById("fileInput")?.click()}
-                    className={`border-2 border-dashed rounded-xl p-6 flex flex-col items-center justify-center gap-2 cursor-pointer transition-all
+                    className={`border-2 border-dashed rounded-xl p-4 sm:p-6 flex flex-col items-center justify-center gap-2 cursor-pointer transition-all
                       ${isDragging
                         ? "border-blue-500 bg-blue-500/5"
                         : "border-border hover:border-blue-400 hover:bg-blue-500/5"
@@ -1287,12 +1288,12 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                         if (file) setUploadedFile(file);
                       }}
                     />
-                    <Upload className="w-7 h-7 text-blue-500" />
+                    <Upload className="w-6 h-6 sm:w-7 sm:h-7 text-blue-500" />
                     <p className="text-sm text-muted-foreground text-center">
                       Arrastra tu archivo aquí o{" "}
                       <span className="text-blue-500 font-medium">selecciona uno</span>
                     </p>
-                    <span className="text-xs text-muted-foreground">
+                    <span className="text-[10px] sm:text-xs text-muted-foreground">
                       PDF, Word, PPT, Excel, MP4, imágenes · máx. 50 MB
                     </span>
                   </div>
@@ -1322,7 +1323,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
             </div>
           </div>
 
-          <div className="px-6 py-4 border-t flex gap-2">
+          <div className="px-6 py-4 border-t flex gap-2 flex-shrink-0">
             <Button
               variant="outline"
               onClick={() => setIsResourceDialogOpen(false)}
