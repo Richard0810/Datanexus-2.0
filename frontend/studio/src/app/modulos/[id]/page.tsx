@@ -197,7 +197,6 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
   const [editingActivity, setEditingActivity] = useState<Activity | null>(null);
   const [editingAssessment, setEditingAssessment] = useState<Assessment | null>(null);
 
-  // Estados para recursos con archivos y responsividad
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [sourceTab, setSourceTab] = useState<"url" | "file">("url");
   const [isDragging, setIsDragging] = useState(false);
@@ -296,35 +295,39 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
 
     try {
       const resourceId = getResourceId(editingResource);
+      
+      // Creamos un FormData para manejar tanto campos de texto como archivos
+      const formData = new FormData();
+      formData.append("titulo", resourceForm.titulo);
+      formData.append("descripcion", resourceForm.descripcion);
+      formData.append("unidad", resourceForm.unidad);
+      formData.append("tipo", resourceForm.tipo);
 
-      if (uploadedFile && sourceTab === "file") {
-        const formData = new FormData();
+      if (sourceTab === "file" && uploadedFile) {
         formData.append("file", uploadedFile);
-        formData.append("titulo", resourceForm.titulo);
-        formData.append("descripcion", resourceForm.descripcion);
-        formData.append("unidad", resourceForm.unidad);
-        formData.append("tipo", resourceForm.tipo);
         formData.append("formato", uploadedFile.name.split(".").pop() || "file");
-
-        if (resourceId) {
-          await api.patch(`/educational-resources/${resourceId}`, formData);
-        } else {
-          await api.post("/educational-resources", formData);
-        }
       } else {
-        if (resourceId) {
-          await api.patch(`/educational-resources/${resourceId}`, resourceForm);
-        } else {
-          await api.post("/educational-resources", resourceForm);
-        }
+        formData.append("url", resourceForm.url);
+        formData.append("formato", "URL");
+      }
+
+      const config = {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      };
+
+      if (resourceId) {
+        await api.patch(`/educational-resources/${resourceId}`, formData, config);
+      } else {
+        await api.post("/educational-resources", formData, config);
       }
 
       setIsResourceDialogOpen(false);
       setUploadedFile(null);
       setSourceTab("url");
       fetchData();
-      toast({ title: "Recurso guardado" });
+      toast({ title: "Recurso guardado con éxito" });
     } catch (error) {
+      console.error("Error al guardar recurso:", error);
       toast({ title: "Error al guardar el recurso", variant: "destructive" });
     } finally {
       setIsProcessing(false);
@@ -707,7 +710,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                             <DropdownMenuItem onSelect={() => { 
                               setEditingResource(res); 
                               setResourceForm(res); 
-                              setSourceTab(res.url ? "url" : "file");
+                              setSourceTab(res.url && !res.url.startsWith('data:') ? "url" : "file");
                               setIsResourceDialogOpen(true); 
                             }} className="cursor-pointer">
                               <Pencil className="mr-2 h-4 w-4" /> Editar
@@ -731,12 +734,14 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                           {res.tipo === "video" ? <Video className="h-4 w-4 text-red-500" /> : <FileText className="h-4 w-4 text-blue-500" />}
                           <Badge variant="outline" className="uppercase">{res.tipo}</Badge>
                         </div>
-                        <Button asChild variant="default" size="sm" className="h-8 bg-slate-900 hover:bg-slate-800 text-white font-bold">
-                          <a href={res.url} target="_blank" rel="noopener noreferrer">
-                            <ExternalLink className="mr-2 h-3 w-3" />
-                            Ver en ventana completa
-                          </a>
-                        </Button>
+                        {res.url && (
+                          <Button asChild variant="default" size="sm" className="h-8 bg-slate-900 hover:bg-slate-800 text-white font-bold">
+                            <a href={res.url} target="_blank" rel="noopener noreferrer">
+                              <ExternalLink className="mr-2 h-3 w-3" />
+                              Ver en ventana completa
+                            </a>
+                          </Button>
+                        )}
                       </div>
                       <CardTitle className="text-2xl mb-2">{res.titulo}</CardTitle>
                       <CardDescription className="text-base mb-4">{res.descripcion}</CardDescription>
@@ -751,9 +756,22 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                             allowFullScreen 
                           />
                         </div>
+                      ) : res.url && res.url.startsWith('data:video/mp4') ? (
+                        <div className="rounded-xl overflow-hidden border bg-black w-full shadow-inner aspect-video">
+                          <video controls className="w-full h-full">
+                            <source src={res.url} type="video/mp4" />
+                          </video>
+                        </div>
+                      ) : res.url && res.url.startsWith('data:image/') ? (
+                        <div className="rounded-xl overflow-hidden border bg-black w-full shadow-inner flex justify-center items-center p-4">
+                           <img src={res.url} alt={res.titulo} className="max-w-full max-h-[500px] object-contain" />
+                        </div>
                       ) : (
                         <div className="rounded-xl border bg-muted w-full flex items-center justify-center p-12 aspect-video">
-                          <ExternalLink className="h-12 w-12 text-muted-foreground opacity-20" />
+                          <div className="text-center">
+                             <FileText className="h-12 w-12 text-muted-foreground opacity-20 mx-auto mb-4" />
+                             <p className="text-xs text-muted-foreground">Vista previa no disponible para este formato.</p>
+                          </div>
                         </div>
                       )}
                     </CardContent>
@@ -1137,7 +1155,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
           }
         }}
       >
-        <DialogContent className="sm:max-w-[600px] p-0 overflow-hidden rounded-2xl max-h-[95vh] flex flex-col">
+        <DialogContent className="sm:max-w-[600px] p-0 overflow-hidden rounded-2xl max-h-[90vh] flex flex-col">
           <div className="bg-[#1a2744] px-6 py-5 flex items-center justify-between flex-shrink-0">
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 rounded-lg bg-blue-500/20 flex items-center justify-center">

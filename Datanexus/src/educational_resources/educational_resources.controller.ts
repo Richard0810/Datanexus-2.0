@@ -1,15 +1,20 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseInterceptors, UploadedFile } from '@nestjs/common';
 import { EducationalResourcesService } from './educational_resources.service';
 import { CreateEducationalResourceDto } from './dto/create-educational_resource.dto';
 import { UpdateEducationalResourceDto } from './dto/update-educational_resource.dto';
+import { FileInterceptor } from '@nestjs/platform-express';
 
 @Controller('educational-resources')
 export class EducationalResourcesController {
   constructor(private readonly educationalResourcesService: EducationalResourcesService) {}
 
   @Post()
-  create(@Body() createEducationalResourceDto: CreateEducationalResourceDto) {
-    return this.educationalResourcesService.create(createEducationalResourceDto);
+  @UseInterceptors(FileInterceptor('file'))
+  create(
+    @Body() createEducationalResourceDto: CreateEducationalResourceDto,
+    @UploadedFile() file?: any,
+  ) {
+    return this.educationalResourcesService.create(createEducationalResourceDto, file);
   }
 
   @Get()
@@ -23,8 +28,13 @@ export class EducationalResourcesController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateEducationalResourceDto: UpdateEducationalResourceDto) {
-    return this.educationalResourcesService.update(id, updateEducationalResourceDto);
+  @UseInterceptors(FileInterceptor('file'))
+  update(
+    @Param('id') id: string, 
+    @Body() updateEducationalResourceDto: UpdateEducationalResourceDto,
+    @UploadedFile() file?: any,
+  ) {
+    return this.educationalResourcesService.update(id, updateEducationalResourceDto, file);
   }
 
   @Delete(':id')

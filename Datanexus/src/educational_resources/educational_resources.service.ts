@@ -12,10 +12,23 @@ export class EducationalResourcesService {
     private educationalResourceModel: Model<EducationalResourcesDocument>,
   ) {}
 
-  async create(createEducationalResourceDto: CreateEducationalResourceDto): Promise<EducationalResources> {
-    const createdEducationalResource = new this.educationalResourceModel(createEducationalResourceDto);
-    const savedEducationalResource = await createdEducationalResource.save();
-    return savedEducationalResource;
+  private fileToDataUri(file: any): string {
+    if (!file) return null;
+    const base64 = file.buffer.toString('base64');
+    return `data:${file.mimetype};base64,${base64}`;
+  }
+
+  async create(createDto: CreateEducationalResourceDto, file?: any): Promise<EducationalResources> {
+    const data = { ...createDto };
+    
+    // Si viene un archivo, lo convertimos a Data URI y lo guardamos en la URL
+    if (file) {
+      data.url = this.fileToDataUri(file);
+      data.formato = file.originalname.split('.').pop() || 'file';
+    }
+
+    const createdEducationalResource = new this.educationalResourceModel(data);
+    return await createdEducationalResource.save();
   }
 
   async findAll(): Promise<EducationalResources[]> {
@@ -26,9 +39,16 @@ export class EducationalResourcesService {
     return this.educationalResourceModel.findById(id).exec();
   }
 
-  async update(id: string, updateEducationalResourceDto: UpdateEducationalResourceDto): Promise<EducationalResources | null> {
+  async update(id: string, updateDto: UpdateEducationalResourceDto, file?: any): Promise<EducationalResources | null> {
+    const data = { ...updateDto };
+    
+    if (file) {
+      data.url = this.fileToDataUri(file);
+      data.formato = file.originalname.split('.').pop() || 'file';
+    }
+
     return this.educationalResourceModel
-      .findByIdAndUpdate(id, updateEducationalResourceDto, { new: true })
+      .findByIdAndUpdate(id, data, { new: true })
       .exec();
   }
 
