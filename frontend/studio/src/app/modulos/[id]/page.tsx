@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useState, use, useRef } from "react";
@@ -214,6 +213,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
     respuestaCorrecta: ""
   });
 
+  // Función infalible para extraer el ID de MongoDB
   const getResourceId = (res: any) => {
     if (!res) return '';
     if (res._id) {
@@ -387,8 +387,8 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
       const payload = {
         usuarioNombre: user?.name || "Estudiante",
         usuarioEmail: user?.email,
-        tipoEnvio: "actividad",
         moduloId: id,
+        tipoEnvio: "actividad",
         tituloContenido: selectedActivity.titulo,
         detalleEnvio: JSON.stringify(submissionData),
         estado: "enviado"
@@ -437,8 +437,8 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
       await api.post("/performance-reports", {
         usuarioNombre: user?.name || "Estudiante",
         usuarioEmail: user?.email,
-        tipoEnvio: "evaluacion",
         moduloId: String(id),
+        tipoEnvio: "evaluacion",
         tituloContenido: assessmentForm.titulo,
         detalleEnvio: JSON.stringify(detailWithQuestions),
         puntaje: finalScoreValue,
@@ -647,10 +647,9 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
           {loading ? <div className="py-20 flex justify-center"><Loader2 className="animate-spin" /></div> : resources.length > 0 ? (
             <div className="grid grid-cols-1 gap-8">
               {resources.map((res) => {
-                const isGamma = res.url.includes("gamma.app");
-                
+                const resourceId = getResourceId(res);
                 return (
-                  <Card key={getResourceId(res)} className="overflow-hidden group relative shadow-md">
+                  <Card key={resourceId} className="overflow-hidden group relative shadow-md">
                     {isAdmin && (
                       <div className="absolute top-4 right-4 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
                         <DropdownMenu>
@@ -693,10 +692,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                       <CardDescription className="text-base mb-4">{res.descripcion}</CardDescription>
                     </CardHeader>
                     <CardContent className="p-6 pt-0">
-                      <div className={cn(
-                        "rounded-xl overflow-hidden border bg-black w-full shadow-inner",
-                        isGamma ? "aspect-[3/4] md:aspect-video" : "aspect-video"
-                      )}>
+                      <div className="rounded-xl overflow-hidden border bg-black w-full shadow-inner aspect-video">
                         <iframe 
                           src={getEmbedUrl(res.url)} 
                           className="w-full h-full border-0" 
