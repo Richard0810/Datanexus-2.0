@@ -303,7 +303,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
       return;
     }
 
-    if (!confirm('¿Estás seguro de que deseas eliminar este recurso de la base de datos?')) return;
+    if (!window.confirm('¿Estás seguro de que deseas eliminar este recurso de la base de datos?')) return;
     
     setIsProcessing(true);
     try {
@@ -357,7 +357,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
   };
 
   const handleDeleteSubmission = async (subId: string) => {
-    if (!confirm("¿Estás seguro de que deseas eliminar tu entrega? Esta acción no se puede deshacer.")) return;
+    if (!window.confirm("¿Estás seguro de que deseas eliminar tu entrega? Esta acción no se puede deshacer.")) return;
     setIsProcessing(true);
     try {
         await api.delete(`/performance-reports/${subId}`);
@@ -655,15 +655,20 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                     {isAdmin && (
                       <div className="absolute top-4 right-4 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
                         <DropdownMenu>
-                          <DropdownMenuTrigger asChild><Button variant="secondary" size="icon" className="h-8 w-8 rounded-full shadow-md"><MoreVertical className="h-4 w-4" /></Button></DropdownMenuTrigger>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="secondary" size="icon" className="h-8 w-8 rounded-full shadow-md">
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem onSelect={() => { setEditingResource(res); setResourceForm(res); setIsResourceDialogOpen(true); }}><Pencil className="mr-2 h-4 w-4" /> Editar</DropdownMenuItem>
+                            <DropdownMenuItem onSelect={() => { setEditingResource(res); setResourceForm(res); setIsResourceDialogOpen(true); }} className="cursor-pointer">
+                              <Pencil className="mr-2 h-4 w-4" /> Editar
+                            </DropdownMenuItem>
                             <DropdownMenuItem 
-                              onSelect={(e) => {
-                                e.preventDefault();
-                                setTimeout(() => handleDeleteResource(res), 100);
+                              onSelect={() => {
+                                setTimeout(() => handleDeleteResource(res), 150);
                               }} 
-                              className="text-destructive"
+                              className="text-destructive cursor-pointer"
                             >
                               <Trash2 className="mr-2 h-4 w-4" /> Eliminar
                             </DropdownMenuItem>
@@ -741,7 +746,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                              size="icon" 
                              className="h-8 w-8 text-destructive" 
                              onClick={async () => { 
-                               if(confirm('¿Seguro?')) { 
+                               if(window.confirm('¿Seguro?')) { 
                                  await api.delete(`/activities/${activityId}`); 
                                  fetchData(); 
                                } 
@@ -805,7 +810,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                   {isAdmin && (
                     <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">
                       <Button variant="secondary" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); setEditingAssessment(ass); setAssessmentForm(ass); setViewMode('edit'); setIsAssessmentDialogOpen(true); }}><Pencil className="h-3 w-3" /></Button>
-                      <Button variant="secondary" size="icon" className="h-7 w-7 text-destructive" onClick={async (e) => { e.stopPropagation(); if(confirm('¿Seguro?')) { await api.delete(`/assessments/${assessmentId}`); fetchData(); } }}><Trash2 className="h-3 w-3" /></Button>
+                      <Button variant="secondary" size="icon" className="h-7 w-7 text-destructive" onClick={async (e) => { e.stopPropagation(); if(window.confirm('¿Seguro?')) { await api.delete(`/assessments/${assessmentId}`); fetchData(); } }}><Trash2 className="h-3 w-3" /></Button>
                     </div>
                   )}
                   <CardHeader>
