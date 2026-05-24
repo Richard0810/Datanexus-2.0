@@ -1,4 +1,3 @@
-
 import { Controller, Post, Body, UnauthorizedException } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { UsersService } from '../users/users.service';
@@ -19,23 +18,23 @@ export class AuthController {
 
     const { uid, email, name } = decodedToken;
     const adminEmail = 'richardai200308@gmail.com';
-    const finalName = nameFromClient || name || 'New User';
     const isMainAdmin = email === adminEmail;
+    const finalName = nameFromClient || name || 'Usuario';
 
     try {
-      // Buscamos al usuario existente
+      // Buscamos al usuario existente en MongoDB
       let user = await this.usersService.findOneByFirebaseUid(uid);
 
-      // Si es el administrador principal pero su rol en DB no es admin, lo corregimos inmediatamente
+      // CORRECCIÓN CRÍTICA: Si es el admin pero su rol no es 'admin', lo forzamos ahora mismo
       if (isMainAdmin && user.rol !== 'admin') {
         user = await this.usersService.updateByFirebaseUid(uid, { rol: 'admin' });
+        console.log(`Rol de administrador forzado para: ${email}`);
       }
       
-      // Devolvemos el usuario (NestJS serializará el objeto Mongoose correctamente)
       return user;
 
     } catch (error) {
-      // Si el usuario no existe (error 404), lo creamos
+      // Si el usuario no existe (error 404), lo creamos con el rol correcto
       if (error.status === 404) {
         const newUser = await this.usersService.create({
           firebaseUid: uid,

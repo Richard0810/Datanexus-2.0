@@ -1,4 +1,3 @@
-
 /* eslint-disable react-hooks/exhaustive-deps */
 'use client';
 
@@ -55,14 +54,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         try {
           const token = await firebaseUser.getIdToken();
           
-          // Sincronizar con el backend
+          // Sincronizar con el backend de MongoDB
           const response = await api.post('/auth/sync', { 
             token,
             name: firebaseUser.displayName 
           });
           
-          // Extraer datos del usuario de la respuesta del backend (MongoDB)
           const userData = response.data;
+          // Mapeamos 'rol' de MongoDB a 'role' del objeto de estado
           const rawRole = userData.rol || 'estudiante';
           const normalizedRole = rawRole.trim().toLowerCase();
 
@@ -73,19 +72,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             role: normalizedRole,
           });
 
-          // Redirigir si estamos en páginas de login/registro
           if (['/', '/login', '/register'].includes(pathname)) {
             router.push('/inicio');
           }
         } catch (error) {
           console.error('Error sincronizando con el backend:', error);
-          // Fallback a los datos de Firebase si el backend falla, 
-          // pero manteniendo el estado de carga para intentar de nuevo si es necesario.
           setUser({ 
             uid: firebaseUser.uid, 
             email: firebaseUser.email, 
             name: firebaseUser.displayName,
-            role: 'estudiante'
+            role: firebaseUser.email === 'richardai200308@gmail.com' ? 'admin' : 'estudiante'
           });
         }
       } else {

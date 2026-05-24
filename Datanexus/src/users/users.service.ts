@@ -1,4 +1,3 @@
-
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
@@ -10,7 +9,7 @@ import { users, usersDocument } from './schemas/users.schema';
 export class UsersService {
   constructor(@InjectModel(users.name) private usersModel: Model<usersDocument>) {}
 
-  async create(createUserDto: CreateUserDto): Promise<users> {
+  async create(createUserDto: any): Promise<users> {
     const createdUser = new this.usersModel(createUserDto);
     return createdUser.save();
   }
