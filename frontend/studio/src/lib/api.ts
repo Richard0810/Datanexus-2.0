@@ -2,12 +2,7 @@ import axios from 'axios';
 
 // Función robusta para determinar la URL del backend
 const getBackendUrl = () => {
-  // En producción, usamos la variable de entorno NEXT_PUBLIC_BACKEND_URL
-  if (process.env.NEXT_PUBLIC_BACKEND_URL) {
-    return process.env.NEXT_PUBLIC_BACKEND_URL;
-  }
-
-  // Fallback para entornos de desarrollo en Cloud Workstations
+  // 1. Detectar si estamos en un entorno de Cloud Workstations (Prioridad para desarrollo local)
   if (typeof window !== 'undefined') {
     const hostname = window.location.hostname;
     const protocol = window.location.protocol;
@@ -23,6 +18,12 @@ const getBackendUrl = () => {
     }
   }
 
+  // 2. Si hay una variable de entorno definida (Producción en Vercel)
+  if (process.env.NEXT_PUBLIC_BACKEND_URL) {
+    return process.env.NEXT_PUBLIC_BACKEND_URL;
+  }
+
+  // 3. Fallback por defecto para localhost tradicional
   return 'http://localhost:3001';
 };
 

@@ -15,16 +15,23 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { AcademicReferencesModule } from './academic_references/academic_references.module';
 import { PerformanceReportsModule } from './performance_reports/performance_reports.module';
 import { AuthModule } from './auth/auth.module';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
+      envFilePath: '.env',
     }),
     EducationalResourcesModule, 
     RolesModule, 
-    MongooseModule.forRoot(process.env.MONGO_URI!), 
+    MongooseModule.forRootAsync({
+      imports: [ConfigModule],
+      useFactory: async (configService: ConfigService) => ({
+        uri: configService.get<string>('MONGO_URI'),
+      }),
+      inject: [ConfigService],
+    }), 
     ModulesModule, 
     QuestionsModule, 
     ActivitiesModule, 

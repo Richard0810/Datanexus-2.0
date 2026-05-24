@@ -27,18 +27,18 @@ async function bootstrap() {
   const documentFactory = () => SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api', app, documentFactory);
 
-  // Puerto asignado dinámicamente por la plataforma (Render/Vercel) o 3001 por defecto
+  // Puerto asignado dinámicamente o 3001 por defecto
   const port = process.env.PORT || 3001;
 
   try {
     await app.listen(port, '0.0.0.0');
-    console.log(`Backend de DataNexus corriendo en el puerto: ${port}`);
+    console.log(`Backend de DataNexus corriendo exitosamente en el puerto: ${port}`);
   } catch (error) {
     if (error.code === 'EADDRINUSE') {
-      console.error(`Error: El puerto ${port} ya está en uso. Intentando cerrar procesos previos o usa otro puerto.`);
+      console.error(`ERROR CRÍTICO: El puerto ${port} está ocupado. Intenta matar el proceso anterior o cambia el puerto en el archivo .env`);
       process.exit(1);
     } else {
-      console.error('Error al iniciar el servidor:', error);
+      console.error('Error fatal al iniciar el servidor:', error);
     }
   }
 }
