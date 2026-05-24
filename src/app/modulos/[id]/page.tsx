@@ -86,14 +86,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/context/AuthContext";
 
@@ -175,7 +167,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
   const [isSubmitDialogOpen, setIsSubmitDialogOpen] = useState(false);
   const [isGradingDialogOpen, setIsGradingDialogOpen] = useState(false);
   
-  // Estados de selección
+  // Selección
   const [itemToDelete, setItemToDelete] = useState<{ id: string, type: 'recurso' | 'actividad' | 'evaluacion' } | null>(null);
   const [editingResource, setEditingResource] = useState<Resource | null>(null);
   const [editingActivity, setEditingActivity] = useState<Activity | null>(null);
@@ -243,7 +235,6 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
 
   const getEmbedUrl = (url: string) => {
     if (!url || typeof url !== 'string' || !url.startsWith("http")) return null;
-    // Si es Google Drive, convertir /view a /preview para evitar errores de acceso incrustado
     if (url.includes("drive.google.com")) {
       if (url.includes("/view")) return url.split("/view")[0] + "/preview";
       return url;
@@ -444,17 +435,17 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
       </div>
 
       <Tabs defaultValue="recursos" className="w-full">
-        <TabsList className="grid w-full md:w-[600px] grid-cols-4 mb-8">
+        <TabsList className={cn("grid w-full mb-8", isAdmin ? "md:w-[600px] grid-cols-4" : "md:w-[450px] grid-cols-3")}>
           <TabsTrigger value="recursos">Recursos</TabsTrigger>
           <TabsTrigger value="actividades">Actividades</TabsTrigger>
           <TabsTrigger value="evaluaciones">Evaluaciones</TabsTrigger>
-          <TabsTrigger value="seguimiento">Seguimiento</TabsTrigger>
+          {isAdmin && <TabsTrigger value="seguimiento">Seguimiento</TabsTrigger>}
         </TabsList>
 
         <TabsContent value="recursos" className="space-y-6">
           <div className="flex justify-between items-center">
             <h2 className="text-xl font-headline">Materiales de Estudio</h2>
-            {isAdmin && <Button onClick={() => { setEditingResource(null); setResourceForm({ titulo: "", descripcion: "", url: "", unidad: `Módulo ${id}`, tipo: "guia", formato: "URL" }); setSourceTab("url"); setIsResourceDialogOpen(true); }} size="sm"><PlusCircle className="mr-2 h-4 w-4" /> Añadir Recurso</Button>}
+            {isAdmin && <Button onClick={() => { setEditingResource(null); setResourceForm({ titulo: "", descripcion: "", url: "", unidad: `Módulo ${id}`, tipo: "guia", formato: "URL" }); setSourceTab("url"); setIsResourceDialogOpen(true); }} size="sm" className="bg-primary hover:bg-primary/90"><PlusCircle className="mr-2 h-4 w-4" /> Añadir Recurso</Button>}
           </div>
 
           <div className="grid grid-cols-1 gap-8">
@@ -476,7 +467,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                   <CardHeader>
                     <div className="flex justify-between items-start mb-2">
                        <Badge variant="outline" className="uppercase">{res.tipo}</Badge>
-                       <Button size="sm" className="bg-slate-900" onClick={() => handleViewFull(res)}>Ver Completo</Button>
+                       <Button size="sm" className="bg-slate-900" onClick={() => handleViewFull(res)}>Ver Pantalla Completa</Button>
                     </div>
                     <CardTitle>{res.titulo}</CardTitle>
                     <CardDescription>{res.descripcion}</CardDescription>
@@ -511,7 +502,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
         <TabsContent value="actividades" className="space-y-6">
           <div className="flex justify-between items-center">
             <h2 className="text-xl font-headline">Actividades Prácticas</h2>
-            {isAdmin && <Button onClick={() => { setEditingActivity(null); setActivityForm({ titulo: "", descripcion: "", tipo: "tarea", criterios_evaluacion: "", moduloId: id }); setIsActivityDialogOpen(true); }} size="sm"><PlusCircle className="mr-2 h-4 w-4" /> Añadir Actividad</Button>}
+            {isAdmin && <Button onClick={() => { setEditingActivity(null); setActivityForm({ titulo: "", descripcion: "", tipo: "tarea", criterios_evaluacion: "", moduloId: id }); setIsActivityDialogOpen(true); }} size="sm" className="bg-primary hover:bg-primary/90"><PlusCircle className="mr-2 h-4 w-4" /> Añadir Actividad</Button>}
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -551,7 +542,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
         <TabsContent value="evaluaciones" className="space-y-6">
           <div className="flex justify-between items-center">
             <h2 className="text-xl font-headline">Evaluaciones</h2>
-            {isAdmin && <Button onClick={() => { setEditingAssessment(null); setAssessmentForm({ titulo: "", descripcion: "", moduloId: id, puntuacion: "5.0", criterios_evaluacion: "" }); setIsAssessmentDialogOpen(true); }} size="sm"><PlusCircle className="mr-2 h-4 w-4" /> Añadir Evaluación</Button>}
+            {isAdmin && <Button onClick={() => { setEditingAssessment(null); setAssessmentForm({ titulo: "", descripcion: "", moduloId: id, puntuacion: "5.0", criterios_evaluacion: "" }); setIsAssessmentDialogOpen(true); }} size="sm" className="bg-primary hover:bg-primary/90"><PlusCircle className="mr-2 h-4 w-4" /> Añadir Evaluación</Button>}
           </div>
 
           <div className="grid grid-cols-1 gap-6">
@@ -580,52 +571,52 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
           </div>
         </TabsContent>
 
-        <TabsContent value="seguimiento" className="space-y-6">
-          <div className="flex justify-between items-center">
-            <h2 className="text-xl font-headline">{isAdmin ? "Entregas Recibidas" : "Mi Seguimiento"}</h2>
-          </div>
+        {isAdmin && (
+          <TabsContent value="seguimiento" className="space-y-6">
+            <div className="flex justify-between items-center">
+              <h2 className="text-xl font-headline">Entregas de Estudiantes</h2>
+            </div>
 
-          <Card className="shadow-sm overflow-hidden">
-            <Table>
-              <TableHeader className="bg-slate-50">
-                <TableRow>
-                  <TableHead>Fecha</TableHead>
-                  {isAdmin && <TableHead>Estudiante</TableHead>}
-                  <TableHead>Contenido</TableHead>
-                  <TableHead>Nota</TableHead>
-                  <TableHead>Estado</TableHead>
-                  {isAdmin && <TableHead className="text-right">Acción</TableHead>}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {submissions.map((sub) => {
-                  const subId = getObjectId(sub);
-                  return (
-                    <TableRow key={subId}>
-                      <TableCell className="text-xs">{sub.createdAt ? new Date(sub.createdAt).toLocaleDateString() : '—'}</TableCell>
-                      {isAdmin && <TableCell className="font-medium text-xs">{sub.usuarioNombre}</TableCell>}
-                      <TableCell className="max-w-[200px] truncate text-xs font-semibold">{sub.tituloContenido}</TableCell>
-                      <TableCell>
-                        <span className={cn("font-bold", sub.puntaje && sub.puntaje >= 3.5 ? "text-green-600" : "text-amber-600")}>
-                          {sub.puntaje !== undefined ? `${sub.puntaje}/5.0` : '—'}
-                        </span>
-                      </TableCell>
-                      <TableCell><Badge variant="secondary" className="text-[10px] uppercase">{sub.estado}</Badge></TableCell>
-                      {isAdmin && (
+            <Card className="shadow-sm overflow-hidden">
+              <Table>
+                <TableHeader className="bg-slate-50">
+                  <TableRow>
+                    <TableHead>Fecha</TableHead>
+                    <TableHead>Estudiante</TableHead>
+                    <TableHead>Actividad</TableHead>
+                    <TableHead>Nota</TableHead>
+                    <TableHead>Estado</TableHead>
+                    <TableHead className="text-right">Acción</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {submissions.map((sub) => {
+                    const subId = getObjectId(sub);
+                    return (
+                      <TableRow key={subId}>
+                        <TableCell className="text-xs">{sub.createdAt ? new Date(sub.createdAt).toLocaleDateString() : '—'}</TableCell>
+                        <TableCell className="font-medium text-xs">{sub.usuarioNombre}</TableCell>
+                        <TableCell className="max-w-[200px] truncate text-xs font-semibold">{sub.tituloContenido}</TableCell>
+                        <TableCell>
+                          <span className={cn("font-bold", sub.puntaje && sub.puntaje >= 3.5 ? "text-green-600" : "text-amber-600")}>
+                            {sub.puntaje !== undefined ? `${sub.puntaje}/5.0` : '—'}
+                          </span>
+                        </TableCell>
+                        <TableCell><Badge variant="secondary" className="text-[10px] uppercase">{sub.estado}</Badge></TableCell>
                         <TableCell className="text-right">
                           <Button size="sm" variant="outline" onClick={() => { setSelectedSubmission(sub); setGradingForm({ puntaje: sub.puntaje || 0, recomendaciones: sub.recomendaciones || "" }); setIsGradingDialogOpen(true); }}>
                             <FileCheck className="mr-2 h-4 w-4" /> Calificar
                           </Button>
                         </TableCell>
-                      )}
-                    </TableRow>
-                  );
-                })}
-                {submissions.length === 0 && <TableRow><TableCell colSpan={6} className="text-center py-10 text-muted-foreground italic">No hay registros de seguimiento para mostrar.</TableCell></TableRow>}
-              </TableBody>
-            </Table>
-          </Card>
-        </TabsContent>
+                      </TableRow>
+                    );
+                  })}
+                  {submissions.length === 0 && <TableRow><TableCell colSpan={6} className="text-center py-10 text-muted-foreground italic">No hay entregas para este módulo.</TableCell></TableRow>}
+                </TableBody>
+              </Table>
+            </Card>
+          </TabsContent>
+        )}
       </Tabs>
 
       {/* DIÁLOGOS DE RECURSOS */}
@@ -680,6 +671,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
           <div className="space-y-4 py-4">
             <div className="space-y-2"><Label>Título *</Label><Input value={assessmentForm.titulo} onChange={e => setAssessmentForm({...assessmentForm, titulo: e.target.value})} /></div>
             <div className="space-y-2"><Label>Descripción</Label><Textarea value={assessmentForm.descripcion} onChange={e => setAssessmentForm({...assessmentForm, descripcion: e.target.value})} /></div>
+            <div className="space-y-2"><Label>Instrucciones / Criterios</Label><Textarea value={assessmentForm.criterios_evaluacion} onChange={e => setAssessmentForm({...assessmentForm, criterios_evaluacion: e.target.value})} /></div>
             <div className="space-y-2"><Label>Puntuación Máxima</Label><Input type="number" step="0.1" value={assessmentForm.puntuacion} onChange={e => setAssessmentForm({...assessmentForm, puntuacion: e.target.value})} /></div>
           </div>
           <DialogFooter><Button variant="outline" onClick={() => setIsAssessmentDialogOpen(false)}>Cancelar</Button><Button onClick={handleSaveAssessment} disabled={isProcessing}>{isProcessing ? <Loader2 className="animate-spin h-4 w-4" /> : 'Guardar'}</Button></DialogFooter>
