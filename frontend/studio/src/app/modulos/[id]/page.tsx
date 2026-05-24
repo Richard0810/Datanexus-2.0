@@ -320,16 +320,33 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
       const blobUrl = base64ToBlobUrl(url);
       if (blobUrl) window.open(blobUrl, '_blank');
     } else {
-      window.open(url, '_blank');
+      // Para Google Drive, abrir la versión de vista previa en pantalla completa
+      if (url.includes("drive.google.com")) {
+        const embedUrl = getEmbedUrl(url);
+        window.open(embedUrl || url, '_blank');
+      } else {
+        window.open(url, '_blank');
+      }
     }
   };
 
   const getEmbedUrl = (url: string) => {
     if (!url || typeof url !== 'string' || !url.startsWith("http")) return null;
+    
+    // Soporte para YouTube
     if (url.includes("youtube.com") || url.includes("youtu.be")) {
       let vId = url.includes("youtu.be/") ? url.split("youtu.be/")[1].split("?")[0] : url.split("v=")[1]?.split("&")[0];
       return vId ? `https://www.youtube.com/embed/${vId}` : url;
     }
+
+    // Soporte para Google Drive (Convertir /view a /preview para evitar bloqueos de sesión)
+    if (url.includes("drive.google.com")) {
+      if (url.includes("/view")) {
+        return url.split("/view")[0] + "/preview";
+      }
+      return url;
+    }
+
     return url;
   };
 
@@ -398,7 +415,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                   </CardHeader>
                   <CardContent>
                     {embedUrl ? (
-                      <div className="aspect-video rounded-xl overflow-hidden bg-black"><iframe src={embedUrl} className="w-full h-full border-0" allowFullScreen /></div>
+                      <div className="aspect-video rounded-xl overflow-hidden bg-white border"><iframe src={embedUrl} className="w-full h-full border-0" allowFullScreen /></div>
                     ) : isPdf ? (
                       <div className="aspect-video rounded-xl overflow-hidden border bg-background"><iframe src={pdfUrls[resId]} className="w-full h-full border-0" /></div>
                     ) : isVideo ? (
