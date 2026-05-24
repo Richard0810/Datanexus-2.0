@@ -218,8 +218,8 @@ function ResourcePreview({ url, title }: { url: string; title: string }) {
     return (
       <div className="w-full h-full flex flex-col items-center justify-center bg-slate-100 text-muted-foreground p-8 text-center rounded-xl">
         <FileText className="h-12 w-12 mb-3 opacity-20" />
-        <p className="text-sm font-bold uppercase tracking-widest">Documento Adjunto</p>
-        <p className="text-xs mt-1 mb-4">{title}</p>
+        <p className="text-sm font-bold uppercase tracking-widest">Recurso Local</p>
+        <p className="text-xs mt-1 mb-4">Este documento está guardado internamente.</p>
         <Button asChild variant="outline" size="sm" className="rounded-xl bg-white font-bold">
           <a href={url} download={title}>
             <Download className="mr-2 h-4 w-4" /> Descargar para Visualizar
@@ -390,9 +390,13 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
         formData.append("formato", uploadedFile.name.split(".").pop() || "file");
 
         if (resourceId) {
-          await api.patch(`/educational-resources/${resourceId}`, formData);
+          await api.patch(`/educational-resources/${resourceId}`, formData, {
+            headers: { 'Content-Type': 'multipart/form-data' }
+          });
         } else {
-          await api.post("/educational-resources", formData);
+          await api.post("/educational-resources", formData, {
+            headers: { 'Content-Type': 'multipart/form-data' }
+          });
         }
       } else {
         if (resourceId) {
@@ -825,7 +829,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                       <div className="grid grid-cols-3 gap-2 w-full">
                         <Button variant="outline" size="sm" className="rounded-xl font-bold" onClick={() => { setSelectedSubmission(userSub); setIsViewOwnSubmissionOpen(true); }}><Eye className="mr-1 h-3 w-3" /> Ver</Button>
                         <Button variant="outline" size="sm" className="rounded-xl font-bold" disabled={userSub.estado === 'calificado'} onClick={() => handleOpenEditSubmission(userSub, act)}><Pencil className="mr-1 h-3 w-3" /> Editar</Button>
-                        <Button variant="outline" size="sm" className="text-destructive rounded-xl font-bold" disabled={userSub.estado === 'calificado'} onClick={() => { setItemToDelete({ id: userSub._id, type: 'entrega' }); setIsDeleteDialogOpen(true); }}><Trash2 className="mr-1 h-3 w-3" /> Borrar</Button>
+                        <Button variant="outline" size="sm" className="text-destructive rounded-xl font-bold" disabled={userSub.estado === 'calificado'} onClick={() => { setItemToDelete({ id: userSub._id, type: 'entrega' } as any); setIsDeleteDialogOpen(true); }}><Trash2 className="mr-1 h-3 w-3" /> Borrar</Button>
                       </div>
                     )}
                     {userSub?.recomendaciones && (

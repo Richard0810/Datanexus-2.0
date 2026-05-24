@@ -1,21 +1,38 @@
-# Dependencias
-node_modules
-dist
-.next
+# dependencies
+/node_modules
+/.pnp
+.pnp.js
+/dist
 
-# Variables de Entorno (Monorepo)
-.env
-.env.local
-Datanexus/.env
-frontend/studio/.env
-frontend/studio/.env.local
+# testing
+/coverage
 
-# IDEs
-.vscode
-.idx
+# next.js
+/.next/
+/out/
+
+# production
+/build
+
+# misc
 .DS_Store
+*.pem
 
-# Logs
+# debug
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+.pnpm-debug.log*
+
+# local env files
+.env*.local
+.env
+Datanexus/.env
+frontend/studio/.env.local
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
