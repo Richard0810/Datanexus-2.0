@@ -236,6 +236,15 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
     return res.id || '';
   };
 
+  const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = (error) => reject(error);
+    });
+  };
+
   const fetchData = async () => {
     try {
       setLoading(true);
@@ -290,40 +299,45 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
 
   const handleSaveResource = async () => {
     if (!resourceForm.titulo) return;
-    if (sourceTab === "url" && !resourceForm.url && !uploadedFile) return;
-    setIsProcessing(true);
+    if (sourceTab === "url" && !resourceForm.url) {
+      toast({ title: "Atención", description: "Debes ingresar una URL", variant: "destructive" });
+      return;
+    }
+    if (sourceTab === "file" && !uploadedFile && !resourceForm.url) {
+      toast({ title: "Atención", description: "Debes seleccionar un archivo", variant: "destructive" });
+      return;
+    }
 
+    setIsProcessing(true);
     try {
       const resourceId = getResourceId(editingResource);
-      
-      const formData = new FormData();
-      formData.append("titulo", resourceForm.titulo);
-      formData.append("descripcion", resourceForm.descripcion);
-      formData.append("unidad", resourceForm.unidad);
-      formData.append("tipo", resourceForm.tipo);
+      let payload = { ...resourceForm };
 
       if (sourceTab === "file" && uploadedFile) {
-        formData.append("file", uploadedFile);
-        formData.append("formato", uploadedFile.name.split(".").pop() || "file");
-      } else {
-        formData.append("url", resourceForm.url);
-        formData.append("formato", "URL");
+        const base64Data = await fileToBase64(uploadedFile);
+        payload.url = base64Data;
+        payload.formato = uploadedFile.name.split('.').pop() || 'file';
       }
 
       if (resourceId) {
-        await api.patch(`/educational-resources/${resourceId}`, formData);
+        await api.patch(`/educational-resources/${resourceId}`, payload);
+        toast({ title: "Recurso actualizado con éxito" });
       } else {
-        await api.post("/educational-resources", formData);
+        await api.post("/educational-resources", payload);
+        toast({ title: "Recurso creado con éxito" });
       }
 
       setIsResourceDialogOpen(false);
       setUploadedFile(null);
       setSourceTab("url");
       fetchData();
-      toast({ title: "Recurso guardado con éxito" });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error al guardar recurso:", error);
-      toast({ title: "Error al guardar el recurso", variant: "destructive" });
+      toast({ 
+        title: "Error al guardar el recurso", 
+        description: "Hubo un problema al procesar la solicitud.",
+        variant: "destructive" 
+      });
     } finally {
       setIsProcessing(false);
     }
@@ -380,7 +394,6 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
         window.open(blobUrl, '_blank');
       } catch (e) {
         console.error("Error opening data URI:", e);
-        // Fallback: si falla la conversión, intentamos abrir directo (puede ser bloqueado por el navegador)
         const newWindow = window.open();
         if (newWindow) {
           newWindow.document.write(`<iframe src="${url}" frameborder="0" style="border:0; top:0px; left:0px; bottom:0px; right:0px; width:100%; height:100%;" allowfullscreen></iframe>`);
@@ -1415,4 +1428,3 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
     </div>
   );
 }
-
