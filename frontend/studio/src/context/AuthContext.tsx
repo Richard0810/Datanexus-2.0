@@ -61,7 +61,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           });
           
           const userData = response.data;
-          // Mapeamos 'rol' de MongoDB a 'role' del objeto de estado
+          // Mapeamos 'rol' de MongoDB a 'role' del objeto de estado (Frontend)
           const rawRole = userData.rol || 'estudiante';
           const normalizedRole = rawRole.trim().toLowerCase();
 
@@ -77,16 +77,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           }
         } catch (error) {
           console.error('Error sincronizando con el backend:', error);
+          // Fallback de emergencia por correo
+          const isAdminEmail = firebaseUser.email === 'richardai200308@gmail.com';
           setUser({ 
             uid: firebaseUser.uid, 
             email: firebaseUser.email, 
             name: firebaseUser.displayName,
-            role: firebaseUser.email === 'richardai200308@gmail.com' ? 'admin' : 'estudiante'
+            role: isAdminEmail ? 'admin' : 'estudiante'
           });
         }
       } else {
         setUser(null);
-        if (!['/', '/login', '/register', '/modelo'].includes(pathname)) {
+        if (!['/', '/login', '/register'].includes(pathname)) {
           router.push('/login');
         }
       }
@@ -103,7 +105,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await signInWithPopup(auth, provider);
     } catch (error: any) {
       if (error.code === 'auth/popup-blocked') {
-        throw new Error('La ventana emergente de inicio de sesión fue bloqueada por el navegador.');
+        throw new Error('La ventana emergente fue bloqueada por el navegador.');
       }
       throw error;
     }
@@ -114,7 +116,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       await updateProfile(userCredential.user, { displayName: name });
     } catch (error) {
-      console.error("Error al registrar con email:", error);
       throw error;
     }
   };
@@ -123,7 +124,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       await signInWithEmailAndPassword(auth, email, password);
     } catch (error) {
-      console.error("Error al iniciar sesión con email:", error);
       throw error;
     }
   };

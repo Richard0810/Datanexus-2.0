@@ -35,7 +35,11 @@ export class UsersService {
   }
 
   async updateByFirebaseUid(firebaseUid: string, data: Partial<users>): Promise<users | null> {
-    return this.usersModel.findOneAndUpdate({ firebaseUid }, data, { new: true }).exec();
+    const updated = await this.usersModel.findOneAndUpdate({ firebaseUid }, data, { new: true }).exec();
+    if (!updated) {
+      throw new NotFoundException(`User with firebaseUid ${firebaseUid} not found for update`);
+    }
+    return updated;
   }
 
   async remove(id: string): Promise<any | null> {

@@ -25,16 +25,16 @@ export class AuthController {
       // Buscamos al usuario existente en MongoDB
       let user = await this.usersService.findOneByFirebaseUid(uid);
 
-      // CORRECCIÓN CRÍTICA: Si es el admin pero su rol no es 'admin', lo forzamos ahora mismo
+      // Si es el admin pero su rol no es 'admin', lo actualizamos inmediatamente
       if (isMainAdmin && user.rol !== 'admin') {
         user = await this.usersService.updateByFirebaseUid(uid, { rol: 'admin' });
-        console.log(`Rol de administrador forzado para: ${email}`);
+        console.log(`Rol de administrador verificado y actualizado para: ${email}`);
       }
       
       return user;
 
     } catch (error) {
-      // Si el usuario no existe (error 404), lo creamos con el rol correcto
+      // Si el usuario no existe (404), lo creamos con el rol correspondiente
       if (error.status === 404) {
         const newUser = await this.usersService.create({
           firebaseUid: uid,

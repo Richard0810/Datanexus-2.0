@@ -177,7 +177,7 @@ function ResourcePreview({ url, title }: { url: string; title: string }) {
     // Soporte para Gamma
     if (url.includes("gamma.app/docs/")) return url.replace("gamma.app/docs/", "gamma.app/embed/");
     
-    // Parche crítico para Google Drive / Docs / Slides
+    // Soporte para Google Drive / Docs / Slides (Forzamos /preview)
     if (url.includes("docs.google.com") || url.includes("drive.google.com")) {
       if (url.includes("/edit") || url.includes("/view")) {
         return url.replace(/\/edit.*$/, "/preview").replace(/\/view.*$/, "/preview");
@@ -678,7 +678,6 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
             <DialogTitle>{editingResource ? "Editar Recurso" : "Añadir Recurso"}</DialogTitle>
             <Button variant="ghost" size="icon" onClick={() => setIsResourceDialogOpen(false)}><X className="h-4 w-4"/></Button>
           </div>
-          {/* Scroll inteligente para el cuerpo del formulario */}
           <div className="p-6 max-h-[60vh] overflow-y-auto space-y-6">
             <div className="space-y-2">
               <Label>Título del Recurso</Label>
