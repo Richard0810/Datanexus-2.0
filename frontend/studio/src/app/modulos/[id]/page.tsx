@@ -193,7 +193,7 @@ function ResourcePreview({ url, title }: { url: string; title: string }) {
       return match ? `https://docs.google.com/presentation/d/${match[1]}/embed` : url;
     }
     
-    // Google Drive Generic Files (Solución para "Necesitas acceso")
+    // Google Drive Generic Files
     if (url.includes("drive.google.com/file/d/")) {
       const match = url.match(/\/d\/(.+?)(\/|$)/);
       return match ? `https://drive.google.com/file/d/${match[1]}/preview` : url;
@@ -336,7 +336,6 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
         api.get("/performance-reports")
       ]);
       
-      // Filtrado flexible para aceptar "Módulo X" o "Unidad X"
       setResources(resResponse.data.filter((res: any) => 
         res.unidad === `Módulo ${id}` || 
         res.unidad === `Unidad ${id}` || 

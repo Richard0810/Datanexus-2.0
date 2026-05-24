@@ -33,7 +33,7 @@ async function bootstrap() {
   try {
     await app.listen(port, '0.0.0.0');
     console.log(`Backend de DataNexus corriendo exitosamente en el puerto: ${port}`);
-  } catch (error) {
+  } catch (error: any) {
     if (error.code === 'EADDRINUSE') {
       console.error(`ERROR: El puerto ${port} está ocupado. Intenta cerrar el proceso anterior.`);
       process.exit(1);
