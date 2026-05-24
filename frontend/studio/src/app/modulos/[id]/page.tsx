@@ -299,15 +299,6 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
 
   const handleSaveResource = async () => {
     if (!resourceForm.titulo) return;
-    if (sourceTab === "url" && !resourceForm.url) {
-      toast({ title: "Atención", description: "Debes ingresar una URL", variant: "destructive" });
-      return;
-    }
-    if (sourceTab === "file" && !uploadedFile && !resourceForm.url) {
-      toast({ title: "Atención", description: "Debes seleccionar un archivo", variant: "destructive" });
-      return;
-    }
-
     setIsProcessing(true);
     try {
       const resourceId = getResourceId(editingResource);
@@ -321,10 +312,10 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
 
       if (resourceId) {
         await api.patch(`/educational-resources/${resourceId}`, payload);
-        toast({ title: "Recurso actualizado con éxito" });
+        toast({ title: "Recurso actualizado" });
       } else {
         await api.post("/educational-resources", payload);
-        toast({ title: "Recurso creado con éxito" });
+        toast({ title: "Recurso creado" });
       }
 
       setIsResourceDialogOpen(false);
@@ -334,8 +325,8 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
     } catch (error: any) {
       console.error("Error al guardar recurso:", error);
       toast({ 
-        title: "Error al guardar el recurso", 
-        description: "Hubo un problema al procesar la solicitud.",
+        title: "Error al guardar", 
+        description: "Hubo un problema de conexión.",
         variant: "destructive" 
       });
     } finally {
@@ -355,13 +346,13 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
     setIsProcessing(true);
     try {
       await api.delete(`/educational-resources/${resourceId}`);
-      toast({ title: "Recurso eliminado correctamente" });
+      toast({ title: "Recurso eliminado" });
       setIsDeleteResourceDialogOpen(false);
       setResourceToDelete(null);
       fetchData();
     } catch (error) {
       console.error("Error al eliminar recurso:", error);
-      toast({ title: "Error al intentar eliminar el recurso", variant: "destructive" });
+      toast({ title: "Error al intentar eliminar", variant: "destructive" });
     } finally {
       setIsProcessing(false);
     }
@@ -373,7 +364,8 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
     if (url.startsWith('data:')) {
       try {
         const parts = url.split(',');
-        const mime = parts[0].match(/:(.*?);/)?.[1] || 'application/octet-stream';
+        const mimeMatch = parts[0].match(/:(.*?);/);
+        const mime = mimeMatch ? mimeMatch[1] : 'application/octet-stream';
         const b64Data = parts[1];
         
         const byteCharacters = atob(b64Data);
@@ -742,6 +734,13 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
               {resources.map((res) => {
                 const resourceId = getResourceId(res);
                 const embedUrl = getEmbedUrl(res.url);
+                
+                // Estrategia de detección automática de Base64 por contenido
+                const isBase64 = res.url && res.url.startsWith('data:');
+                const isPdf = isBase64 && res.url.includes('application/pdf');
+                const isVideo = isBase64 && res.url.includes('video/');
+                const isImage = isBase64 && res.url.includes('image/');
+                
                 return (
                   <Card key={resourceId} className="overflow-hidden group relative shadow-md">
                     {isAdmin && (
@@ -801,32 +800,37 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                           <iframe 
                             src={embedUrl} 
                             className="w-full h-full border-0" 
-                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen" 
                             allowFullScreen 
                           />
                         </div>
-                      ) : res.url && res.url.startsWith('data:video/mp4') ? (
+                      ) : isVideo ? (
                         <div className="rounded-xl overflow-hidden border bg-black w-full shadow-inner aspect-video">
                           <video controls className="w-full h-full">
-                            <source src={res.url} type="video/mp4" />
+                            <source src={res.url} />
                           </video>
                         </div>
-                      ) : res.url && res.url.startsWith('data:image/') ? (
-                        <div className="rounded-xl overflow-hidden border bg-black w-full shadow-inner flex justify-center items-center p-4">
-                           <img src={res.url} alt={res.titulo} className="max-w-full max-h-[500px] object-contain" />
+                      ) : isImage ? (
+                        <div className="rounded-xl overflow-hidden border bg-slate-50 w-full shadow-inner flex justify-center items-center p-4">
+                           <img src={res.url} alt={res.titulo} className="max-w-full max-h-[500px] object-contain shadow-sm rounded-lg" />
                         </div>
-                      ) : res.url && res.url.startsWith('data:application/pdf') ? (
-                        <div className="rounded-xl overflow-hidden border bg-background w-full shadow-inner aspect-[3/4] md:aspect-video">
+                      ) : isPdf ? (
+                        <div className="rounded-xl overflow-hidden border bg-background w-full shadow-inner aspect-[3/4] md:aspect-video relative">
                           <iframe 
                             src={res.url} 
                             className="w-full h-full border-0" 
+                            title={res.titulo}
                           />
+                          <div className="absolute bottom-4 right-4 md:hidden">
+                             <Button size="sm" onClick={() => handleViewFull(res.url)} className="bg-primary/90">Ampliar PDF</Button>
+                          </div>
                         </div>
                       ) : (
-                        <div className="rounded-xl border bg-muted w-full flex items-center justify-center p-12 aspect-video">
+                        <div className="rounded-xl border border-dashed bg-muted/30 w-full flex items-center justify-center p-12 aspect-video">
                           <div className="text-center">
-                             <FileText className="h-12 w-12 text-muted-foreground opacity-20 mx-auto mb-4" />
-                             <p className="text-xs text-muted-foreground">Vista previa no disponible para este formato. Usa el botón superior para ver el contenido.</p>
+                             <FileText className="h-16 w-16 text-muted-foreground opacity-20 mx-auto mb-4" />
+                             <p className="text-sm font-medium text-muted-foreground">Vista previa generada automáticamente</p>
+                             <p className="text-xs text-muted-foreground mt-2 max-w-xs mx-auto">Si el visor no carga, utiliza el botón superior "Ver en ventana completa" para acceder al material.</p>
+                             <Button variant="outline" size="sm" className="mt-6" onClick={() => handleViewFull(res.url)}>Forzar Apertura</Button>
                           </div>
                         </div>
                       )}
@@ -1030,10 +1034,10 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-destructive">
               <Trash2 className="h-5 w-5" />
-              ¿Estás seguro de eliminar este recurso?
+              ¿Eliminar este recurso?
             </DialogTitle>
             <DialogDescription className="py-2">
-              Esta acción eliminará permanentemente el recurso <strong>{resourceToDelete?.titulo}</strong> de la base de datos de DataNexus. No se puede deshacer.
+              Se eliminará permanentemente <strong>{resourceToDelete?.titulo}</strong>.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="flex flex-col sm:flex-row gap-2">
@@ -1042,7 +1046,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
             </Button>
             <Button variant="destructive" onClick={confirmDeleteResource} disabled={isProcessing}>
               {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
-              Eliminar Permanentemente
+              Eliminar
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1056,22 +1060,19 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
               Revisión de Entrega
             </DialogTitle>
             <DialogDescription>
-              Viendo el trabajo de <strong>{selectedSubmission?.usuarioNombre}</strong> para "{selectedSubmission?.tituloContenido}"
+              Viendo el trabajo de <strong>{selectedSubmission?.usuarioNombre}</strong>
             </DialogDescription>
           </DialogHeader>
 
           <div className="flex-1 overflow-y-auto pr-2 py-4 space-y-6">
             <div className="space-y-2">
-              <Label className="text-xs uppercase text-muted-foreground">Contenido de la Entrega</Label>
+              <Label className="text-xs uppercase text-muted-foreground">Contenido</Label>
               {selectedSubmission && formatSubmissionDetail(selectedSubmission.detalleEnvio)}
             </div>
             <Separator />
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="md:col-span-1 space-y-3">
-                <Label htmlFor="puntaje" className="flex items-center gap-2">
-                  Puntaje (0-5)
-                  <Trophy className="h-3 w-3 text-yellow-500" />
-                </Label>
+                <Label htmlFor="puntaje" className="flex items-center gap-2">Puntaje (0-5)</Label>
                 <input 
                   id="puntaje"
                   type="number"
@@ -1083,14 +1084,14 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                     const val = Number(e.target.value);
                     if (val <= 5) setGradingForm({...gradingForm, puntaje: val});
                   }}
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                 />
               </div>
               <div className="md:col-span-2 space-y-3">
-                <Label htmlFor="recomendaciones">Recomendaciones y Retroalimentación</Label>
+                <Label htmlFor="recomendaciones">Recomendaciones</Label>
                 <Textarea 
                   id="recomendaciones"
-                  placeholder="Escribe tus observaciones para el estudiante..."
+                  placeholder="Escribe tus observaciones..."
                   value={gradingForm.recomendaciones}
                   onChange={e => setGradingForm({...gradingForm, recomendaciones: e.target.value})}
                   rows={4}
@@ -1114,7 +1115,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
         <DialogContent className="sm:max-w-[700px] max-h-[80vh] overflow-hidden flex flex-col">
           <DialogHeader>
             <DialogTitle>Mi Entrega</DialogTitle>
-            <DialogDescription>Material enviado para "{selectedSubmission?.tituloContenido}"</DialogDescription>
+            <DialogDescription>Enviado para "{selectedSubmission?.tituloContenido}"</DialogDescription>
           </DialogHeader>
           <div className="flex-1 overflow-y-auto py-4">
             {selectedSubmission && formatSubmissionDetail(selectedSubmission.detalleEnvio)}
@@ -1136,10 +1137,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
       <Dialog open={isSubmitActivityOpen} onOpenChange={setIsSubmitActivityOpen}>
         <DialogContent className="sm:max-w-[800px] max-h-[90vh] flex flex-col">
           <DialogHeader>
-            <DialogTitle>{editingSubmissionId ? "Editar Entrega" : "Realizar Entrega"}: {selectedActivity?.titulo}</DialogTitle>
-            <DialogDescription>
-                {editingSubmissionId ? "Modifica tu respuesta anterior." : "Completa tu respuesta y adjunta un archivo si es necesario."}
-            </DialogDescription>
+            <DialogTitle>{editingSubmissionId ? "Editar Entrega" : "Realizar Entrega"}</DialogTitle>
           </DialogHeader>
           <div className="flex-1 overflow-y-auto pr-2 py-4 space-y-6">
             <div className="space-y-3">
@@ -1158,12 +1156,11 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                         ref={editorRef}
                         contentEditable
                         className="p-4 min-h-[250px] bg-background outline-none prose prose-sm max-w-none"
-                        placeholder="Escribe tu entrega aquí..."
                     />
                 </div>
             </div>
             <div className="space-y-3">
-                <Label>Adjuntar Documento (PDF, Word, Imágenes)</Label>
+                <Label>Adjuntar Documento</Label>
                 <div className={cn(
                     "relative border-2 border-dashed rounded-xl p-6 transition-all",
                     attachedFile ? "border-primary bg-primary/5" : "border-muted-foreground/20 hover:border-primary/50"
@@ -1183,8 +1180,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                         ) : (
                             <>
                                 <FileUp className="h-8 w-8 text-muted-foreground mb-2" />
-                                <p className="text-sm font-medium">Arrastra o haz clic para subir un archivo</p>
-                                <p className="text-xs text-muted-foreground mt-1">Soportado: PDF, DOCX, JPG, PNG (Max 5MB)</p>
+                                <p className="text-sm font-medium">Arrastra o selecciona un archivo</p>
                             </>
                         )}
                     </div>
@@ -1195,7 +1191,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
             <Button variant="outline" onClick={() => { setIsSubmitActivityOpen(false); setEditingSubmissionId(null); }}>Cancelar</Button>
             <Button onClick={handleSubmitActivity} disabled={isProcessing} className="bg-primary px-8">
                 {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
-                {editingSubmissionId ? "Actualizar Entrega" : "Finalizar Entrega"}
+                Enviar Entrega
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1221,50 +1217,34 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                 <DialogTitle className="text-white text-base font-medium">
                   {editingResource ? "Editar recurso" : "Nuevo recurso"}
                 </DialogTitle>
-                <p className="text-slate-400 text-xs mt-0.5">
-                  Módulo {id}
-                </p>
+                <p className="text-slate-400 text-xs mt-0.5">Módulo {id}</p>
               </div>
             </div>
           </div>
 
           <div className="p-6 flex flex-col gap-5 overflow-y-auto flex-1">
             <div className="flex flex-col gap-1.5">
-              <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                Título <span className="text-red-500">*</span>
-              </Label>
+              <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Título *</Label>
               <Input
                 value={resourceForm.titulo}
-                onChange={(e) =>
-                  setResourceForm({ ...resourceForm, titulo: e.target.value })
-                }
+                onChange={(e) => setResourceForm({ ...resourceForm, titulo: e.target.value })}
                 placeholder="Ej: Introducción a SQL"
                 maxLength={80}
-                className="focus-visible:ring-blue-500"
               />
-              <span className="text-xs text-muted-foreground text-right">
-                {resourceForm.titulo.length}/80
-              </span>
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                Descripción
-              </Label>
+              <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Descripción</Label>
               <Textarea
                 value={resourceForm.descripcion}
-                onChange={(e) =>
-                  setResourceForm({ ...resourceForm, descripcion: e.target.value })
-                }
-                placeholder="Breve descripción del recurso..."
-                className="resize-none min-h-[80px] focus-visible:ring-blue-500"
+                onChange={(e) => setResourceForm({ ...resourceForm, descripcion: e.target.value })}
+                placeholder="Breve descripción..."
+                className="resize-none min-h-[80px]"
               />
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                Tipo de recurso
-              </Label>
+              <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Tipo de recurso</Label>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                 {[
                   { value: "video", label: "Video", icon: PlayCircle },
@@ -1277,15 +1257,9 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                   <button
                     key={value}
                     type="button"
-                    onClick={() =>
-                      setResourceForm({ ...resourceForm, tipo: value })
-                    }
+                    onClick={() => setResourceForm({ ...resourceForm, tipo: value })}
                     className={`flex flex-col items-center gap-1.5 p-3 rounded-lg border transition-all text-sm
-                      ${
-                        resourceForm.tipo === value
-                          ? "border-blue-500 bg-blue-500/10 text-blue-600"
-                          : "border-border bg-muted/40 text-muted-foreground hover:border-blue-400 hover:bg-blue-500/5"
-                      }`}
+                      ${resourceForm.tipo === value ? "border-blue-500 bg-blue-500/10 text-blue-600" : "border-border bg-muted/40 text-muted-foreground"}`}
                   >
                     <Icon className="w-5 h-5" />
                     <span className="text-xs font-medium">{label}</span>
@@ -1295,44 +1269,17 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
             </div>
 
             <div className="flex flex-col gap-2">
-              <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                Fuente del recurso
-              </Label>
+              <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Fuente del recurso</Label>
               <div className="flex gap-1 p-1 bg-muted rounded-lg">
-                <button
-                  type="button"
-                  onClick={() => setSourceTab("url")}
-                  className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-md text-xs font-medium transition-all
-                    ${sourceTab === "url"
-                      ? "bg-background text-blue-600 shadow-sm"
-                      : "text-muted-foreground hover:text-foreground"
-                    }`}
-                >
-                  <LinkIcon className="w-3.5 h-3.5" />
-                  URL externa
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSourceTab("file")}
-                  className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-md text-xs font-medium transition-all
-                    ${sourceTab === "file"
-                      ? "bg-background text-blue-600 shadow-sm"
-                      : "text-muted-foreground hover:text-foreground"
-                    }`}
-                >
-                  <Upload className="w-3.5 h-3.5" />
-                  Subir archivo
-                </button>
+                <button type="button" onClick={() => setSourceTab("url")} className={`flex-1 py-1.5 rounded-md text-xs font-medium ${sourceTab === "url" ? "bg-background text-blue-600 shadow-sm" : "text-muted-foreground"}`}>URL externa</button>
+                <button type="button" onClick={() => setSourceTab("file")} className={`flex-1 py-1.5 rounded-md text-xs font-medium ${sourceTab === "file" ? "bg-background text-blue-600 shadow-sm" : "text-muted-foreground"}`}>Subir archivo</button>
               </div>
 
               {sourceTab === "url" ? (
                 <Input
                   value={resourceForm.url}
-                  onChange={(e) =>
-                    setResourceForm({ ...resourceForm, url: e.target.value })
-                  }
+                  onChange={(e) => setResourceForm({ ...resourceForm, url: e.target.value })}
                   placeholder="https://..."
-                  className="focus-visible:ring-blue-500"
                 />
               ) : (
                 <div className="flex flex-col gap-2">
@@ -1346,50 +1293,29 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                       if (file) setUploadedFile(file);
                     }}
                     onClick={() => document.getElementById("fileInput")?.click()}
-                    className={`border-2 border-dashed rounded-xl p-4 sm:p-6 flex flex-col items-center justify-center gap-2 cursor-pointer transition-all
-                      ${isDragging
-                        ? "border-blue-500 bg-blue-500/5"
-                        : "border-border hover:border-blue-400 hover:bg-blue-500/5"
-                      }`}
+                    className={`border-2 border-dashed rounded-xl p-4 sm:p-6 flex flex-col items-center justify-center gap-2 cursor-pointer transition-all ${isDragging ? "border-blue-500 bg-blue-500/5" : "border-border hover:border-blue-400"}`}
                   >
                     <input
                       id="fileInput"
                       type="file"
                       className="hidden"
-                      accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.mp4,.png,.jpg,.jpeg,.zip"
                       onChange={(e) => {
                         const file = e.target.files?.[0];
                         if (file) setUploadedFile(file);
                       }}
                     />
-                    <Upload className="w-6 h-6 sm:w-7 sm:h-7 text-blue-500" />
-                    <p className="text-sm text-muted-foreground text-center">
-                      Arrastra tu archivo aquí o{" "}
-                      <span className="text-blue-500 font-medium">selecciona uno</span>
-                    </p>
-                    <span className="text-[10px] sm:text-xs text-muted-foreground">
-                      PDF, Word, PPT, Excel, MP4, imágenes · máx. 50 MB
-                    </span>
+                    <Upload className="w-6 h-6 text-blue-500" />
+                    <p className="text-sm text-muted-foreground">Arrastra o selecciona un archivo</p>
                   </div>
 
                   {uploadedFile && (
                     <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg border">
-                      <div className="w-8 h-8 rounded-md bg-blue-500/15 flex items-center justify-center flex-shrink-0">
-                        <FileText className="w-4 h-4 text-blue-500" />
-                      </div>
+                      <FileText className="w-4 h-4 text-blue-500" />
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium truncate">{uploadedFile.name}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {formatFileSize(uploadedFile.size)}
-                        </p>
+                        <p className="text-xs text-muted-foreground">{formatFileSize(uploadedFile.size)}</p>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => setUploadedFile(null)}
-                        className="text-muted-foreground hover:text-destructive transition-colors"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
+                      <button type="button" onClick={() => setUploadedFile(null)} className="text-muted-foreground hover:text-destructive"><X className="w-4 h-4" /></button>
                     </div>
                   )}
                 </div>
@@ -1398,29 +1324,10 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
           </div>
 
           <div className="px-6 py-4 border-t flex gap-2 flex-shrink-0">
-            <Button
-              variant="outline"
-              onClick={() => setIsResourceDialogOpen(false)}
-              className="flex-shrink-0"
-            >
-              Cancelar
-            </Button>
-            <Button
-              onClick={handleSaveResource}
-              disabled={isProcessing}
-              className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
-            >
-              {isProcessing ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                  Guardando...
-                </>
-              ) : (
-                <>
-                  <Save className="w-4 h-4 mr-2" />
-                  Guardar recurso
-                </>
-              )}
+            <Button variant="outline" onClick={() => setIsResourceDialogOpen(false)} className="flex-shrink-0">Cancelar</Button>
+            <Button onClick={handleSaveResource} disabled={isProcessing} className="flex-1 bg-blue-600 hover:bg-blue-700 text-white">
+              {isProcessing ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
+              Guardar recurso
             </Button>
           </div>
         </DialogContent>
