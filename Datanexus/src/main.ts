@@ -12,7 +12,7 @@ async function bootstrap() {
 
   // CORS configurado para producción y desarrollo
   app.enableCors({
-    origin: true, // En producción puedes cambiarlo a tu dominio de Vercel específico
+    origin: true, 
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     credentials: true,
     allowedHeaders: '*',

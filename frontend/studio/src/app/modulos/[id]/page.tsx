@@ -37,7 +37,8 @@ import {
   Database,
   MoreHorizontal,
   Link as LinkIcon,
-  CheckSquare
+  CheckSquare,
+  ExternalLink
 } from "lucide-react";
 import Link from "next/link";
 import api from "@/lib/api";
@@ -174,28 +175,38 @@ function ResourcePreview({ url, title }: { url: string; title: string }) {
 
   const getEmbedUrl = (url: string) => {
     if (!url || !url.startsWith("http")) return null;
+    
+    // YouTube
     if (url.includes("youtube.com") || url.includes("youtu.be")) {
       let videoId = "";
       if (url.includes("youtu.be/")) videoId = url.split("youtu.be/")[1].split("?")[0];
       else if (url.includes("v=")) videoId = url.split("v=")[1].split("&")[0];
       return videoId ? `https://www.youtube.com/embed/${videoId}` : url;
     }
+    
+    // Gamma
     if (url.includes("gamma.app/docs/")) return url.replace("gamma.app/docs/", "gamma.app/embed/");
+    
+    // Google Slides
     if (url.includes("docs.google.com/presentation/d/")) {
       const match = url.match(/\/d\/(.+?)(\/|$)/);
       return match ? `https://docs.google.com/presentation/d/${match[1]}/embed` : url;
     }
+    
+    // Google Drive Generic Files (Solución para "Necesitas acceso")
+    if (url.includes("drive.google.com/file/d/")) {
+      const match = url.match(/\/d\/(.+?)(\/|$)/);
+      return match ? `https://drive.google.com/file/d/${match[1]}/preview` : url;
+    }
+    
+    // Google Docs
+    if (url.includes("docs.google.com/document/d/")) {
+      const match = url.match(/\/d\/(.+?)(\/|$)/);
+      return match ? `https://docs.google.com/document/d/${match[1]}/preview` : url;
+    }
+
     return url;
   };
-
-  if (!url) return null;
-
-  if (url.startsWith('data:image/')) {
-    return <div className="w-full h-full flex items-center justify-center bg-slate-50"><img src={url} alt={title} className="max-w-full max-h-full object-contain" /></div>;
-  }
-  if (url.startsWith('data:video/')) {
-    return <video src={url} controls className="w-full h-full bg-black" />;
-  }
 
   const finalUrl = blobUrl || getEmbedUrl(url);
 
@@ -203,23 +214,41 @@ function ResourcePreview({ url, title }: { url: string; title: string }) {
     return (
       <div className="w-full h-full flex flex-col items-center justify-center bg-slate-100 text-muted-foreground p-8 text-center">
         <FileText className="h-12 w-12 mb-3 opacity-20" />
-        <p className="text-sm font-bold uppercase tracking-widest">Documento Local</p>
-        <Button asChild variant="outline" size="sm" className="mt-4 rounded-xl font-bold bg-white">
-          <a href={url} download={title}>
-            <Download className="mr-2 h-4 w-4" /> Descargar y Ver
-          </a>
-        </Button>
+        <p className="text-xs font-bold uppercase tracking-widest mb-4">Material de Estudio</p>
+        <div className="flex gap-2">
+           <Button asChild variant="outline" size="sm" className="rounded-xl font-bold bg-white">
+            <a href={url} target="_blank" rel="noopener noreferrer">
+              <ExternalLink className="mr-2 h-4 w-4" /> Ver Externo
+            </a>
+          </Button>
+          {url.startsWith('data:') && (
+            <Button asChild variant="default" size="sm" className="rounded-xl font-bold">
+              <a href={url} download={title}>
+                <Download className="mr-2 h-4 w-4" /> Descargar
+              </a>
+            </Button>
+          )}
+        </div>
       </div>
     );
   }
 
   return (
-    <iframe 
-      src={finalUrl} 
-      className="w-full h-full border-0" 
-      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
-      allowFullScreen 
-    />
+    <div className="relative w-full h-full">
+      <iframe 
+        src={finalUrl} 
+        className="w-full h-full border-0" 
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+        allowFullScreen 
+      />
+      <div className="absolute bottom-4 right-4 z-30">
+        <Button asChild size="sm" variant="secondary" className="rounded-full shadow-lg opacity-80 hover:opacity-100">
+          <a href={url} target="_blank" rel="noopener noreferrer">
+            <ExternalLink className="h-4 w-4 mr-2" /> Ventana Nueva
+          </a>
+        </Button>
+      </div>
+    </div>
   );
 }
 
@@ -307,8 +336,11 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
         api.get("/performance-reports")
       ]);
       
+      // Filtrado flexible para aceptar "Módulo X" o "Unidad X"
       setResources(resResponse.data.filter((res: any) => 
-        res.unidad === `Módulo ${id}` || res.unidad === `Unidad ${id}`
+        res.unidad === `Módulo ${id}` || 
+        res.unidad === `Unidad ${id}` || 
+        res.unidad === id
       ));
       setActivities(actResponse.data.filter((act: any) => String(act.moduloId) === String(id)));
       setAssessments(assResponse.data.filter((ass: any) => String(ass.moduloId) === String(id)));
@@ -497,8 +529,6 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
     } catch (error) { toast({ title: "Error", variant: "destructive" }); }
     finally { setIsProcessing(false); setIsDeleteDialogOpen(false); }
   };
-
-  const handleResetPreview = () => { setUserAnswers({}); setShowFeedback(false); setScore(null); };
 
   const formatSubmissionDetail = (detail: string) => {
     try {
@@ -711,7 +741,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                 <Input value={resourceForm.url} onChange={e => setResourceForm({...resourceForm, url: e.target.value})} placeholder="https://..." className="rounded-xl"/>
               </TabsContent>
               <TabsContent value="file">
-                 <div className="border-2 border-dashed rounded-2xl p-8 text-center" onClick={() => document.getElementById('resFile')?.click()}>
+                 <div className="border-2 border-dashed rounded-2xl p-8 text-center cursor-pointer" onClick={() => document.getElementById('resFile')?.click()}>
                     <input id="resFile" type="file" className="hidden" onChange={e => setUploadedFile(e.target.files?.[0] || null)}/>
                     <Upload className="h-10 w-10 mx-auto text-muted-foreground mb-2"/>
                     <p className="text-sm font-medium">{uploadedFile ? uploadedFile.name : "Selecciona o arrastra un archivo (PDF, MP4, PNG)"}</p>
@@ -740,14 +770,14 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                </div>
                <div ref={editorRef} contentEditable className="p-5 min-h-[200px] outline-none prose prose-sm max-w-none"/>
             </div>
-            <div className="border-2 border-dashed rounded-2xl p-6 text-center" onClick={() => document.getElementById('subFile')?.click()}>
+            <div className="border-2 border-dashed rounded-2xl p-6 text-center cursor-pointer" onClick={() => document.getElementById('subFile')?.click()}>
                <input id="subFile" type="file" className="hidden" onChange={handleFileChange}/>
                {attachedFile ? <div className="flex items-center justify-center gap-2 text-primary font-bold"><CheckCircle2 className="h-5 w-5"/> {attachedFile.name}</div> : <p className="text-sm text-muted-foreground">Adjuntar archivo opcional (PDF, Imágenes)</p>}
             </div>
           </div>
           <DialogFooter className="p-4 border-t">
             <Button variant="outline" onClick={() => setIsSubmitActivityOpen(false)} className="rounded-xl">Cancelar</Button>
-            <Button onClick={handleSubmitActivity} disabled={isProcessing} className="bg-primary px-8 rounded-xl font-bold">{isProcessing ? <Loader2 className="animate-spin mr-2 h-4 w-4"/> : <Upload className="mr-2 h-4 w-4"/>} Enviar Entrega</Button>
+            <Button onClick={handleSubmitActivity} disabled={isProcessing} className="bg-primary px-8 rounded-xl font-bold">{isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4"/>} Enviar Entrega</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
