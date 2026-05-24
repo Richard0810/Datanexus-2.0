@@ -52,6 +52,8 @@ export function NavMenu() {
   }, []);
 
   const filteredItems = navItems.filter(item => {
+    // Excluir Modelo de Datos (ya no está en la lista pero por seguridad)
+    if (item.href === '/modelo') return false;
     if (item.adminOnly && (!mounted || user?.role !== 'admin')) return false;
     return true;
   });
