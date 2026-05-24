@@ -271,6 +271,21 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
     return () => Object.values(newUrls).forEach(url => URL.revokeObjectURL(url));
   }, [resources]);
 
+  const handleEditClick = (res: Resource) => {
+    setEditingResource(res);
+    setResourceForm({
+      titulo: res.titulo,
+      descripcion: res.descripcion || "",
+      url: res.url || "",
+      unidad: res.unidad || `Módulo ${id}`,
+      tipo: res.tipo || "guia",
+      formato: res.formato || "URL"
+    });
+    setSourceTab(res.url?.startsWith('data:') ? "file" : "url");
+    setUploadedFile(null);
+    setIsResourceDialogOpen(true);
+  };
+
   const handleSaveResource = async () => {
     if (!resourceForm.titulo) return;
     setIsProcessing(true);
@@ -291,21 +306,6 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
     } finally {
       setIsProcessing(false);
     }
-  };
-
-  const handleEditClick = (res: Resource) => {
-    setEditingResource(res);
-    setResourceForm({
-      titulo: res.titulo,
-      descripcion: res.descripcion || "",
-      url: res.url || "",
-      unidad: res.unidad || `Módulo ${id}`,
-      tipo: res.tipo || "guia",
-      formato: res.formato || "URL"
-    });
-    setSourceTab(res.url?.startsWith('data:') ? "file" : "url");
-    setUploadedFile(null);
-    setIsResourceDialogOpen(true);
   };
 
   const handleViewFull = (res: Resource) => {
@@ -367,11 +367,23 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
               return (
                 <Card key={resId} className="overflow-hidden shadow-md group relative">
                   {isAdmin && (
-                    <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity flex gap-2">
-                      <Button variant="secondary" size="icon" className="h-8 w-8" onClick={() => handleEditClick(res)}>
+                    <div className="absolute top-4 right-4 flex gap-2 z-20">
+                      <Button 
+                        variant="default" 
+                        size="icon" 
+                        className="h-8 w-8 bg-blue-600 hover:bg-blue-700 text-white shadow-md" 
+                        onClick={() => handleEditClick(res)}
+                        title="Editar Recurso"
+                      >
                         <Pencil className="h-4 w-4" />
                       </Button>
-                      <Button variant="destructive" size="icon" className="h-8 w-8" onClick={async () => { if(confirm('¿Seguro?')) { await api.delete(`/educational-resources/${resId}`); fetchData(); } }}>
+                      <Button 
+                        variant="destructive" 
+                        size="icon" 
+                        className="h-8 w-8 shadow-md" 
+                        onClick={async () => { if(confirm('¿Seguro?')) { await api.delete(`/educational-resources/${resId}`); fetchData(); } }}
+                        title="Eliminar Recurso"
+                      >
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
