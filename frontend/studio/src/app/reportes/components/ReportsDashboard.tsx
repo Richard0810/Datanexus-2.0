@@ -10,7 +10,7 @@ import { ChartConfig, ChartContainer, ChartTooltipContent } from "@/components/u
 import api from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import { Badge } from "@/components/ui/badge";
-import { format } from "date-fns";
+import { format, isValid } from "date-fns";
 import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 
@@ -82,6 +82,13 @@ export function ReportsDashboard() {
       color: "hsl(var(--primary))" 
     },
   } satisfies ChartConfig;
+
+  // Función para formatear fechas de forma segura
+  const safeFormatDate = (dateStr: string) => {
+    if (!dateStr) return "S/F";
+    const date = new Date(dateStr);
+    return isValid(date) ? format(date, "dd MMM, yyyy", { locale: es }) : "S/F";
+  };
 
   if (loading) {
     return (
@@ -188,10 +195,14 @@ export function ReportsDashboard() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {[...submissions].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).map((sub) => (
+              {[...submissions].sort((a, b) => {
+                const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+                const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+                return dateB - dateA;
+              }).map((sub) => (
                 <TableRow key={sub._id} className="hover:bg-slate-50/80 transition-colors">
                   <TableCell className="px-8 font-medium">
-                    {format(new Date(sub.createdAt), "dd MMM, yyyy", { locale: es })}
+                    {safeFormatDate(sub.createdAt)}
                   </TableCell>
                   {isAdmin && <TableCell className="text-xs">{sub.usuarioNombre}</TableCell>}
                   <TableCell>
