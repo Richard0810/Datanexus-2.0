@@ -37,7 +37,14 @@ import {
   AlignRight,
   CheckSquare,
   ExternalLink,
-  Link2
+  Link2,
+  Plus,
+  PlayCircle,
+  BookOpen,
+  Monitor,
+  Database,
+  MoreHorizontal,
+  Link as LinkIcon
 } from "lucide-react";
 import Link from "next/link";
 import api from "@/lib/api";
@@ -98,7 +105,7 @@ const modulesData = {
   "4": { title: "Módulo 4: Estrategias de Búsqueda Avanzada", objective: "Aplicar técnicas avanzadas para mejorar resultados de búsqueda." },
   "5": { title: "Módulo 5: Inteligencia Artificial en la Búsqueda", objective: "Utilizar herramientas de IA para optimizar la búsqueda académica." },
   "6": { title: "Módulo 6: Gestión de la Información", objective: "Organizar y almacenar información recuperada." },
-  "7": { title: "Módulo 7: Evaluación y Selección de Fuentes", objective: "Evaluar la calidad de la información académica." },
+  "7": { title: "Módulo 7: Evaluación y Selección de Fuentes", objective: "Evaluación de la calidad de la información académica." },
   "8": { title: "Módulo 8: Ética y Uso Responsable de la Información", objective: "Aplicar principios éticos en el uso de información." },
   "9": { title: "Módulo 9: Aplicación Práctica en Investigación", objective: "Integrar todos los conocimientos en un ejercicio completo." }
 };
@@ -189,6 +196,11 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
   const editorRef = useRef<HTMLDivElement>(null);
   const [attachedFile, setAttachedFile] = useState<{ name: string, data: string } | null>(null);
   
+  // Nuevos estados para la gestión de recursos moderna
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [sourceTab, setSourceTab] = useState<"url" | "file">("url");
+  const [isDragging, setIsDragging] = useState(false);
+  
   const [editingResource, setEditingResource] = useState<Resource | null>(null);
   const [editingActivity, setEditingActivity] = useState<Activity | null>(null);
   const [editingAssessment, setEditingAssessment] = useState<Assessment | null>(null);
@@ -223,6 +235,11 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
       if (typeof item._id === 'object') return item._id.$oid || item._id.toString();
     }
     return '';
+  };
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
 
   const fetchData = async () => {
@@ -278,16 +295,42 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
   };
 
   const handleSaveResource = async () => {
-    if (!resourceForm.titulo || !resourceForm.url) return;
+    if (!resourceForm.titulo) return;
+    if (sourceTab === "url" && !resourceForm.url && !uploadedFile) return;
     setIsProcessing(true);
+
     try {
       const resourceId = getObjectId(editingResource);
-      if (resourceId) {
-        await api.patch(`/educational-resources/${resourceId}`, resourceForm);
+
+      if (uploadedFile && sourceTab === "file") {
+        const formData = new FormData();
+        formData.append("file", uploadedFile);
+        formData.append("titulo", resourceForm.titulo);
+        formData.append("descripcion", resourceForm.descripcion);
+        formData.append("unidad", resourceForm.unidad);
+        formData.append("tipo", resourceForm.tipo);
+        formData.append("formato", uploadedFile.name.split(".").pop() || "file");
+
+        if (resourceId) {
+          await api.patch(`/educational-resources/${resourceId}`, formData, {
+            headers: { 'Content-Type': 'multipart/form-data' }
+          });
+        } else {
+          await api.post("/educational-resources", formData, {
+            headers: { 'Content-Type': 'multipart/form-data' }
+          });
+        }
       } else {
-        await api.post("/educational-resources", resourceForm);
+        if (resourceId) {
+          await api.patch(`/educational-resources/${resourceId}`, resourceForm);
+        } else {
+          await api.post("/educational-resources", resourceForm);
+        }
       }
+
       setIsResourceDialogOpen(false);
+      setUploadedFile(null);
+      setSourceTab("url");
       fetchData();
       toast({ title: "Recurso guardado" });
     } catch (error) {
@@ -556,6 +599,10 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
       const match = url.match(/\/d\/(.+?)(\/|$)/);
       return match ? `https://drive.google.com/file/d/${match[1]}/preview` : url;
     }
+    if (url.includes("docs.google.com/document/d/")) {
+      const match = url.match(/\/d\/(.+?)(\/|$)/);
+      return match ? `https://docs.google.com/document/d/${match[1]}/preview` : url;
+    }
     return url;
   };
 
@@ -569,7 +616,6 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
     try {
       const parsed = JSON.parse(detail);
       
-      // Formato de actividad con texto enriquecido y archivo
       if (parsed.text !== undefined) {
           return (
               <div className="space-y-6">
@@ -599,7 +645,6 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
           );
       }
       
-      // Formato de evaluación (Array de preguntas y respuestas)
       if (Array.isArray(parsed)) {
         return (
           <div className="space-y-4">
@@ -643,7 +688,13 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
           <div className="flex justify-between items-center">
             <h2 className="text-xl font-headline">Materiales de Estudio</h2>
             {isAdmin && (
-              <Button onClick={() => { setEditingResource(null); setResourceForm({ titulo: "", descripcion: "", url: "", unidad: `Módulo ${id}`, tipo: "guia", formato: "URL" }); setIsResourceDialogOpen(true); }} size="sm">
+              <Button onClick={() => { 
+                setEditingResource(null); 
+                setResourceForm({ titulo: "", descripcion: "", url: "", unidad: `Módulo ${id}`, tipo: "guia", formato: "URL" }); 
+                setSourceTab("url");
+                setUploadedFile(null);
+                setIsResourceDialogOpen(true); 
+              }} size="sm">
                 <PlusCircle className="mr-2 h-4 w-4" /> Añadir Recurso
               </Button>
             )}
@@ -656,7 +707,12 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                   <Card key={resId} className="overflow-hidden group relative shadow-md">
                     {isAdmin && (
                       <div className="absolute top-4 right-4 flex gap-2 z-20">
-                        <Button variant="default" size="icon" className="h-9 w-9 bg-blue-600 hover:bg-blue-700 text-white shadow-lg rounded-full" onClick={() => { setEditingResource(res); setResourceForm(res); setIsResourceDialogOpen(true); }}><Pencil className="h-4 w-4" /></Button>
+                        <Button variant="default" size="icon" className="h-9 w-9 bg-blue-600 hover:bg-blue-700 text-white shadow-lg rounded-full" onClick={() => { 
+                          setEditingResource(res); 
+                          setResourceForm(res); 
+                          setSourceTab(res.url?.startsWith('data:') ? "file" : "url");
+                          setIsResourceDialogOpen(true); 
+                        }}><Pencil className="h-4 w-4" /></Button>
                         <Button variant="destructive" size="icon" className="h-9 w-9 bg-red-600 text-white shadow-lg rounded-full" onClick={() => { setItemToDelete({ id: resId, type: 'recurso' }); setIsDeleteDialogOpen(true); }}><Trash2 className="h-4 w-4" /></Button>
                       </div>
                     )}
@@ -855,8 +911,226 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
         )}
       </Tabs>
 
+      {/* DIÁLOGOS DE GESTIÓN (RECURSOS MODERNO) */}
+      <Dialog open={isResourceDialogOpen} onOpenChange={(open) => { 
+        setIsResourceDialogOpen(open); 
+        if (!open) { setUploadedFile(null); setSourceTab("url"); } 
+      }}>
+        <DialogContent className="sm:max-w-[600px] p-0 overflow-hidden rounded-2xl">
+          {/* Header */}
+          <div className="bg-[#1a2744] px-6 py-5 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-lg bg-blue-500/20 flex items-center justify-center">
+                <Plus className="w-5 h-5 text-blue-400" />
+              </div>
+              <div>
+                <DialogTitle className="text-white text-base font-medium">
+                  {editingResource ? "Editar recurso" : "Nuevo recurso"}
+                </DialogTitle>
+                <p className="text-slate-400 text-xs mt-0.5">
+                  {moduleInfo.title}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Body - Auto-ajustable con scroll interno */}
+          <div className="p-6 flex flex-col gap-5 max-h-[60vh] overflow-y-auto">
+            {/* Título */}
+            <div className="flex flex-col gap-1.5">
+              <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                Título <span className="text-red-500">*</span>
+              </Label>
+              <Input
+                value={resourceForm.titulo}
+                onChange={(e) => setResourceForm({ ...resourceForm, titulo: e.target.value })}
+                placeholder="Ej: Introducción a SQL"
+                maxLength={80}
+                className="focus-visible:ring-blue-500 rounded-xl"
+              />
+              <span className="text-xs text-muted-foreground text-right">
+                {resourceForm.titulo.length}/80
+              </span>
+            </div>
+
+            {/* Descripción */}
+            <div className="flex flex-col gap-1.5">
+              <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                Descripción
+              </Label>
+              <Textarea
+                value={resourceForm.descripcion}
+                onChange={(e) => setResourceForm({ ...resourceForm, descripcion: e.target.value })}
+                placeholder="Breve descripción del recurso..."
+                className="resize-none min-h-[80px] focus-visible:ring-blue-500 rounded-xl"
+              />
+            </div>
+
+            {/* Tipo de recurso */}
+            <div className="flex flex-col gap-1.5">
+              <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                Tipo de recurso
+              </Label>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                {[
+                  { value: "video", label: "Video", icon: PlayCircle },
+                  { value: "guia", label: "Guía", icon: BookOpen },
+                  { value: "articulo", label: "Artículo", icon: FileText },
+                  { value: "presentacion", label: "Presentación", icon: Monitor },
+                  { value: "dataset", label: "Dataset", icon: Database },
+                  { value: "otro", label: "Otro", icon: MoreHorizontal },
+                ].map(({ value, label, icon: Icon }) => (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => setResourceForm({ ...resourceForm, tipo: value })}
+                    className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border transition-all text-sm
+                      ${resourceForm.tipo === value
+                        ? "border-blue-500 bg-blue-500/10 text-blue-600"
+                        : "border-border bg-muted/40 text-muted-foreground hover:border-blue-400 hover:bg-blue-500/5"
+                      }`}
+                  >
+                    <Icon className="w-5 h-5" />
+                    <span className="text-[10px] font-bold uppercase">{label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Fuente: tabs URL / Archivo */}
+            <div className="flex flex-col gap-2">
+              <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                Fuente del recurso
+              </Label>
+              <div className="flex gap-1 p-1 bg-muted rounded-xl">
+                <button
+                  type="button"
+                  onClick={() => setSourceTab("url")}
+                  className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-medium transition-all
+                    ${sourceTab === "url"
+                      ? "bg-background text-blue-600 shadow-sm"
+                      : "text-muted-foreground hover:text-foreground"
+                    }`}
+                >
+                  <LinkIcon className="w-3.5 h-3.5" />
+                  URL externa
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSourceTab("file")}
+                  className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-medium transition-all
+                    ${sourceTab === "file"
+                      ? "bg-background text-blue-600 shadow-sm"
+                      : "text-muted-foreground hover:text-foreground"
+                    }`}
+                >
+                  <Upload className="w-3.5 h-3.5" />
+                  Subir archivo
+                </button>
+              </div>
+
+              {sourceTab === "url" ? (
+                <Input
+                  value={resourceForm.url}
+                  onChange={(e) => setResourceForm({ ...resourceForm, url: e.target.value })}
+                  placeholder="https://..."
+                  className="focus-visible:ring-blue-500 rounded-xl"
+                />
+              ) : (
+                <div className="flex flex-col gap-2">
+                  <div
+                    onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+                    onDragLeave={() => setIsDragging(false)}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      setIsDragging(false);
+                      const file = e.dataTransfer.files[0];
+                      if (file) setUploadedFile(file);
+                    }}
+                    onClick={() => document.getElementById("resourceFileInput")?.click()}
+                    className={`border-2 border-dashed rounded-2xl p-6 flex flex-col items-center justify-center gap-2 cursor-pointer transition-all
+                      ${isDragging
+                        ? "border-blue-500 bg-blue-500/5"
+                        : "border-slate-200 hover:border-blue-400 hover:bg-blue-500/5"
+                      }`}
+                  >
+                    <input
+                      id="resourceFileInput"
+                      type="file"
+                      className="hidden"
+                      accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.mp4,.png,.jpg,.jpeg,.zip"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) setUploadedFile(file);
+                      }}
+                    />
+                    <Upload className="w-7 h-7 text-blue-500" />
+                    <p className="text-sm text-muted-foreground text-center">
+                      Arrastra tu archivo aquí o <span className="text-blue-500 font-medium">selecciona uno</span>
+                    </p>
+                    <span className="text-[10px] text-muted-foreground uppercase tracking-widest">
+                      PDF, Word, MP4 · máx. 50 MB
+                    </span>
+                  </div>
+
+                  {uploadedFile && (
+                    <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-xl border">
+                      <div className="w-8 h-8 rounded-md bg-blue-500/15 flex items-center justify-center flex-shrink-0">
+                        <FileText className="w-4 h-4 text-blue-500" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-bold truncate">{uploadedFile.name}</p>
+                        <p className="text-[10px] text-muted-foreground">
+                          {formatFileSize(uploadedFile.size)}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setUploadedFile(null)}
+                        className="text-muted-foreground hover:text-destructive transition-colors"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div className="px-6 py-4 border-t flex gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setIsResourceDialogOpen(false)}
+              className="flex-shrink-0 rounded-xl"
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleSaveResource}
+              disabled={isProcessing}
+              className="flex-1 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold shadow-lg shadow-blue-500/20"
+            >
+              {isProcessing ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                  Guardando...
+                </>
+              ) : (
+                <>
+                  <Save className="w-4 h-4 mr-2" />
+                  Guardar recurso en MongoDB
+                </>
+              )}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* DIÁLOGOS DE REVISIÓN */}
       <Dialog open={isGradingDialogOpen} onOpenChange={setIsGradingDialogOpen}>
-        <DialogContent className="sm:max-w-[800px] max-h-[85vh] overflow-hidden flex flex-col">
+        <DialogContent className="sm:max-w-[800px] max-h-[85vh] overflow-hidden flex flex-col rounded-[2rem]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2"><GradeIcon className="h-5 w-5 text-primary" /> Revisión Pedagógica</DialogTitle>
             <DialogDescription>Calificando a: <strong>{selectedSubmission?.usuarioNombre}</strong></DialogDescription>
@@ -892,7 +1166,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
       </Dialog>
 
       <Dialog open={isViewOwnSubmissionOpen} onOpenChange={setIsViewOwnSubmissionOpen}>
-        <DialogContent className="sm:max-w-[700px] max-h-[80vh] overflow-hidden flex flex-col">
+        <DialogContent className="sm:max-w-[700px] max-h-[80vh] overflow-hidden flex flex-col rounded-[2rem]">
           <DialogHeader><DialogTitle>Mi Entrega Registrada</DialogTitle><DialogDescription>Visualización del material enviado para "{selectedSubmission?.tituloContenido}"</DialogDescription></DialogHeader>
           <div className="flex-1 overflow-y-auto py-4">{selectedSubmission && formatSubmissionDetail(selectedSubmission.detalleEnvio)}</div>
           <DialogFooter><Button variant="outline" onClick={() => setIsViewOwnSubmissionOpen(false)}>Cerrar</Button></DialogFooter>
@@ -900,7 +1174,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
       </Dialog>
 
       <Dialog open={isSubmitActivityOpen} onOpenChange={setIsSubmitActivityOpen}>
-        <DialogContent className="sm:max-w-[800px] max-h-[90vh] flex flex-col">
+        <DialogContent className="sm:max-w-[800px] max-h-[90vh] flex flex-col rounded-[2rem]">
           <DialogHeader>
             <DialogTitle className="text-2xl font-headline">{editingSubmissionId ? "Actualizar Mi Entrega" : "Realizar Entrega de Tarea"}</DialogTitle>
             <DialogDescription>Completa el desarrollo de tu actividad. Puedes usar el editor para formatear tu respuesta o adjuntar un archivo local.</DialogDescription>
@@ -950,27 +1224,6 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                 {editingSubmissionId ? "Actualizar Mi Tarea" : "Enviar Tarea Final"}
             </Button>
           </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={isResourceDialogOpen} onOpenChange={setIsResourceDialogOpen}>
-        <DialogContent className="sm:max-w-[600px] rounded-[2rem]">
-          <DialogHeader><DialogTitle className="text-2xl font-headline">Gestionar Recurso</DialogTitle></DialogHeader>
-          <div className="grid gap-6 py-6">
-            <div className="grid gap-2"><Label>Título del Material</Label><Input value={resourceForm.titulo} onChange={e => setResourceForm({...resourceForm, titulo: e.target.value})} className="rounded-xl h-11" /></div>
-            <div className="grid gap-2"><Label>Descripción Pedagógica</Label><Textarea value={resourceForm.descripcion} onChange={e => setResourceForm({...resourceForm, descripcion: e.target.value})} className="rounded-xl" rows={3} /></div>
-            <div className="grid gap-2"><Label>URL de la Fuente (YouTube, Drive, Gamma)</Label><Input value={resourceForm.url} onChange={e => setResourceForm({...resourceForm, url: e.target.value})} className="rounded-xl h-11" placeholder="https://..." /></div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="grid gap-2"><Label>Tipo</Label>
-                <Select value={resourceForm.tipo} onValueChange={v => setResourceForm({...resourceForm, tipo: v})}>
-                  <SelectTrigger className="rounded-xl h-11"><SelectValue /></SelectTrigger>
-                  <SelectContent><SelectItem value="video">🎥 Video Tutorial</SelectItem><SelectItem value="guia">📖 Guía de Estudio</SelectItem><SelectItem value="articulo">📝 Artículo Académico</SelectItem></SelectContent>
-                </Select>
-              </div>
-              <div className="grid gap-2"><Label>Formato</Label><Input value={resourceForm.formato} onChange={e => setResourceForm({...resourceForm, formato: e.target.value})} className="rounded-xl h-11" /></div>
-            </div>
-          </div>
-          <DialogFooter><Button onClick={handleSaveResource} disabled={isProcessing} className="w-full h-12 rounded-xl font-bold">{isProcessing ? <Loader2 className="animate-spin" /> : "Guardar Cambios en MongoDB"}</Button></DialogFooter>
         </DialogContent>
       </Dialog>
 
@@ -1132,10 +1385,10 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
         <AlertDialogContent className="rounded-[2.5rem]">
           <AlertDialogHeader>
             <AlertDialogTitle className="text-2xl font-headline">¿Confirmar eliminación?</AlertDialogTitle>
-            <AlertDialogDescription className="text-base">Esta acción borrará permanentemente el {itemToDelete?.type} de la base de datos de MongoDB. No se puede deshacer esta operación.</AlertDialogDescription>
+            <AlertDialogDescription className="text-base">Esta acción borrará permanentemente el elemento de la base de datos de MongoDB. No se puede deshacer esta operación.</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="gap-2">
-            <AlertDialogCancel disabled={isProcessing} className="rounded-2xl h-12 h-12">Cancelar</AlertDialogCancel>
+            <AlertDialogCancel disabled={isProcessing} className="rounded-2xl h-12">Cancelar</AlertDialogCancel>
             <AlertDialogAction onClick={(e) => { e.preventDefault(); handleDeleteConfirm(); }} className="bg-red-600 hover:bg-red-700 text-white rounded-2xl h-12 px-8" disabled={isProcessing}>
                 {isProcessing ? <Loader2 className="animate-spin h-4 w-4 mr-2" /> : <Trash2 className="w-4 h-4 mr-2" />} Borrar Definitivamente
             </AlertDialogAction>
@@ -1145,4 +1398,3 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
     </div>
   );
 }
-
