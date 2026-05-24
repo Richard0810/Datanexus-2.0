@@ -158,6 +158,94 @@ interface Submission {
   moduloId: string;
 }
 
+// Componente para previsualizar recursos de forma segura (PDFs, Videos, Imagenes)
+function ResourcePreview({ url, title }: { url: string; title: string }) {
+  const [blobUrl, setBlobUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Si es un PDF local (Base64), creamos un Blob para evitar errores de renderizado
+    if (url && url.startsWith('data:application/pdf')) {
+      try {
+        const parts = url.split(',');
+        const mime = parts[0].match(/:(.*?);/)?.[1] || 'application/pdf';
+        const byteString = atob(parts[1]);
+        const ab = new ArrayBuffer(byteString.length);
+        const ia = new Uint8Array(ab);
+        for (let i = 0; i < byteString.length; i++) {
+          ia[i] = byteString.charCodeAt(i);
+        }
+        const blob = new Blob([ab], { type: mime });
+        const newUrl = URL.createObjectURL(blob);
+        setBlobUrl(newUrl);
+        return () => URL.revokeObjectURL(newUrl);
+      } catch (e) {
+        console.error("Error creating blob for PDF:", e);
+      }
+    }
+    return undefined;
+  }, [url]);
+
+  const getEmbedUrl = (url: string) => {
+    if (!url || !url.startsWith("http")) return null;
+    if (url.includes("youtube.com") || url.includes("youtu.be")) {
+      let videoId = "";
+      if (url.includes("youtu.be/")) videoId = url.split("youtu.be/")[1].split("?")[0];
+      else if (url.includes("v=")) videoId = url.split("v=")[1].split("&")[0];
+      return videoId ? `https://www.youtube.com/embed/${videoId}` : url;
+    }
+    if (url.includes("gamma.app/docs/")) return url.replace("gamma.app/docs/", "gamma.app/embed/");
+    if (url.includes("docs.google.com/presentation/d/")) {
+      const match = url.match(/\/d\/(.+?)(\/|$)/);
+      return match ? `https://docs.google.com/presentation/d/${match[1]}/embed` : url;
+    }
+    if (url.includes("drive.google.com/file/d/")) {
+      const match = url.match(/\/d\/(.+?)(\/|$)/);
+      return match ? `https://drive.google.com/file/d/${match[1]}/preview` : url;
+    }
+    if (url.includes("docs.google.com/document/d/")) {
+      const match = url.match(/\/d\/(.+?)(\/|$)/);
+      return match ? `https://docs.google.com/document/d/${match[1]}/preview` : url;
+    }
+    return url;
+  };
+
+  if (!url) return null;
+
+  if (url.startsWith('data:image/')) {
+    return <div className="w-full h-full flex items-center justify-center bg-slate-50"><img src={url} alt={title} className="max-w-full max-h-full object-contain" /></div>;
+  }
+
+  if (url.startsWith('data:video/')) {
+    return <video src={url} controls className="w-full h-full bg-black" />;
+  }
+
+  const finalUrl = blobUrl || getEmbedUrl(url);
+
+  if (!finalUrl) {
+    return (
+      <div className="w-full h-full flex flex-col items-center justify-center bg-slate-100 text-muted-foreground p-8 text-center rounded-xl">
+        <FileText className="h-12 w-12 mb-3 opacity-20" />
+        <p className="text-sm font-bold uppercase tracking-widest">Recurso Local</p>
+        <p className="text-xs mt-1">Este archivo está guardado internamente.</p>
+        <Button asChild variant="outline" size="sm" className="mt-4 rounded-xl font-bold bg-white">
+          <a href={url} download={title}>
+            <Download className="mr-2 h-4 w-4" /> Descargar y Ver
+          </a>
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <iframe 
+      src={finalUrl} 
+      className="w-full h-full border-0" 
+      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+      allowFullScreen 
+    />
+  );
+}
+
 export default function ModuloDetallePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const { user } = useAuth();
@@ -371,20 +459,6 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
     }, 100);
   };
 
-  const handleDeleteSubmission = async (subId: string) => {
-    if (!confirm("¿Estás seguro de que deseas eliminar tu entrega? Esta acción no se puede deshacer.")) return;
-    setIsProcessing(true);
-    try {
-        await api.delete(`/performance-reports/${subId}`);
-        toast({ title: "Entrega eliminada con éxito" });
-        fetchData();
-    } catch (error) {
-        toast({ title: "Error al eliminar la entrega", variant: "destructive" });
-    } finally {
-        setIsProcessing(false);
-    }
-  };
-
   const handleSubmitActivity = async () => {
     if (!selectedActivity) return;
     const richText = editorRef.current?.innerHTML || "";
@@ -439,6 +513,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
     
     const detailWithQuestions = assessmentForm.preguntas.map(q => ({
       pregunta: q.texto,
+      id: q.id,
       respuesta: userAnswers[q.id] || "(Sin respuesta)"
     }));
 
@@ -565,30 +640,6 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
     setScore(null);
   };
 
-  const getEmbedUrl = (url: string) => {
-    if (!url || !url.startsWith("http")) return null;
-    if (url.includes("youtube.com") || url.includes("youtu.be")) {
-      let videoId = "";
-      if (url.includes("youtu.be/")) videoId = url.split("youtu.be/")[1].split("?")[0];
-      else if (url.includes("v=")) videoId = url.split("v=")[1].split("&")[0];
-      return videoId ? `https://www.youtube.com/embed/${videoId}` : url;
-    }
-    if (url.includes("gamma.app/docs/")) return url.replace("gamma.app/docs/", "gamma.app/embed/");
-    if (url.includes("docs.google.com/presentation/d/")) {
-      const match = url.match(/\/d\/(.+?)(\/|$)/);
-      return match ? `https://docs.google.com/presentation/d/${match[1]}/embed` : url;
-    }
-    if (url.includes("drive.google.com/file/d/")) {
-      const match = url.match(/\/d\/(.+?)(\/|$)/);
-      return match ? `https://drive.google.com/file/d/${match[1]}/preview` : url;
-    }
-    if (url.includes("docs.google.com/document/d/")) {
-      const match = url.match(/\/d\/(.+?)(\/|$)/);
-      return match ? `https://docs.google.com/document/d/${match[1]}/preview` : url;
-    }
-    return url;
-  };
-
   const formatSubmissionDetail = (detail: string) => {
     try {
       const parsed = JSON.parse(detail);
@@ -635,67 +686,6 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
     } catch (e) {}
     return <div className="p-4 bg-muted rounded-lg text-sm whitespace-pre-wrap">{detail}</div>;
   };
-
-  // Helper para previsualizar recursos multimedia Base64
-  function ResourcePreview({ url, title, type }: { url: string; title: string, type: string }) {
-    const [blobUrl, setBlobUrl] = useState<string | null>(null);
-
-    useEffect(() => {
-      if (url.startsWith('data:application/pdf')) {
-        try {
-          const byteString = atob(url.split(',')[1]);
-          const mimeString = url.split(',')[0].split(':')[1].split(';')[0];
-          const ab = new ArrayBuffer(byteString.length);
-          const ia = new Uint8Array(ab);
-          for (let i = 0; i < byteString.length; i++) {
-            ia[i] = byteString.charCodeAt(i);
-          }
-          const blob = new Blob([ab], { type: mimeString });
-          const newUrl = URL.createObjectURL(blob);
-          setBlobUrl(newUrl);
-          return () => URL.revokeObjectURL(newUrl);
-        } catch (e) {
-          console.error("Error creating blob URL", e);
-        }
-      }
-      return undefined;
-    }, [url]);
-
-    if (url.startsWith('data:image/')) {
-      return <div className="w-full h-full flex items-center justify-center p-4 bg-slate-50"><img src={url} alt={title} className="max-w-full max-h-full object-contain rounded-lg shadow-sm" /></div>;
-    }
-
-    if (url.startsWith('data:video/')) {
-      return <video src={url} controls className="w-full h-full rounded-lg" />;
-    }
-
-    const embedUrl = getEmbedUrl(url);
-    const finalSrc = blobUrl || embedUrl;
-
-    if (!finalSrc) {
-      return (
-        <div className="w-full h-full flex flex-col items-center justify-center bg-slate-100 text-muted-foreground p-8 text-center rounded-xl">
-          <FileText className="h-12 w-12 mb-3 opacity-20" />
-          <p className="text-sm font-bold uppercase tracking-widest">Archivo local</p>
-          <p className="text-xs mt-1">Este recurso se guardó como archivo interno.</p>
-          <Button asChild variant="outline" size="sm" className="mt-6 rounded-xl font-bold bg-white">
-            <a href={url} download={title}>
-               <Download className="mr-2 h-4 w-4" /> Descargar y Ver
-            </a>
-          </Button>
-        </div>
-      );
-    }
-
-    return (
-      <iframe 
-        src={finalSrc} 
-        className="w-full h-full border-0 rounded-xl" 
-        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
-        allowFullScreen 
-      />
-    );
-  }
 
   return (
     <div className="space-y-8">
@@ -765,7 +755,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                     </CardHeader>
                     <CardContent>
                       <div className="aspect-video rounded-xl overflow-hidden bg-black border shadow-inner">
-                        <ResourcePreview url={res.url} title={res.titulo} type={res.tipo} />
+                        <ResourcePreview url={res.url} title={res.titulo} />
                       </div>
                     </CardContent>
                   </Card>
@@ -814,7 +804,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                     <p className="text-sm"><strong>Criterios:</strong> {act.criterios_evaluacion}</p>
                     {act.archivoUrl && (
                       <Button asChild variant="outline" size="sm" className="w-full rounded-xl">
-                        <a href={getEmbedUrl(act.archivoUrl) || '#'} target="_blank" rel="noopener noreferrer">
+                        <a href={act.archivoUrl} target="_blank" rel="noopener noreferrer">
                           <Link2 className="mr-2 h-4 w-4" /> Ver Material de Referencia
                         </a>
                       </Button>
