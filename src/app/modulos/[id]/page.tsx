@@ -175,7 +175,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
   const [isSubmitDialogOpen, setIsSubmitDialogOpen] = useState(false);
   const [isGradingDialogOpen, setIsGradingDialogOpen] = useState(false);
   
-  // Estados de edición y selección
+  // Estados de selección
   const [itemToDelete, setItemToDelete] = useState<{ id: string, type: 'recurso' | 'actividad' | 'evaluacion' } | null>(null);
   const [editingResource, setEditingResource] = useState<Resource | null>(null);
   const [editingActivity, setEditingActivity] = useState<Activity | null>(null);
@@ -255,7 +255,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
       setActivities(actResponse.data.filter((act: any) => String(act.moduloId) === String(id)));
       setAssessments(assResponse.data.filter((ass: any) => String(ass.moduloId) === String(id)));
       
-      // Filtrar seguimientos del módulo: admin ve todo, estudiante solo lo suyo
+      // Seguimiento: admin ve todo, estudiante solo lo suyo
       const filteredSubs = subResponse.data.filter((sub: any) => 
         String(sub.moduloId) === String(id) && (isAdmin ? true : sub.usuarioEmail === user?.email)
       );
@@ -360,20 +360,18 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
   };
 
   const handleSubmitWork = async () => {
-    if (!submitText && !uploadedFile) return;
+    if (!submitText) return;
     setIsProcessing(true);
     try {
-      const payload: Submission = {
+      const payload = {
         usuarioNombre: user?.name || "Estudiante",
         usuarioEmail: user?.email || "",
         tipoEnvio: "actividad",
         moduloId: id,
-        tituloContenido: selectedActivity?.titulo || "Sin título",
+        tituloContenido: selectedActivity?.titulo || "Tarea",
         detalleEnvio: submitText,
-        estado: "enviado",
-        _id: undefined
+        estado: "enviado"
       };
-      
       await api.post("/performance-reports", payload);
       toast({ title: "Tarea enviada correctamente" });
       setIsSubmitDialogOpen(false);
@@ -572,7 +570,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
 
         <TabsContent value="seguimiento" className="space-y-6">
           <div className="flex justify-between items-center">
-            <h2 className="text-xl font-headline">{isAdmin ? "Reporte de Entregas" : "Mi Progreso en el Módulo"}</h2>
+            <h2 className="text-xl font-headline">{isAdmin ? "Entregas Recibidas" : "Mi Seguimiento"}</h2>
           </div>
 
           <Card className="shadow-sm">
@@ -581,8 +579,8 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                 <TableRow>
                   <TableHead>Fecha</TableHead>
                   {isAdmin && <TableHead>Estudiante</TableHead>}
-                  <TableHead>Actividad</TableHead>
-                  <TableHead>Puntaje</TableHead>
+                  <TableHead>Contenido</TableHead>
+                  <TableHead>Nota</TableHead>
                   <TableHead>Estado</TableHead>
                   {isAdmin && <TableHead className="text-right">Acción</TableHead>}
                 </TableRow>
@@ -592,9 +590,9 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                   const subId = getObjectId(sub);
                   return (
                     <TableRow key={subId}>
-                      <TableCell className="text-xs">{sub.createdAt ? new Date(sub.createdAt).toLocaleDateString() : 'Recién enviado'}</TableCell>
+                      <TableCell className="text-xs">{sub.createdAt ? new Date(sub.createdAt).toLocaleDateString() : 'Pendiente'}</TableCell>
                       {isAdmin && <TableCell className="font-medium text-xs">{sub.usuarioNombre}</TableCell>}
-                      <TableCell className="max-w-[150px] truncate text-xs">{sub.tituloContenido}</TableCell>
+                      <TableCell className="max-w-[200px] truncate text-xs font-semibold">{sub.tituloContenido}</TableCell>
                       <TableCell>
                         <span className={cn("font-bold", sub.puntaje && sub.puntaje >= 3.5 ? "text-green-600" : "text-amber-600")}>
                           {sub.puntaje !== undefined ? `${sub.puntaje}/5.0` : '—'}
@@ -611,7 +609,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                     </TableRow>
                   );
                 })}
-                {submissions.length === 0 && <TableRow><TableCell colSpan={6} className="text-center py-10 text-muted-foreground italic">No hay registros de seguimiento para este módulo.</TableCell></TableRow>}
+                {submissions.length === 0 && <TableRow><TableCell colSpan={6} className="text-center py-10 text-muted-foreground italic">No hay registros de seguimiento.</TableCell></TableRow>}
               </TableBody>
             </Table>
           </Card>
@@ -647,14 +645,14 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
       <Dialog open={isSubmitDialogOpen} onOpenChange={setIsSubmitDialogOpen}>
         <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
-            <DialogTitle>Enviar Tarea</DialogTitle>
-            <DialogDescription>Actividad: {selectedActivity?.titulo}</DialogDescription>
+            <DialogTitle>Enviar Actividad</DialogTitle>
+            <DialogDescription>{selectedActivity?.titulo}</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label>Texto de entrega / Enlace</Label>
+              <Label>Respuesta o Enlace</Label>
               <Textarea 
-                placeholder="Pega aquí el enlace a tu documento o escribe tu respuesta directamente..."
+                placeholder="Escribe tu respuesta aquí o pega el enlace a tu trabajo..."
                 value={submitText}
                 onChange={(e) => setSubmitText(e.target.value)}
                 rows={10}
@@ -664,7 +662,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsSubmitDialogOpen(false)}>Cancelar</Button>
             <Button onClick={handleSubmitWork} disabled={isProcessing || !submitText}>
-              {isProcessing ? <Loader2 className="animate-spin h-4 w-4 mr-2" /> : <Send className="mr-2 h-4 w-4" />} Enviar Trabajo
+              {isProcessing ? <Loader2 className="animate-spin h-4 w-4 mr-2" /> : <Send className="mr-2 h-4 w-4" />} Enviar
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -678,8 +676,8 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
             <DialogDescription>Estudiante: {selectedSubmission?.usuarioNombre}</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
-            <div className="p-4 bg-muted/30 rounded-lg text-sm italic">
-              <p className="font-bold mb-1">Contenido enviado:</p>
+            <div className="p-4 bg-muted/30 rounded-lg text-sm border-l-4 border-l-primary">
+              <p className="font-bold mb-1">Contenido Recibido:</p>
               <p className="whitespace-pre-wrap">{selectedSubmission?.detalleEnvio}</p>
             </div>
             <div className="space-y-2">
@@ -694,9 +692,9 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
               />
             </div>
             <div className="space-y-2">
-              <Label>Recomendaciones de Mejora</Label>
+              <Label>Recomendaciones</Label>
               <Textarea 
-                placeholder="Escribe sugerencias para el estudiante..." 
+                placeholder="Retroalimentación para el estudiante..." 
                 value={gradingForm.recomendaciones}
                 onChange={e => setGradingForm({...gradingForm, recomendaciones: e.target.value})}
               />
@@ -705,7 +703,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsGradingDialogOpen(false)}>Cancelar</Button>
             <Button onClick={handleGradeSubmission} disabled={isProcessing}>
-              {isProcessing ? <Loader2 className="animate-spin h-4 w-4" /> : 'Confirmar Nota'}
+              {isProcessing ? <Loader2 className="animate-spin h-4 w-4" /> : 'Calificar'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -738,7 +736,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
           <div className="space-y-4 py-4">
             <div className="space-y-2"><Label>Título *</Label><Input value={assessmentForm.titulo} onChange={e => setAssessmentForm({...assessmentForm, titulo: e.target.value})} /></div>
             <div className="space-y-2"><Label>Descripción</Label><Textarea value={assessmentForm.descripcion} onChange={e => setAssessmentForm({...assessmentForm, descripcion: e.target.value})} /></div>
-            <div className="space-y-2"><Label>Instrucciones / Criterios</Label><Textarea value={assessmentForm.criterios_evaluacion} onChange={e => setAssessmentForm({...assessmentForm, criterios_evaluacion: e.target.value})} /></div>
+            <div className="space-y-2"><Label>Instrucciones</Label><Textarea value={assessmentForm.criterios_evaluacion} onChange={e => setAssessmentForm({...assessmentForm, criterios_evaluacion: e.target.value})} /></div>
             <div className="space-y-2"><Label>Puntuación Máxima</Label><Input type="number" step="0.1" value={assessmentForm.puntuacion} onChange={e => setAssessmentForm({...assessmentForm, puntuacion: e.target.value})} /></div>
           </div>
           <DialogFooter><Button variant="outline" onClick={() => setIsAssessmentDialogOpen(false)}>Cancelar</Button><Button onClick={handleSaveAssessment} disabled={isProcessing}>{isProcessing ? <Loader2 className="animate-spin h-4 w-4" /> : 'Guardar'}</Button></DialogFooter>
@@ -749,7 +747,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>¿Confirmar eliminación?</AlertDialogTitle>
-            <AlertDialogDescription>Esta acción eliminará permanentemente el {itemToDelete?.type} de la base de datos.</AlertDialogDescription>
+            <AlertDialogDescription>Esta acción eliminará permanentemente el registro seleccionado.</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={isProcessing}>Cancelar</AlertDialogCancel>
