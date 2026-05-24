@@ -4,54 +4,17 @@ import { useEffect, useState, use, useRef } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { 
-  GraduationCap, 
   ArrowLeft, 
   Loader2, 
-  ExternalLink, 
   PlusCircle, 
-  CheckCircle2, 
   Pencil, 
   Trash2,
-  MoreVertical,
-  Link as LinkIcon,
-  Upload,
-  ClipboardList,
-  FileQuestion,
-  Layers,
-  HelpCircle,
-  Eye,
-  Settings2,
-  X,
-  Check,
-  Circle,
-  RotateCcw,
-  Trophy,
-  FileText,
-  Video,
-  ShieldCheck,
-  History,
-  MessageSquare,
-  GraduationCap as GradeIcon,
-  Save,
-  Link2,
-  Bold,
-  Italic,
-  Underline,
-  AlignLeft,
-  AlignCenter,
-  AlignRight,
-  Download,
-  FileUp,
-  AlertCircle,
-  Plus,
-  PlayCircle,
-  BookOpen,
   Monitor,
-  Database,
-  MoreHorizontal,
   FileCode,
   Send,
-  FileCheck
+  FileCheck,
+  CheckSquare,
+  Trophy
 } from "lucide-react";
 import Link from "next/link";
 import api from "@/lib/api";
@@ -86,6 +49,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/context/AuthContext";
 
@@ -159,7 +130,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
   
   const [pdfUrls, setPdfUrls] = useState<Record<string, string>>({});
   
-  // Diálogos
+  // Estados de Diálogos
   const [isResourceDialogOpen, setIsResourceDialogOpen] = useState(false);
   const [isActivityDialogOpen, setIsActivityDialogOpen] = useState(false);
   const [isAssessmentDialogOpen, setIsAssessmentDialogOpen] = useState(false);
@@ -167,7 +138,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
   const [isSubmitDialogOpen, setIsSubmitDialogOpen] = useState(false);
   const [isGradingDialogOpen, setIsGradingDialogOpen] = useState(false);
   
-  // Selección
+  // Selección para editar/borrar/calificar
   const [itemToDelete, setItemToDelete] = useState<{ id: string, type: 'recurso' | 'actividad' | 'evaluacion' } | null>(null);
   const [editingResource, setEditingResource] = useState<Resource | null>(null);
   const [editingActivity, setEditingActivity] = useState<Activity | null>(null);
@@ -235,10 +206,13 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
 
   const getEmbedUrl = (url: string) => {
     if (!url || typeof url !== 'string' || !url.startsWith("http")) return null;
+    // Corrección para Google Drive
     if (url.includes("drive.google.com")) {
       if (url.includes("/view")) return url.split("/view")[0] + "/preview";
+      if (url.includes("/edit")) return url.split("/edit")[0] + "/preview";
       return url;
     }
+    // Corrección para Youtube
     if (url.includes("youtube.com") || url.includes("youtu.be")) {
       let vId = url.includes("youtu.be/") ? url.split("youtu.be/")[1].split("?")[0] : url.split("v=")[1]?.split("&")[0];
       return vId ? `https://www.youtube.com/embed/${vId}` : url;
@@ -304,7 +278,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
       else await api.post("/educational-resources", payload);
       setIsResourceDialogOpen(false);
       fetchData();
-      toast({ title: "Recurso guardado" });
+      toast({ title: "Recurso guardado con éxito" });
     } catch (error) {
       toast({ title: "Error al guardar", variant: "destructive" });
     } finally {
@@ -352,7 +326,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
     try {
       const endpoint = itemToDelete.type === 'recurso' ? 'educational-resources' : itemToDelete.type === 'actividad' ? 'activities' : 'assessments';
       await api.delete(`/${endpoint}/${itemToDelete.id}`);
-      toast({ title: "Eliminado con éxito" });
+      toast({ title: "Registro eliminado" });
       fetchData();
     } catch (error) {
       toast({ title: "Error al eliminar", variant: "destructive" });
@@ -377,7 +351,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
         estado: "enviado"
       };
       await api.post("/performance-reports", payload);
-      toast({ title: "Tarea enviada correctamente" });
+      toast({ title: "Trabajo enviado correctamente" });
       setIsSubmitDialogOpen(false);
       setSubmitText("");
       fetchData();
@@ -398,7 +372,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
         recomendaciones: gradingForm.recomendaciones,
         estado: "calificado"
       });
-      toast({ title: "Calificación guardada" });
+      toast({ title: "Calificación registrada" });
       setIsGradingDialogOpen(false);
       fetchData();
     } catch (error) {
@@ -435,7 +409,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
       </div>
 
       <Tabs defaultValue="recursos" className="w-full">
-        <TabsList className={cn("grid w-full mb-8", isAdmin ? "md:w-[600px] grid-cols-4" : "md:w-[450px] grid-cols-3")}>
+        <TabsList className={cn("grid w-full mb-8", isAdmin ? "md:w-[640px] grid-cols-4" : "md:w-[480px] grid-cols-3")}>
           <TabsTrigger value="recursos">Recursos</TabsTrigger>
           <TabsTrigger value="actividades">Actividades</TabsTrigger>
           <TabsTrigger value="evaluaciones">Evaluaciones</TabsTrigger>
@@ -460,8 +434,8 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                 <Card key={resId} className="overflow-hidden shadow-md relative">
                   {isAdmin && (
                     <div className="absolute top-4 right-4 flex gap-2 z-20">
-                      <Button variant="default" size="icon" className="h-8 w-8 bg-blue-600 hover:bg-blue-700 text-white" onClick={() => { setEditingResource(res); setResourceForm({...res}); setSourceTab(res.url?.startsWith('data:') ? "file" : "url"); setIsResourceDialogOpen(true); }}><Pencil className="h-4 w-4" /></Button>
-                      <Button variant="destructive" size="icon" className="h-8 w-8" onClick={() => { setItemToDelete({ id: resId, type: 'recurso' }); setIsDeleteDialogOpen(true); }}><Trash2 className="h-4 w-4" /></Button>
+                      <Button variant="default" size="icon" className="h-8 w-8 bg-blue-600 hover:bg-blue-700 text-white shadow-lg" onClick={() => { setEditingResource(res); setResourceForm({...res}); setSourceTab(res.url?.startsWith('data:') ? "file" : "url"); setIsResourceDialogOpen(true); }}><Pencil className="h-4 w-4" /></Button>
+                      <Button variant="destructive" size="icon" className="h-8 w-8 shadow-lg" onClick={() => { setItemToDelete({ id: resId, type: 'recurso' }); setIsDeleteDialogOpen(true); }}><Trash2 className="h-4 w-4" /></Button>
                     </div>
                   )}
                   <CardHeader>
@@ -495,7 +469,6 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                 </Card>
               );
             })}
-            {resources.length === 0 && <p className="text-center py-10 text-muted-foreground italic">No hay recursos en este módulo.</p>}
           </div>
         </TabsContent>
 
@@ -528,20 +501,19 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                     </div>
                     {!isAdmin && (
                       <Button className="w-full" onClick={() => { setSelectedActivity(act); setIsSubmitDialogOpen(true); }}>
-                        <Send className="mr-2 h-4 w-4" /> Enviar Tarea
+                        <Send className="mr-2 h-4 w-4" /> Enviar Trabajo
                       </Button>
                     )}
                   </CardContent>
                 </Card>
               );
             })}
-            {activities.length === 0 && <p className="text-center py-10 text-muted-foreground italic col-span-2">No hay actividades para este módulo.</p>}
           </div>
         </TabsContent>
 
         <TabsContent value="evaluaciones" className="space-y-6">
           <div className="flex justify-between items-center">
-            <h2 className="text-xl font-headline">Evaluaciones</h2>
+            <h2 className="text-xl font-headline">Evaluaciones de Módulo</h2>
             {isAdmin && <Button onClick={() => { setEditingAssessment(null); setAssessmentForm({ titulo: "", descripcion: "", moduloId: id, puntuacion: "5.0", criterios_evaluacion: "" }); setIsAssessmentDialogOpen(true); }} size="sm" className="bg-primary hover:bg-primary/90"><PlusCircle className="mr-2 h-4 w-4" /> Añadir Evaluación</Button>}
           </div>
 
@@ -557,26 +529,33 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                     </div>
                   )}
                   <CardHeader>
+                    <div className="flex items-center gap-2 mb-2">
+                      <CheckSquare className="h-5 w-5 text-accent" />
+                      <span className="text-xs font-bold uppercase text-accent">Examen</span>
+                    </div>
                     <CardTitle>{ass.titulo}</CardTitle>
                     <CardDescription>{ass.descripcion}</CardDescription>
                   </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-muted-foreground mb-4">Puntuación máxima: <strong>{ass.puntuacion || "5.0"}</strong></p>
-                    {!isAdmin && <Button className="bg-accent hover:bg-accent/90">Iniciar Examen</Button>}
+                  <CardContent className="flex flex-col md:flex-row gap-8">
+                     <div className="flex-1">
+                        <p className="text-sm font-bold mb-2">Criterios:</p>
+                        <p className="text-sm text-muted-foreground">{ass.criterios_evaluacion || "Completa todas las preguntas."}</p>
+                     </div>
+                     <div className="w-full md:w-32 flex flex-col items-center justify-center bg-accent/5 rounded-xl p-4 border border-accent/10">
+                        <Trophy className="h-6 w-6 text-accent mb-1" />
+                        <span className="text-2xl font-bold text-accent">{ass.puntuacion || "5.0"}</span>
+                        <span className="text-[10px] uppercase font-bold text-accent/60">Puntos</span>
+                     </div>
                   </CardContent>
                 </Card>
               );
             })}
-            {assessments.length === 0 && <p className="text-center py-10 text-muted-foreground italic">No hay evaluaciones para este módulo.</p>}
           </div>
         </TabsContent>
 
         {isAdmin && (
           <TabsContent value="seguimiento" className="space-y-6">
-            <div className="flex justify-between items-center">
-              <h2 className="text-xl font-headline">Entregas de Estudiantes</h2>
-            </div>
-
+            <h2 className="text-xl font-headline">Control de Entregas</h2>
             <Card className="shadow-sm overflow-hidden">
               <Table>
                 <TableHeader className="bg-slate-50">
@@ -584,7 +563,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                     <TableHead>Fecha</TableHead>
                     <TableHead>Estudiante</TableHead>
                     <TableHead>Actividad</TableHead>
-                    <TableHead>Nota</TableHead>
+                    <TableHead>Puntaje</TableHead>
                     <TableHead>Estado</TableHead>
                     <TableHead className="text-right">Acción</TableHead>
                   </TableRow>
@@ -611,7 +590,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                       </TableRow>
                     );
                   })}
-                  {submissions.length === 0 && <TableRow><TableCell colSpan={6} className="text-center py-10 text-muted-foreground italic">No hay entregas para este módulo.</TableCell></TableRow>}
+                  {submissions.length === 0 && <TableRow><TableCell colSpan={6} className="text-center py-10 text-muted-foreground italic">No hay trabajos entregados aún.</TableCell></TableRow>}
                 </TableBody>
               </Table>
             </Card>
@@ -619,7 +598,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
         )}
       </Tabs>
 
-      {/* DIÁLOGOS DE RECURSOS */}
+      {/* DIÁLOGOS DE GESTIÓN */}
       <Dialog open={isResourceDialogOpen} onOpenChange={setIsResourceDialogOpen}>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader><DialogTitle>{editingResource ? 'Editar' : 'Nuevo'} Recurso</DialogTitle></DialogHeader>
@@ -634,7 +613,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                 <TabsContent value="file" className="pt-2">
                   <div className="border-2 border-dashed rounded-xl p-6 text-center cursor-pointer hover:bg-muted/50" onClick={() => document.getElementById('resFile')?.click()}>
                     <input id="resFile" type="file" className="hidden" onChange={e => setUploadedFile(e.target.files?.[0] || null)} />
-                    {uploadedFile ? <p className="text-sm font-bold">{uploadedFile.name}</p> : <><Upload className="h-8 w-8 mx-auto mb-2 opacity-50" /><p className="text-xs">Soporta PDF, PPTX, DOCX, MP4</p></>}
+                    {uploadedFile ? <p className="text-sm font-bold">{uploadedFile.name}</p> : <p className="text-xs">Selecciona un PDF, Imagen o MP4</p>}
                   </div>
                 </TabsContent>
               </Tabs>
@@ -644,7 +623,6 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
         </DialogContent>
       </Dialog>
 
-      {/* DIÁLOGOS DE ACTIVIDADES */}
       <Dialog open={isActivityDialogOpen} onOpenChange={setIsActivityDialogOpen}>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader><DialogTitle>{editingActivity ? 'Editar' : 'Nueva'} Actividad</DialogTitle></DialogHeader>
@@ -652,97 +630,52 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
             <div className="space-y-2"><Label>Título *</Label><Input value={activityForm.titulo} onChange={e => setActivityForm({...activityForm, titulo: e.target.value})} /></div>
             <div className="space-y-2"><Label>Descripción</Label><Textarea value={activityForm.descripcion} onChange={e => setActivityForm({...activityForm, descripcion: e.target.value})} /></div>
             <div className="space-y-2"><Label>Criterios de Evaluación</Label><Textarea value={activityForm.criterios_evaluacion} onChange={e => setActivityForm({...activityForm, criterios_evaluacion: e.target.value})} /></div>
-            <div className="space-y-2">
-              <Label>Tipo</Label>
-              <Select value={activityForm.tipo} onValueChange={v => setActivityForm({...activityForm, tipo: v})}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent><SelectItem value="tarea">Tarea</SelectItem><SelectItem value="foro">Foro</SelectItem><SelectItem value="simulacion">Simulación</SelectItem></SelectContent>
-              </Select>
-            </div>
           </div>
-          <DialogFooter><Button variant="outline" onClick={() => setIsActivityDialogOpen(false)}>Cancelar</Button><Button onClick={handleSaveActivity} disabled={isProcessing}>{isProcessing ? <Loader2 className="animate-spin h-4 w-4" /> : 'Guardar'}</Button></DialogFooter>
+          <DialogFooter><Button variant="outline" onClick={() => setIsActivityDialogOpen(false)}>Cancelar</Button><Button onClick={handleSaveActivity} disabled={isProcessing}>Guardar</Button></DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* DIÁLOGOS DE EVALUACIONES */}
       <Dialog open={isAssessmentDialogOpen} onOpenChange={setIsAssessmentDialogOpen}>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader><DialogTitle>{editingAssessment ? 'Editar' : 'Nueva'} Evaluación</DialogTitle></DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2"><Label>Título *</Label><Input value={assessmentForm.titulo} onChange={e => setAssessmentForm({...assessmentForm, titulo: e.target.value})} /></div>
-            <div className="space-y-2"><Label>Descripción</Label><Textarea value={assessmentForm.descripcion} onChange={e => setAssessmentForm({...assessmentForm, descripcion: e.target.value})} /></div>
-            <div className="space-y-2"><Label>Instrucciones / Criterios</Label><Textarea value={assessmentForm.criterios_evaluacion} onChange={e => setAssessmentForm({...assessmentForm, criterios_evaluacion: e.target.value})} /></div>
+            <div className="space-y-2"><Label>Instrucciones</Label><Textarea value={assessmentForm.criterios_evaluacion} onChange={e => setAssessmentForm({...assessmentForm, criterios_evaluacion: e.target.value})} /></div>
             <div className="space-y-2"><Label>Puntuación Máxima</Label><Input type="number" step="0.1" value={assessmentForm.puntuacion} onChange={e => setAssessmentForm({...assessmentForm, puntuacion: e.target.value})} /></div>
           </div>
-          <DialogFooter><Button variant="outline" onClick={() => setIsAssessmentDialogOpen(false)}>Cancelar</Button><Button onClick={handleSaveAssessment} disabled={isProcessing}>{isProcessing ? <Loader2 className="animate-spin h-4 w-4" /> : 'Guardar'}</Button></DialogFooter>
+          <DialogFooter><Button variant="outline" onClick={() => setIsAssessmentDialogOpen(false)}>Cancelar</Button><Button onClick={handleSaveAssessment} disabled={isProcessing}>Guardar</Button></DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* DIÁLOGO ENVIAR TAREA */}
       <Dialog open={isSubmitDialogOpen} onOpenChange={setIsSubmitDialogOpen}>
         <DialogContent className="sm:max-w-[600px]">
-          <DialogHeader>
-            <DialogTitle>Enviar Actividad</DialogTitle>
-            <DialogDescription>{selectedActivity?.titulo}</DialogDescription>
-          </DialogHeader>
+          <DialogHeader><DialogTitle>Enviar Trabajo</DialogTitle><DialogDescription>{selectedActivity?.titulo}</DialogDescription></DialogHeader>
           <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label>Respuesta o Enlace</Label>
-              <Textarea 
-                placeholder="Escribe tu respuesta aquí o pega el enlace a tu trabajo..."
-                value={submitText}
-                onChange={(e) => setSubmitText(e.target.value)}
-                rows={10}
-              />
-            </div>
+            <Label>Tu Respuesta o Enlace</Label>
+            <Textarea placeholder="Pega aquí el enlace a tu documento o escribe tu respuesta..." value={submitText} onChange={(e) => setSubmitText(e.target.value)} rows={10} />
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsSubmitDialogOpen(false)}>Cancelar</Button>
-            <Button onClick={handleSubmitWork} disabled={isProcessing || !submitText}>
-              {isProcessing ? <Loader2 className="animate-spin h-4 w-4 mr-2" /> : <Send className="mr-2 h-4 w-4" />} Enviar
-            </Button>
-          </DialogFooter>
+          <DialogFooter><Button variant="outline" onClick={() => setIsSubmitDialogOpen(false)}>Cancelar</Button><Button onClick={handleSubmitWork} disabled={isProcessing || !submitText}>Enviar Ahora</Button></DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* DIÁLOGO CALIFICAR */}
       <Dialog open={isGradingDialogOpen} onOpenChange={setIsGradingDialogOpen}>
         <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle>Calificar Entrega</DialogTitle>
-            <DialogDescription>Estudiante: {selectedSubmission?.usuarioNombre}</DialogDescription>
-          </DialogHeader>
+          <DialogHeader><DialogTitle>Calificar Entrega</DialogTitle></DialogHeader>
           <div className="space-y-4 py-4">
             <div className="p-4 bg-muted/30 rounded-lg text-sm border-l-4 border-l-primary max-h-[200px] overflow-y-auto">
-              <p className="font-bold mb-1">Contenido Recibido:</p>
+              <p className="font-bold mb-1">Respuesta Estudiante:</p>
               <p className="whitespace-pre-wrap">{selectedSubmission?.detalleEnvio}</p>
             </div>
             <div className="space-y-2">
-              <Label>Puntaje (0.0 - 5.0)</Label>
-              <Input 
-                type="number" 
-                step="0.1" 
-                min="0" 
-                max="5" 
-                value={gradingForm.puntaje} 
-                onChange={e => setGradingForm({...gradingForm, puntaje: parseFloat(e.target.value)})} 
-              />
+              <Label>Nota (0.0 - 5.0)</Label>
+              <Input type="number" step="0.1" min="0" max="5" value={gradingForm.puntaje} onChange={e => setGradingForm({...gradingForm, puntaje: parseFloat(e.target.value)})} />
             </div>
             <div className="space-y-2">
               <Label>Recomendaciones</Label>
-              <Textarea 
-                placeholder="Retroalimentación para el estudiante..." 
-                value={gradingForm.recomendaciones}
-                onChange={e => setGradingForm({...gradingForm, recomendaciones: e.target.value})}
-              />
+              <Textarea placeholder="Pistas para mejorar..." value={gradingForm.recomendaciones} onChange={e => setGradingForm({...gradingForm, recomendaciones: e.target.value})} />
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsGradingDialogOpen(false)}>Cancelar</Button>
-            <Button onClick={handleGradeSubmission} disabled={isProcessing}>
-              {isProcessing ? <Loader2 className="animate-spin h-4 w-4" /> : 'Calificar'}
-            </Button>
-          </DialogFooter>
+          <DialogFooter><Button variant="outline" onClick={() => setIsGradingDialogOpen(false)}>Cancelar</Button><Button onClick={handleGradeSubmission} disabled={isProcessing}>Calificar</Button></DialogFooter>
         </DialogContent>
       </Dialog>
 
