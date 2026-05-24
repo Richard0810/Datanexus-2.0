@@ -1,19 +1,17 @@
+
 "use client";
 
 import { useEffect, useState, use, useRef } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { 
-  GraduationCap, 
   ArrowLeft, 
   Loader2, 
-  ExternalLink, 
   PlusCircle, 
   CheckCircle2, 
   Pencil, 
   Trash2,
   MoreVertical,
-  Link as LinkIcon,
   Upload,
   ClipboardList,
   FileQuestion,
@@ -22,13 +20,9 @@ import {
   Eye,
   Settings2,
   X,
-  Check,
-  Circle,
-  RotateCcw,
   Trophy,
   FileText,
   Video,
-  ShieldCheck,
   History,
   MessageSquare,
   GraduationCap as GradeIcon,
@@ -42,13 +36,14 @@ import {
   AlignRight,
   Download,
   FileUp,
-  AlertCircle,
   Plus,
   PlayCircle,
   BookOpen,
   Monitor,
   Database,
-  MoreHorizontal
+  MoreHorizontal,
+  Link as LinkIcon,
+  CheckSquare
 } from "lucide-react";
 import Link from "next/link";
 import api from "@/lib/api";
@@ -162,6 +157,95 @@ interface Submission {
   recomendaciones?: string;
   createdAt: string;
   moduloId: string;
+}
+
+// Función helper para determinar URLs de incrustación (Embed)
+const getEmbedUrl = (url: string) => {
+  if (!url || !url.startsWith("http")) return null;
+  if (url.includes("youtube.com") || url.includes("youtu.be")) {
+    let videoId = "";
+    if (url.includes("youtu.be/")) videoId = url.split("youtu.be/")[1].split("?")[0];
+    else if (url.includes("v=")) videoId = url.split("v=")[1].split("&")[0];
+    return videoId ? `https://www.youtube.com/embed/${videoId}` : url;
+  }
+  if (url.includes("gamma.app/docs/")) return url.replace("gamma.app/docs/", "gamma.app/embed/");
+  if (url.includes("docs.google.com/presentation/d/")) {
+    const match = url.match(/\/d\/(.+?)(\/|$)/);
+    return match ? `https://docs.google.com/presentation/d/${match[1]}/embed` : url;
+  }
+  if (url.includes("drive.google.com/file/d/")) {
+    const match = url.match(/\/d\/(.+?)(\/|$)/);
+    return match ? `https://drive.google.com/file/d/${match[1]}/preview` : url;
+  }
+  if (url.includes("docs.google.com/document/d/")) {
+    const match = url.match(/\/d\/(.+?)(\/|$)/);
+    return match ? `https://docs.google.com/document/d/${match[1]}/preview` : url;
+  }
+  return url;
+};
+
+// Componente para previsualizar recursos de forma segura (PDFs locales con Blob URLs)
+function ResourcePreview({ url, title }: { url: string; title: string }) {
+  const [blobUrl, setBlobUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Si es un PDF local (Base64), creamos un Blob para evitar errores de red y bloqueos de seguridad
+    if (url && url.startsWith('data:application/pdf')) {
+      try {
+        const parts = url.split(',');
+        const byteString = atob(parts[1]);
+        const ab = new ArrayBuffer(byteString.length);
+        const ia = new Uint8Array(ab);
+        for (let i = 0; i < byteString.length; i++) {
+          ia[i] = byteString.charCodeAt(i);
+        }
+        const blob = new Blob([ab], { type: 'application/pdf' });
+        const objUrl = URL.createObjectURL(blob);
+        setBlobUrl(objUrl);
+        return () => URL.revokeObjectURL(objUrl);
+      } catch (e) {
+        console.error("Error creating PDF blob preview:", e);
+      }
+    }
+    return undefined;
+  }, [url]);
+
+  if (!url) return null;
+
+  if (url.startsWith('data:image/')) {
+    return <img src={url} alt={title} className="w-full h-full object-contain bg-slate-50" />;
+  }
+
+  if (url.startsWith('data:video/')) {
+    return <video src={url} controls className="w-full h-full bg-black" />;
+  }
+
+  const embedUrl = getEmbedUrl(url);
+  const finalUrl = blobUrl || embedUrl;
+
+  if (finalUrl) {
+    return (
+      <iframe 
+        src={finalUrl} 
+        className="w-full h-full border-0" 
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+        allowFullScreen 
+      />
+    );
+  }
+
+  return (
+    <div className="w-full h-full flex flex-col items-center justify-center bg-slate-100 text-muted-foreground p-8 text-center rounded-xl">
+      <FileText className="h-12 w-12 mb-3 opacity-20" />
+      <p className="text-sm font-bold uppercase tracking-widest">Documento Adjunto</p>
+      <p className="text-xs mt-1 mb-4">{title}</p>
+      <Button asChild variant="outline" size="sm" className="rounded-xl bg-white font-bold">
+        <a href={url} download={title}>
+          <Download className="mr-2 h-4 w-4" /> Descargar para Visualizar
+        </a>
+      </Button>
+    </div>
+  );
 }
 
 export default function ModuloDetallePage({ params }: { params: Promise<{ id: string }> }) {
@@ -315,9 +399,13 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
         formData.append("formato", uploadedFile.name.split(".").pop() || "file");
 
         if (resourceId) {
-          await api.patch(`/educational-resources/${resourceId}`, formData);
+          await api.patch(`/educational-resources/${resourceId}`, formData, {
+            headers: { 'Content-Type': 'multipart/form-data' }
+          });
         } else {
-          await api.post("/educational-resources", formData);
+          await api.post("/educational-resources", formData, {
+            headers: { 'Content-Type': 'multipart/form-data' }
+          });
         }
       } else {
         if (resourceId) {
@@ -353,37 +441,6 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
       toast({ title: "Error al guardar la actividad", variant: "destructive" });
     } finally {
       setIsProcessing(false);
-    }
-  };
-
-  const handleOpenEditSubmission = (sub: Submission, act: Activity) => {
-    setSelectedActivity(act);
-    setEditingSubmissionId(sub._id);
-    setIsSubmitActivityOpen(true);
-    
-    setTimeout(() => {
-        try {
-            const parsed = JSON.parse(sub.detalleEnvio);
-            if (editorRef.current) editorRef.current.innerHTML = parsed.text || "";
-            if (parsed.file) setAttachedFile(parsed.file);
-            else setAttachedFile(null);
-        } catch (e) {
-            console.error("Error al cargar entrega para editar", e);
-        }
-    }, 100);
-  };
-
-  const handleDeleteSubmission = async (subId: string) => {
-    if (!confirm("¿Estás seguro de que deseas eliminar tu entrega? Esta acción no se puede deshacer.")) return;
-    setIsProcessing(true);
-    try {
-        await api.delete(`/performance-reports/${subId}`);
-        toast({ title: "Entrega eliminada con éxito" });
-        fetchData();
-    } catch (error) {
-        toast({ title: "Error al eliminar la entrega", variant: "destructive" });
-    } finally {
-        setIsProcessing(false);
     }
   };
 
@@ -571,30 +628,6 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
     setScore(null);
   };
 
-  const getEmbedUrl = (url: string) => {
-    if (!url || !url.startsWith("http")) return "";
-    if (url.includes("youtube.com") || url.includes("youtu.be")) {
-      let videoId = "";
-      if (url.includes("youtu.be/")) videoId = url.split("youtu.be/")[1].split("?")[0];
-      else if (url.includes("v=")) videoId = url.split("v=")[1].split("&")[0];
-      return videoId ? `https://www.youtube.com/embed/${videoId}` : url;
-    }
-    if (url.includes("gamma.app/docs/")) return url.replace("gamma.app/docs/", "gamma.app/embed/");
-    if (url.includes("docs.google.com/presentation/d/")) {
-      const match = url.match(/\/d\/(.+?)(\/|$)/);
-      return match ? `https://docs.google.com/presentation/d/${match[1]}/embed` : url;
-    }
-    if (url.includes("drive.google.com/file/d/")) {
-      const match = url.match(/\/d\/(.+?)(\/|$)/);
-      return match ? `https://drive.google.com/file/d/${match[1]}/preview` : url;
-    }
-    if (url.includes("docs.google.com/document/d/")) {
-      const match = url.match(/\/d\/(.+?)(\/|$)/);
-      return match ? `https://docs.google.com/document/d/${match[1]}/preview` : url;
-    }
-    return url;
-  };
-
   const formatSubmissionDetail = (detail: string) => {
     try {
       const parsed = JSON.parse(detail);
@@ -703,19 +736,29 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                            {res.tipo === "video" ? <Video className="h-4 w-4 text-red-500" /> : <FileText className="h-4 w-4 text-blue-500" />}
                            <Badge variant="outline" className="uppercase tracking-widest text-[9px] font-bold">{res.tipo}</Badge>
                          </div>
-                         <Button size="sm" className="bg-slate-900 text-white font-bold" onClick={() => window.open(res.url, '_blank')}>Ver Completo</Button>
+                         <Button 
+                          size="sm" 
+                          className="bg-slate-900 text-white font-bold" 
+                          onClick={() => {
+                            if (res.url?.startsWith('data:')) {
+                              const link = document.createElement('a');
+                              link.href = res.url;
+                              link.download = res.titulo;
+                              link.click();
+                            } else {
+                              window.open(res.url, '_blank');
+                            }
+                          }}
+                        >
+                          Ver Completo
+                        </Button>
                       </div>
                       <CardTitle className="text-2xl font-bold">{res.titulo}</CardTitle>
                       <CardDescription className="text-base leading-relaxed">{res.descripcion}</CardDescription>
                     </CardHeader>
                     <CardContent>
                       <div className="aspect-video rounded-xl overflow-hidden bg-black border shadow-inner">
-                        <iframe 
-                          src={getEmbedUrl(res.url)} 
-                          className="w-full h-full border-0" 
-                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
-                          allowFullScreen 
-                        />
+                        <ResourcePreview url={res.url} title={res.titulo} />
                       </div>
                     </CardContent>
                   </Card>
@@ -764,7 +807,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                     <p className="text-sm"><strong>Criterios:</strong> {act.criterios_evaluacion}</p>
                     {act.archivoUrl && (
                       <Button asChild variant="outline" size="sm" className="w-full rounded-xl">
-                        <a href={getEmbedUrl(act.archivoUrl)} target="_blank" rel="noopener noreferrer">
+                        <a href={act.archivoUrl} target="_blank" rel="noopener noreferrer">
                           <Link2 className="mr-2 h-4 w-4" /> Ver Material de Referencia
                         </a>
                       </Button>
@@ -1116,7 +1159,6 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
         </DialogContent> 
       </Dialog>
 
-      {/* DIÁLOGOS DE REVISIÓN */}
       <Dialog open={isGradingDialogOpen} onOpenChange={setIsGradingDialogOpen}>
         <DialogContent className="sm:max-w-[800px] max-h-[85vh] overflow-hidden flex flex-col rounded-2xl">
           <DialogHeader>
