@@ -64,6 +64,16 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -170,17 +180,8 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
   const [pdfUrls, setPdfUrls] = useState<Record<string, string>>({});
   
   const [isResourceDialogOpen, setIsResourceDialogOpen] = useState(false);
-  const [isActivityDialogOpen, setIsActivityDialogOpen] = useState(false);
-  const [isAssessmentDialogOpen, setIsAssessmentDialogOpen] = useState(false);
-  const [isSubmitActivityOpen, setIsSubmitActivityOpen] = useState(false);
-  const [isGradingDialogOpen, setIsGradingDialogOpen] = useState(false);
-  
-  const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
-  const [selectedSubmission, setSelectedSubmission] = useState<Submission | null>(null);
-  const [gradingForm, setGradingForm] = useState({ puntaje: 0, recomendaciones: "" });
-  
-  const editorRef = useRef<HTMLDivElement>(null);
-  const [attachedFile, setAttachedFile] = useState<{ name: string, data: string } | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [resourceToDelete, setResourceToDelete] = useState<Resource | null>(null);
   
   const [editingResource, setEditingResource] = useState<Resource | null>(null);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
@@ -308,6 +309,23 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
     }
   };
 
+  const handleDeleteConfirm = async () => {
+    if (!resourceToDelete) return;
+    const resId = getResourceId(resourceToDelete);
+    setIsProcessing(true);
+    try {
+      await api.delete(`/educational-resources/${resId}`);
+      toast({ title: "Recurso eliminado" });
+      fetchData();
+    } catch (error) {
+      toast({ title: "Error al eliminar", variant: "destructive" });
+    } finally {
+      setIsProcessing(false);
+      setIsDeleteDialogOpen(false);
+      setResourceToDelete(null);
+    }
+  };
+
   const handleViewFull = (res: Resource) => {
     const url = res.url;
     if (!url) return;
@@ -320,26 +338,15 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
       const blobUrl = base64ToBlobUrl(url);
       if (blobUrl) window.open(blobUrl, '_blank');
     } else {
-      // Para Google Drive, abrir la versión de vista previa en pantalla completa
-      if (url.includes("drive.google.com")) {
-        const embedUrl = getEmbedUrl(url);
-        window.open(embedUrl || url, '_blank');
-      } else {
-        window.open(url, '_blank');
-      }
+      const embedUrl = getEmbedUrl(url);
+      window.open(embedUrl || url, '_blank');
     }
   };
 
   const getEmbedUrl = (url: string) => {
     if (!url || typeof url !== 'string' || !url.startsWith("http")) return null;
     
-    // Soporte para YouTube
-    if (url.includes("youtube.com") || url.includes("youtu.be")) {
-      let vId = url.includes("youtu.be/") ? url.split("youtu.be/")[1].split("?")[0] : url.split("v=")[1]?.split("&")[0];
-      return vId ? `https://www.youtube.com/embed/${vId}` : url;
-    }
-
-    // Soporte para Google Drive (Convertir /view a /preview para evitar bloqueos de sesión)
+    // Soporte para Google Drive (Convertir /view a /preview)
     if (url.includes("drive.google.com")) {
       if (url.includes("/view")) {
         return url.split("/view")[0] + "/preview";
@@ -347,6 +354,11 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
       return url;
     }
 
+    // Soporte para YouTube
+    if (url.includes("youtube.com") || url.includes("youtu.be")) {
+      let vId = url.includes("youtu.be/") ? url.split("youtu.be/")[1].split("?")[0] : url.split("v=")[1]?.split("&")[0];
+      return vId ? `https://www.youtube.com/embed/${vId}` : url;
+    }
     return url;
   };
 
@@ -398,7 +410,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                         variant="destructive" 
                         size="icon" 
                         className="h-8 w-8 shadow-md" 
-                        onClick={async () => { if(confirm('¿Seguro?')) { await api.delete(`/educational-resources/${resId}`); fetchData(); } }}
+                        onClick={() => { setResourceToDelete(res); setIsDeleteDialogOpen(true); }}
                         title="Eliminar Recurso"
                       >
                         <Trash2 className="h-4 w-4" />
@@ -460,6 +472,28 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
           <div className="p-6 border-t flex justify-end gap-2"><Button variant="outline" onClick={() => setIsResourceDialogOpen(false)}>Cancelar</Button><Button onClick={handleSaveResource} disabled={isProcessing}>{isProcessing ? <Loader2 className="animate-spin h-4 w-4" /> : 'Guardar'}</Button></div>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Confirmar eliminación?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Se eliminará permanentemente el recurso <strong>{resourceToDelete?.titulo}</strong>. Esta acción no se puede deshacer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isProcessing}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={(e) => { e.preventDefault(); handleDeleteConfirm(); }} 
+              className="bg-destructive text-white hover:bg-destructive/90"
+              disabled={isProcessing}
+            >
+              {isProcessing ? <Loader2 className="animate-spin h-4 w-4 mr-2" /> : <Trash2 className="w-4 h-4 mr-2" />}
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
