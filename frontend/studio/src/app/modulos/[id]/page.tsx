@@ -14,9 +14,6 @@ import {
   ClipboardList,
   FileQuestion,
   Layers,
-  HelpCircle,
-  Eye,
-  Settings2,
   X,
   Trophy,
   FileText,
@@ -263,7 +260,6 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
   
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [sourceTab, setSourceTab] = useState<"url" | "file">("url");
-  const [isDragging, setIsDragging] = useState(false);
 
   const [editingResource, setEditingResource] = useState<Resource | null>(null);
   const [editingActivity, setEditingActivity] = useState<Activity | null>(null);
@@ -301,11 +297,6 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
     return '';
   };
 
-  const formatFileSize = (bytes: number) => {
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-  };
-
   const fetchData = async () => {
     try {
       setLoading(true);
@@ -316,7 +307,6 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
         api.get("/performance-reports")
       ]);
       
-      // Ajuste de filtrado flexible para aceptar "Módulo X" o "Unidad X"
       setResources(resResponse.data.filter((res: any) => 
         res.unidad === `Módulo ${id}` || res.unidad === `Unidad ${id}`
       ));
@@ -406,20 +396,6 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
     } finally {
       setIsProcessing(false);
     }
-  };
-
-  const handleOpenEditSubmission = (sub: Submission, act: Activity) => {
-    setSelectedActivity(act);
-    setEditingSubmissionId(sub._id);
-    setIsSubmitActivityOpen(true);
-    setTimeout(() => {
-        try {
-            const parsed = JSON.parse(sub.detalleEnvio);
-            if (editorRef.current) editorRef.current.innerHTML = parsed.text || "";
-            if (parsed.file) setAttachedFile(parsed.file);
-            else setAttachedFile(null);
-        } catch (e) { console.error(e); }
-    }, 100);
   };
 
   const handleSubmitActivity = async () => {
