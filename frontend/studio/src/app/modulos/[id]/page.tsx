@@ -202,6 +202,9 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [sourceTab, setSourceTab] = useState<"url" | "file">("url");
   const [isDragging, setIsDragging] = useState(false);
+
+  // Estado para manejar las URLs de Blob para PDFs (evita bloqueos de Chrome)
+  const [pdfUrls, setPdfUrls] = useState<Record<string, string>>({});
   
   const { toast } = useToast();
   const moduleInfo = modulesData[id as keyof typeof modulesData] || { title: `Módulo ${id}`, objective: "" };
@@ -247,6 +250,36 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
     });
   };
 
+  // Función para convertir Base64 a un Blob URL seguro para iframes
+  const base64ToBlobUrl = (dataUri: string) => {
+    try {
+      const parts = dataUri.split(',');
+      if (parts.length < 2) return null;
+      
+      const mimeMatch = parts[0].match(/:(.*?);/);
+      const mime = mimeMatch ? mimeMatch[1] : 'application/pdf';
+      
+      const b64Data = parts[1];
+      const byteCharacters = atob(b64Data);
+      const byteArrays = [];
+      
+      for (let offset = 0; offset < byteCharacters.length; offset += 512) {
+        const slice = byteCharacters.slice(offset, offset + 512);
+        const byteNumbers = new Array(slice.length);
+        for (let i = 0; i < slice.length; i++) {
+          byteNumbers[i] = slice.charCodeAt(i);
+        }
+        byteArrays.push(new Uint8Array(byteNumbers));
+      }
+      
+      const blob = new Blob(byteArrays, { type: mime });
+      return URL.createObjectURL(blob);
+    } catch (e) {
+      console.error("Error creating Blob URL:", e);
+      return null;
+    }
+  };
+
   const fetchData = async () => {
     try {
       setLoading(true);
@@ -257,7 +290,8 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
         api.get("/performance-reports")
       ]);
       
-      setResources(resResponse.data.filter((res: any) => res.unidad === `Módulo ${id}`));
+      const fetchedResources = resResponse.data.filter((res: any) => res.unidad === `Módulo ${id}`);
+      setResources(fetchedResources);
       setActivities(actResponse.data.filter((act: any) => String(act.moduloId) === String(id)));
       setAssessments(assResponse.data.filter((ass: any) => String(ass.moduloId) === String(id)));
 
@@ -273,6 +307,32 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
       setLoading(false);
     }
   };
+
+  // Efecto para generar URLs de Blob para previsualizaciones de PDF (evita bloqueos de Chrome)
+  useEffect(() => {
+    // Revocar URLs antiguas para evitar fugas de memoria
+    Object.values(pdfUrls).forEach(url => URL.revokeObjectURL(url));
+    
+    const newUrls: Record<string, string> = {};
+    resources.forEach(res => {
+      const isBase64 = res.url && res.url.startsWith('data:');
+      const isPdf = isBase64 && (res.url.includes('application/pdf') || res.formato?.toLowerCase() === 'pdf');
+      
+      if (isPdf) {
+        const blobUrl = base64ToBlobUrl(res.url);
+        if (blobUrl) {
+          const resId = getResourceId(res);
+          newUrls[resId] = blobUrl;
+        }
+      }
+    });
+    
+    setPdfUrls(newUrls);
+    
+    return () => {
+      Object.values(newUrls).forEach(url => URL.revokeObjectURL(url));
+    };
+  }, [resources]);
 
   useEffect(() => {
     if (user) {
@@ -365,6 +425,13 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
     if (!url) return;
     
     if (url.startsWith('data:')) {
+      const resId = getResourceId(res);
+      // Si ya tenemos una URL de blob para este recurso (para PDFs), la usamos
+      if (pdfUrls[resId]) {
+        window.open(pdfUrls[resId], '_blank');
+        return;
+      }
+
       try {
         const parts = url.split(',');
         let mime = 'application/octet-stream';
@@ -372,7 +439,6 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
         if (mimeMatch) {
           mime = mimeMatch[1];
         } else {
-          // Fallback para extensiones comunes si falla el regex
           const ext = res.formato?.toLowerCase();
           if (ext === 'pptx') mime = 'application/vnd.openxmlformats-officedocument.presentationml.presentation';
           else if (ext === 'docx') mime = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
@@ -746,7 +812,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                 const embedUrl = getEmbedUrl(res.url);
                 
                 const isBase64 = res.url && res.url.startsWith('data:');
-                const isPdf = isBase64 && res.url.includes('application/pdf');
+                const isPdf = isBase64 && (res.url.includes('application/pdf') || res.formato?.toLowerCase() === 'pdf');
                 const isVideo = isBase64 && res.url.includes('video/');
                 const isImage = isBase64 && res.url.includes('image/');
                 
@@ -754,6 +820,9 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                 const isPpt = isBase64 && (res.url.includes('presentationml') || res.formato?.toLowerCase() === 'pptx' || res.formato?.toLowerCase() === 'ppt');
                 const isExcel = isBase64 && (res.url.includes('spreadsheetml') || res.formato?.toLowerCase() === 'xlsx' || res.formato?.toLowerCase() === 'xls');
                 const isOffice = isWord || isPpt || isExcel;
+
+                // Usar la URL de Blob segura si es un PDF para evitar bloqueos de Chrome
+                const safeUrl = (isPdf && pdfUrls[resourceId]) ? pdfUrls[resourceId] : res.url;
                 
                 return (
                   <Card key={resourceId} className="overflow-hidden group relative shadow-md">
@@ -830,9 +899,10 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                       ) : isPdf ? (
                         <div className="rounded-xl overflow-hidden border bg-background w-full shadow-inner aspect-[3/4] md:aspect-video relative">
                           <iframe 
-                            src={res.url} 
+                            src={safeUrl} 
                             className="w-full h-full border-0" 
                             title={res.titulo}
+                            key={safeUrl} // Forzar re-render si cambia el blob
                           />
                           <div className="absolute bottom-4 right-4 md:hidden">
                              <Button size="sm" onClick={() => handleViewFull(res)} className="bg-primary/90">Ampliar PDF</Button>
