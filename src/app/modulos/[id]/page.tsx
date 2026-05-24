@@ -148,6 +148,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
   const { user } = useAuth();
   const { toast } = useToast();
   
+  // Lógica de detección de admin blindada
   const userRole = (user?.role || '').trim().toLowerCase();
   const isAdmin = userRole === 'admin' || userRole === 'administrador';
   
@@ -241,6 +242,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
     } catch (e) { return null; }
   };
 
+  // Corrección de visualización para Google Drive
   const getEmbedUrl = (url: string) => {
     if (!url || typeof url !== 'string' || !url.startsWith("http")) return null;
     if (url.includes("drive.google.com")) {
@@ -282,7 +284,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
 
   useEffect(() => {
     if (user) fetchData();
-  }, [id, user]);
+  }, [id, user, isAdmin]);
 
   useEffect(() => {
     Object.values(pdfUrls).forEach(url => URL.revokeObjectURL(url));
@@ -436,12 +438,13 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
   const handleGradeSubmission = async () => {
     if (!selectedSubmission) return;
     
+    // Validación 0-5
     if (gradingForm.puntaje > 5) {
-      toast({ title: "Puntaje inválido", description: "El máximo es 5.0", variant: "destructive" });
+      toast({ title: "Puntaje inválido", description: "El puntaje máximo es 5.0", variant: "destructive" });
       return;
     }
     if (gradingForm.puntaje < 0) {
-      toast({ title: "Puntaje inválido", description: "El mínimo es 0.0", variant: "destructive" });
+      toast({ title: "Puntaje inválido", description: "El puntaje mínimo es 0.0", variant: "destructive" });
       return;
     }
 
@@ -482,17 +485,38 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
     return <div className="p-4 bg-muted rounded-lg text-sm whitespace-pre-wrap">{detail}</div>;
   };
 
+  const handleViewFull = (res: Resource) => {
+    const url = res.url;
+    if (!url) return;
+    if (url.startsWith('data:')) {
+      const resId = getObjectId(res);
+      if (pdfUrls[resId]) {
+        window.open(pdfUrls[resId], '_blank');
+        return;
+      }
+      const blobUrl = base64ToBlobUrl(url);
+      if (blobUrl) window.open(blobUrl, '_blank');
+    } else {
+      const embedUrl = getEmbedUrl(url);
+      window.open(embedUrl || url, '_blank');
+    }
+  };
+
   return (
     <div className="space-y-8">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex items-center gap-4">
           <Button asChild variant="ghost" size="icon"><Link href="/modulos"><ArrowLeft className="h-5 w-5" /></Link></Button>
-          <h1 className="text-3xl font-headline font-bold">{moduleInfo.title}</h1>
+          <div>
+            <h1 className="text-3xl font-headline font-bold">{moduleInfo.title}</h1>
+            {isAdmin && <Badge className="mt-1 bg-primary text-white">Administrador</Badge>}
+          </div>
         </div>
       </div>
 
       <Tabs defaultValue="recursos" className="w-full">
-        <TabsList className={cn("grid w-full mb-8", isAdmin ? "md:w-[640px] grid-cols-4" : "md:w-[480px] grid-cols-3")}>
+        {/* LISTADO DE PESTAÑAS: SEGUIMIENTO APARECE AQUÍ PARA ADMIN */}
+        <TabsList className={cn("grid w-full mb-8", isAdmin ? "md:w-[800px] grid-cols-4" : "md:w-[480px] grid-cols-3")}>
           <TabsTrigger value="recursos">Recursos</TabsTrigger>
           <TabsTrigger value="actividades">Actividades</TabsTrigger>
           <TabsTrigger value="evaluaciones">Evaluaciones</TabsTrigger>
@@ -504,6 +528,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
             <h2 className="text-xl font-headline">Materiales de Estudio</h2>
             {isAdmin && <Button onClick={() => { setEditingResource(null); setResourceForm({ titulo: "", descripcion: "", url: "", unidad: `Módulo ${id}`, tipo: "guia", formato: "URL" }); setSourceTab("url"); setIsResourceDialogOpen(true); }} size="sm" className="bg-primary"><PlusCircle className="mr-2 h-4 w-4" /> Añadir Recurso</Button>}
           </div>
+
           <div className="grid grid-cols-1 gap-8">
             {resources.map((res) => {
               const resId = getObjectId(res);
@@ -516,14 +541,15 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                 <Card key={resId} className="overflow-hidden shadow-md relative group">
                   {isAdmin && (
                     <div className="absolute top-4 right-4 flex gap-2 z-20">
+                      {/* BOTONES SIEMPRE VISIBLES Y CON COLORES RESALTANTES */}
                       <Button variant="default" size="icon" className="h-8 w-8 bg-blue-600 hover:bg-blue-700 text-white shadow-lg" onClick={() => { setEditingResource(res); setResourceForm({...res}); setSourceTab(res.url?.startsWith('data:') ? "file" : "url"); setIsResourceDialogOpen(true); }}><Pencil className="h-4 w-4" /></Button>
-                      <Button variant="destructive" size="icon" className="h-8 w-8 shadow-lg" onClick={() => { setItemToDelete({ id: resId, type: 'recurso' }); setIsDeleteDialogOpen(true); }}><Trash2 className="h-4 w-4" /></Button>
+                      <Button variant="destructive" size="icon" className="h-8 w-8 bg-red-600 text-white shadow-lg" onClick={() => { setItemToDelete({ id: resId, type: 'recurso' }); setIsDeleteDialogOpen(true); }}><Trash2 className="h-4 w-4" /></Button>
                     </div>
                   )}
                   <CardHeader>
                     <div className="flex justify-between items-start mb-2">
                        <Badge variant="outline" className="uppercase">{res.tipo}</Badge>
-                       <Button size="sm" className="bg-slate-900" onClick={() => handleViewFull(res)}>Ver Pantalla Completa</Button>
+                       <Button size="sm" className="bg-slate-900 text-white" onClick={() => handleViewFull(res)}>Ver Pantalla Completa</Button>
                     </div>
                     <CardTitle>{res.titulo}</CardTitle>
                     <CardDescription>{res.descripcion}</CardDescription>
@@ -550,21 +576,22 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
             <h2 className="text-xl font-headline">Actividades Prácticas</h2>
             {isAdmin && <Button onClick={() => { setEditingActivity(null); setActivityForm({ titulo: "", descripcion: "", tipo: "tarea", criterios_evaluacion: "", moduloId: id }); setIsActivityDialogOpen(true); }} size="sm" className="bg-primary"><PlusCircle className="mr-2 h-4 w-4" /> Añadir Actividad</Button>}
           </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {activities.map((act) => {
               const actId = getObjectId(act);
               return (
-                <Card key={actId} className="shadow-md border-l-4 border-l-primary relative">
+                <Card key={actId} className="shadow-md border-l-4 border-l-primary relative group">
                   {isAdmin && (
                     <div className="absolute top-4 right-4 flex gap-2">
-                      <Button variant="default" size="icon" className="h-8 w-8 bg-blue-600 hover:bg-blue-700 text-white" onClick={() => { setEditingActivity(act); setActivityForm({...act}); setIsActivityDialogOpen(true); }}><Pencil className="h-4 w-4" /></Button>
-                      <Button variant="destructive" size="icon" className="h-8 w-8" onClick={() => { setItemToDelete({ id: actId, type: 'actividad' }); setIsDeleteDialogOpen(true); }}><Trash2 className="h-4 w-4" /></Button>
+                      <Button variant="default" size="icon" className="h-8 w-8 bg-blue-600 hover:bg-blue-700 text-white shadow-lg" onClick={() => { setEditingActivity(act); setActivityForm({...act}); setIsActivityDialogOpen(true); }}><Pencil className="h-4 w-4" /></Button>
+                      <Button variant="destructive" size="icon" className="h-8 w-8 bg-red-600 text-white shadow-lg" onClick={() => { setItemToDelete({ id: actId, type: 'actividad' }); setIsDeleteDialogOpen(true); }}><Trash2 className="h-4 w-4" /></Button>
                     </div>
                   )}
                   <CardHeader><Badge className="w-fit mb-2">{act.tipo.toUpperCase()}</Badge><CardTitle>{act.titulo}</CardTitle><CardDescription>{act.descripcion}</CardDescription></CardHeader>
                   <CardContent className="space-y-4">
-                    <div className="text-sm bg-muted/30 p-4 rounded-lg"><p className="font-bold mb-1">Criterios:</p><p className="text-muted-foreground">{act.criterios_evaluacion || "No especificados"}</p></div>
-                    {!isAdmin && <Button className="w-full" onClick={() => { setSelectedActivity(act); setIsSubmitDialogOpen(true); }}><Send className="mr-2 h-4 w-4" /> Enviar Trabajo</Button>}
+                    <div className="text-sm bg-muted/30 p-4 rounded-lg"><p className="font-bold mb-1">Criterios de Evaluación:</p><p className="text-muted-foreground">{act.criterios_evaluacion || "No especificados"}</p></div>
+                    {!isAdmin && <Button className="w-full bg-accent" onClick={() => { setSelectedActivity(act); setIsSubmitDialogOpen(true); }}><Send className="mr-2 h-4 w-4" /> Enviar Tarea</Button>}
                   </CardContent>
                 </Card>
               );
@@ -574,9 +601,10 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
 
         <TabsContent value="evaluaciones" className="space-y-6">
           <div className="flex justify-between items-center">
-            <h2 className="text-xl font-headline">Evaluaciones</h2>
+            <h2 className="text-xl font-headline">Evaluaciones del Módulo</h2>
             {isAdmin && <Button onClick={() => { setEditingAssessment(null); setAssessmentForm({ titulo: "", descripcion: "", moduloId: id, preguntas: [] }); setViewMode('edit'); setIsAssessmentDialogOpen(true); }} size="sm" className="bg-primary"><PlusCircle className="mr-2 h-4 w-4" /> Crear Evaluación</Button>}
           </div>
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {assessments.map((ass) => {
               const assId = getObjectId(ass);
@@ -585,7 +613,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                   {isAdmin && (
                     <div className="absolute top-2 right-2 flex gap-1 z-10">
                       <Button variant="secondary" size="icon" className="h-7 w-7 bg-blue-600 text-white" onClick={(e) => { e.stopPropagation(); setEditingAssessment(ass); setAssessmentForm(ass); setViewMode('edit'); setIsAssessmentDialogOpen(true); }}><Pencil className="h-3 w-3" /></Button>
-                      <Button variant="secondary" size="icon" className="h-7 w-7 text-destructive" onClick={(e) => { e.stopPropagation(); setItemToDelete({ id: assId, type: 'evaluacion' }); setIsDeleteDialogOpen(true); }}><Trash2 className="h-3 w-3" /></Button>
+                      <Button variant="secondary" size="icon" className="h-7 w-7 text-destructive bg-red-600 text-white" onClick={(e) => { e.stopPropagation(); setItemToDelete({ id: assId, type: 'evaluacion' }); setIsDeleteDialogOpen(true); }}><Trash2 className="h-3 w-3" /></Button>
                     </div>
                   )}
                   <CardHeader><CardTitle className="text-lg">{ass.titulo}</CardTitle><CardDescription className="line-clamp-2">{ass.descripcion}</CardDescription></CardHeader>
@@ -596,9 +624,14 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
           </div>
         </TabsContent>
 
+        {/* CONTENIDO DE SEGUIMIENTO: SÓLO PARA ADMINS */}
         {isAdmin && (
           <TabsContent value="seguimiento" className="space-y-6">
-            <Card className="shadow-sm overflow-hidden">
+            <Card className="shadow-sm overflow-hidden border-none rounded-2xl">
+              <CardHeader className="bg-slate-50 border-b">
+                <CardTitle className="flex items-center gap-2"><History className="h-5 w-5 text-primary" /> Panel de Seguimiento</CardTitle>
+                <CardDescription>Revisa las entregas y califica el desempeño de tus estudiantes.</CardDescription>
+              </CardHeader>
               <Table>
                 <TableHeader className="bg-slate-50">
                   <TableRow>
@@ -618,15 +651,15 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                         <TableCell className="max-w-[200px] truncate text-xs font-semibold">{sub.tituloContenido}</TableCell>
                         <TableCell>
                           {sub.puntaje !== undefined ? (
-                            <span className={cn("font-bold", sub.puntaje >= 3.5 ? "text-green-600" : "text-amber-600")}>{Number(sub.puntaje).toFixed(1)}/5.0</span>
-                          ) : '—'}
+                            <Badge className={cn("px-2 font-bold", sub.puntaje >= 3.5 ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700")}>{Number(sub.puntaje).toFixed(1)} / 5.0</Badge>
+                          ) : <span className="text-slate-300 italic text-[10px]">Pendiente</span>}
                         </TableCell>
                         <TableCell><Badge variant={sub.estado === "calificado" ? "default" : "secondary"} className="text-[10px]">{sub.estado.toUpperCase()}</Badge></TableCell>
                         <TableCell className="text-right"><Button size="sm" variant="outline" onClick={() => { setSelectedSubmission(sub); setGradingForm({ puntaje: sub.puntaje || 0, recomendaciones: sub.recomendaciones || "" }); setIsGradingDialogOpen(true); }}><FileCheck className="mr-2 h-4 w-4" /> Calificar</Button></TableCell>
                       </TableRow>
                     );
                   })}
-                  {submissions.length === 0 && <TableRow><TableCell colSpan={5} className="text-center py-10 italic text-muted-foreground">No hay envíos registrados.</TableCell></TableRow>}
+                  {submissions.length === 0 && <TableRow><TableCell colSpan={5} className="text-center py-20 italic text-muted-foreground">No hay envíos registrados para este módulo.</TableCell></TableRow>}
                 </TableBody>
               </Table>
             </Card>
@@ -634,42 +667,42 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
         )}
       </Tabs>
 
-      {/* DIÁLOGOS DE REVISIÓN Y GESTIÓN */}
+      {/* DIÁLOGOS DE EDICIÓN Y GESTIÓN */}
       <Dialog open={isGradingDialogOpen} onOpenChange={setIsGradingDialogOpen}>
         <DialogContent className="sm:max-w-[700px] max-h-[85vh] overflow-hidden flex flex-col">
-          <DialogHeader><DialogTitle>Revisión de Entrega</DialogTitle><DialogDescription>Estudiante: {selectedSubmission?.usuarioNombre}</DialogDescription></DialogHeader>
+          <DialogHeader><DialogTitle className="flex items-center gap-2"><GradeIcon className="h-5 w-5 text-primary" /> Revisión de Entrega</DialogTitle><DialogDescription>Calificando a: <strong>{selectedSubmission?.usuarioNombre}</strong></DialogDescription></DialogHeader>
           <div className="flex-1 overflow-y-auto pr-2 py-4 space-y-6">
             <div className="space-y-2"><Label className="text-xs uppercase font-bold text-primary">Respuesta enviada</Label>{selectedSubmission && formatSubmissionDetail(selectedSubmission.detalleEnvio)}</div>
             <Separator />
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="space-y-2">
-                <Label>Puntaje (0-5)</Label>
+                <Label>Puntaje (0-5.0)</Label>
                 <Input type="number" step="0.1" min="0" max="5" value={gradingForm.puntaje} onChange={e => setGradingForm({...gradingForm, puntaje: parseFloat(e.target.value)})} />
-                <p className="text-[10px] text-muted-foreground">Máximo permitido: 5.0</p>
+                <p className="text-[10px] text-muted-foreground italic">Calificación máxima permitida: 5.0</p>
               </div>
               <div className="md:col-span-2 space-y-2">
                 <Label>Retroalimentación</Label>
-                <Textarea placeholder="Observaciones..." value={gradingForm.recomendaciones} onChange={e => setGradingForm({...gradingForm, recomendaciones: e.target.value})} rows={3} />
+                <Textarea placeholder="Observaciones pedagógicas..." value={gradingForm.recomendaciones} onChange={e => setGradingForm({...gradingForm, recomendaciones: e.target.value})} rows={3} />
               </div>
             </div>
           </div>
-          <DialogFooter><Button variant="outline" onClick={() => setIsGradingDialogOpen(false)}>Cancelar</Button><Button onClick={handleGradeSubmission} disabled={isProcessing}>Guardar</Button></DialogFooter>
+          <DialogFooter><Button variant="outline" onClick={() => setIsGradingDialogOpen(false)}>Cancelar</Button><Button onClick={handleGradeSubmission} disabled={isProcessing} className="bg-primary">{isProcessing ? <Loader2 className="animate-spin h-4 w-4" /> : 'Guardar Calificación'}</Button></DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* DIÁLOGOS DE EDICIÓN (RECURSOS, ACTIVIDADES, EVALUACIONES) */}
       <Dialog open={isResourceDialogOpen} onOpenChange={setIsResourceDialogOpen}>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader><DialogTitle>{editingResource ? 'Editar' : 'Nuevo'} Recurso</DialogTitle></DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2"><Label>Título *</Label><Input value={resourceForm.titulo} onChange={e => setResourceForm({...resourceForm, titulo: e.target.value})} /></div>
+            <div className="space-y-2"><Label>Descripción</Label><Textarea value={resourceForm.descripcion} onChange={e => setResourceForm({...resourceForm, descripcion: e.target.value})} /></div>
             <div className="space-y-2">
               <Label>Fuente</Label>
               <Tabs value={sourceTab} onValueChange={(v:any) => setSourceTab(v)}>
                 <TabsList className="grid w-full grid-cols-2"><TabsTrigger value="url">URL</TabsTrigger><TabsTrigger value="file">Archivo</TabsTrigger></TabsList>
                 <TabsContent value="url" className="pt-2"><Input value={resourceForm.url} onChange={e => setResourceForm({...resourceForm, url: e.target.value})} placeholder="https://..." /></TabsContent>
                 <TabsContent value="file" className="pt-2">
-                   <div className="border-2 border-dashed rounded-xl p-6 text-center cursor-pointer hover:bg-muted/50" onClick={() => document.getElementById('resFile')?.click()}>
+                  <div className="border-2 border-dashed rounded-xl p-6 text-center cursor-pointer hover:bg-muted/50" onClick={() => document.getElementById('resFile')?.click()}>
                     <input id="resFile" type="file" className="hidden" onChange={e => setUploadedFile(e.target.files?.[0] || null)} />
                     {uploadedFile ? <p className="text-sm font-bold">{uploadedFile.name}</p> : <><Upload className="h-8 w-8 mx-auto mb-2 opacity-50" /><p className="text-xs">Soporta PDF, Videos y Office</p></>}
                   </div>
@@ -677,30 +710,48 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
               </Tabs>
             </div>
           </div>
-          <DialogFooter><Button onClick={handleSaveResource} disabled={isProcessing}>Guardar Recurso</Button></DialogFooter>
+          <DialogFooter><Button onClick={handleSaveResource} disabled={isProcessing} className="bg-primary">Guardar Recurso</Button></DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* ELIMINAR SEGURO */}
-      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader><AlertDialogTitle>¿Confirmar eliminación?</AlertDialogTitle><AlertDialogDescription>Esta acción es permanente e irreversible.</AlertDialogDescription></AlertDialogHeader>
-          <AlertDialogFooter><AlertDialogCancel>Cancelar</AlertDialogCancel><AlertDialogAction onClick={handleDeleteConfirm} className="bg-destructive text-white hover:bg-destructive/90">Eliminar</AlertDialogAction></AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      <Dialog open={isSubmitDialogOpen} onOpenChange={setIsSubmitDialogOpen}>
-        <DialogContent><DialogHeader><DialogTitle>Enviar Tarea</DialogTitle></DialogHeader><div className="py-4"><Textarea placeholder="Pega el enlace o escribe tu respuesta aquí..." value={submitText} onChange={e => setSubmitText(e.target.value)} rows={8} /></div><DialogFooter><Button variant="outline" onClick={() => setIsSubmitDialogOpen(false)}>Cancelar</Button><Button onClick={handleSubmitWork} disabled={isProcessing}>Enviar</Button></DialogFooter></DialogContent>
+      <Dialog open={isActivityDialogOpen} onOpenChange={setIsActivityDialogOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader><DialogTitle>{editingActivity ? 'Editar' : 'Nueva'} Actividad</DialogTitle></DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2"><Label>Título *</Label><Input value={activityForm.titulo} onChange={e => setActivityForm({...activityForm, titulo: e.target.value})} /></div>
+            <div className="space-y-2"><Label>Descripción / Instrucciones</Label><Textarea value={activityForm.descripcion} onChange={e => setActivityForm({...activityForm, descripcion: e.target.value})} rows={4} /></div>
+            <div className="space-y-2"><Label>Criterios de Evaluación</Label><Textarea value={activityForm.criterios_evaluacion} onChange={e => setActivityForm({...activityForm, criterios_evaluacion: e.target.value})} rows={2} /></div>
+            <div className="space-y-2">
+              <Label>Tipo de Actividad</Label>
+              <Select value={activityForm.tipo} onValueChange={v => setActivityForm({...activityForm, tipo: v})}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent><SelectItem value="tarea">Tarea</SelectItem><SelectItem value="foro">Foro</SelectItem><SelectItem value="simulacion">Simulación</SelectItem></SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter><Button onClick={handleSaveActivity} disabled={isProcessing} className="bg-primary">Guardar Actividad</Button></DialogFooter>
+        </DialogContent>
       </Dialog>
 
       <Dialog open={isAssessmentDialogOpen} onOpenChange={setIsAssessmentDialogOpen}>
         <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
-           {viewMode === 'edit' ? (
-             <div className="space-y-6 py-4">
-                <DialogHeader><DialogTitle>Gestor de Evaluación</DialogTitle></DialogHeader>
+          <DialogHeader>
+            <div className="flex items-center justify-between pr-8">
+              <DialogTitle className="text-2xl font-headline">{viewMode === 'edit' ? 'Gestor de Examen' : assessmentForm.titulo}</DialogTitle>
+              {isAdmin && (
+                <div className="flex gap-2">
+                  <Button variant={viewMode === 'edit' ? 'default' : 'outline'} size="sm" onClick={() => setViewMode('edit')}><Settings2 className="mr-2 h-4 w-4" /> Editar</Button>
+                  <Button variant={viewMode === 'preview' ? 'default' : 'outline'} size="sm" onClick={() => setViewMode('preview')}><Eye className="mr-2 h-4 w-4" /> Previsualizar</Button>
+                </div>
+              )}
+            </div>
+          </DialogHeader>
+
+          {viewMode === 'edit' ? (
+            <div className="space-y-6 py-4">
                 <div className="grid grid-cols-2 gap-4"><div className="grid gap-2"><Label>Título</Label><Input value={assessmentForm.titulo} onChange={e => setAssessmentForm({...assessmentForm, titulo: e.target.value})} /></div><div className="grid gap-2"><Label>Descripción</Label><Input value={assessmentForm.descripcion} onChange={e => setAssessmentForm({...assessmentForm, descripcion: e.target.value})} /></div></div>
-                <div className="p-4 border rounded-xl bg-muted/20 space-y-4">
-                  <h3 className="font-bold text-primary">Añadir Pregunta</h3>
+                <div className="p-5 border rounded-2xl bg-muted/20 space-y-4 shadow-inner">
+                  <h3 className="font-bold text-primary flex items-center gap-2"><PlusCircle className="h-4 w-4" /> Añadir Nueva Pregunta</h3>
                   <div className="grid gap-2"><Label>Enunciado</Label><Input value={currentQuestion.texto} onChange={e => setCurrentQuestion({...currentQuestion, texto: e.target.value})} /></div>
                   <div className="grid gap-2">
                     <Label>Tipo</Label>
@@ -710,31 +761,88 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                     </Select>
                   </div>
                   {currentQuestion.tipo === 'opcion-multiple' && (
-                    <div className="space-y-2">
+                    <div className="space-y-3">
                        {currentQuestion.opciones.map((opt, i) => (
-                         <div key={i} className="flex items-center gap-2"><RadioGroupItem checked={currentQuestion.respuestaCorrecta === opt} onClick={() => setCurrentQuestion({...currentQuestion, respuestaCorrecta: opt})} value={opt} /><Input value={opt} onChange={e => { const n = [...currentQuestion.opciones]; n[i] = e.target.value; setCurrentQuestion({...currentQuestion, opciones: n}); }} /></div>
+                         <div key={i} className="flex items-center gap-2"><RadioGroupItem checked={currentQuestion.respuestaCorrecta === opt} onClick={() => setCurrentQuestion({...currentQuestion, respuestaCorrecta: opt})} value={opt} /><Input value={opt} onChange={e => { const n = [...currentQuestion.opciones]; n[i] = e.target.value; setCurrentQuestion({...currentQuestion, opciones: n}); }} /><Button variant="ghost" size="icon" onClick={() => setCurrentQuestion({...currentQuestion, opciones: currentQuestion.opciones.filter((_, idx) => idx !== i)})} disabled={currentQuestion.opciones.length <= 2}><X className="h-4 w-4" /></Button></div>
                        ))}
+                       <Button variant="outline" size="sm" onClick={() => setCurrentQuestion({...currentQuestion, opciones: [...currentQuestion.opciones, "Nueva Opción"]})} className="w-full">Agregar Opción</Button>
                     </div>
                   )}
-                  <Button variant="default" className="w-full" onClick={() => { if(!currentQuestion.texto) return; setAssessmentForm({...assessmentForm, preguntas: [...assessmentForm.preguntas, currentQuestion]}); setCurrentQuestion({id: Math.random().toString(36).substr(2,9), texto:"", tipo:"opcion-multiple", opciones:["A","B"], respuestaCorrecta:""}); }}>Añadir Pregunta</Button>
+                  <Button variant="default" className="w-full bg-slate-900" onClick={() => { if(!currentQuestion.texto) return; setAssessmentForm({...assessmentForm, preguntas: [...assessmentForm.preguntas, currentQuestion]}); setCurrentQuestion({id: Math.random().toString(36).substr(2,9), texto:"", tipo:"opcion-multiple", opciones:["A","B"], respuestaCorrecta:""}); }}>Añadir Pregunta al Examen</Button>
                 </div>
-                <DialogFooter><Button onClick={handleSaveAssessment} className="w-full">Guardar Evaluación Completa</Button></DialogFooter>
+                {assessmentForm.preguntas.length > 0 && (
+                  <div className="space-y-2 border-t pt-4">
+                    <Label className="font-bold">Preguntas en el examen ({assessmentForm.preguntas.length})</Label>
+                    <div className="space-y-2">
+                      {assessmentForm.preguntas.map((q, i) => (
+                        <div key={q.id} className="flex items-center justify-between p-3 border rounded-xl bg-white shadow-sm">
+                          <span className="text-sm font-medium">{i+1}. {q.texto} <Badge variant="secondary" className="ml-2 text-[10px]">{q.tipo}</Badge></span>
+                          <Button variant="ghost" size="icon" onClick={() => setAssessmentForm({...assessmentForm, preguntas: assessmentForm.preguntas.filter(item => item.id !== q.id)})}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                <DialogFooter><Button onClick={handleSaveAssessment} disabled={isProcessing} className="w-full h-12 bg-primary font-bold">Guardar Evaluación Completa</Button></DialogFooter>
              </div>
            ) : (
-             <div className="py-4 space-y-6">
-                <DialogHeader><DialogTitle className="text-2xl">{assessmentForm.titulo}</DialogTitle></DialogHeader>
+             <div className="py-4 space-y-8">
                 {assessmentForm.preguntas.map((q, idx) => (
-                  <div key={q.id} className="space-y-4">
-                    <p className="text-lg font-bold">{idx + 1}. {q.texto}</p>
-                    {q.tipo === 'opcion-multiple' && <RadioGroup value={userAnswers[q.id]} onValueChange={v => !showFeedback && setUserAnswers({...userAnswers, [q.id]: v})} className="space-y-2">{q.opciones.map((opt, i) => <div key={i} className={cn("flex items-center space-x-3 p-3 border rounded-xl", showFeedback && q.respuestaCorrecta === opt ? "bg-green-100 border-green-500" : "hover:bg-muted/50")}><RadioGroupItem value={opt} id={`q${idx}o${i}`} disabled={showFeedback} /><Label htmlFor={`q${idx}o${i}`} className="flex-1 cursor-pointer">{opt}</Label></div>)}</RadioGroup>}
-                    {q.tipo === 'escrita' && <Textarea placeholder="Escribe aquí..." value={userAnswers[q.id] || ""} onChange={e => !showFeedback && setUserAnswers({...userAnswers, [q.id]: e.target.value})} disabled={showFeedback} rows={4} />}
+                  <div key={q.id} className="space-y-4 bg-muted/10 p-6 rounded-2xl border">
+                    <p className="text-lg font-bold text-slate-800">{idx + 1}. {q.texto}</p>
+                    {q.tipo === 'opcion-multiple' && (
+                      <RadioGroup value={userAnswers[q.id]} onValueChange={v => !showFeedback && setUserAnswers({...userAnswers, [q.id]: v})} className="space-y-2">
+                        {q.opciones.map((opt, i) => (
+                          <div key={i} className={cn("flex items-center space-x-3 p-4 border rounded-xl transition-all", showFeedback && q.respuestaCorrecta === opt ? "bg-green-100 border-green-500 shadow-sm" : "hover:bg-muted/50")}>
+                            <RadioGroupItem value={opt} id={`q${idx}o${i}`} disabled={showFeedback} />
+                            <Label htmlFor={`q${idx}o${i}`} className="flex-1 cursor-pointer font-medium">{opt}</Label>
+                          </div>
+                        ))}
+                      </RadioGroup>
+                    )}
+                    {q.tipo === 'escrita' && <Textarea placeholder="Redacta tu respuesta aquí..." value={userAnswers[q.id] || ""} onChange={e => !showFeedback && setUserAnswers({...userAnswers, [q.id]: e.target.value})} disabled={showFeedback} rows={6} className="bg-white" />}
+                    {q.tipo === 'verdadero-falso' && (
+                      <div className="flex gap-4">
+                        {['Verdadero', 'Falso'].map(val => (
+                          <Button key={val} variant={userAnswers[q.id] === val ? 'default' : 'outline'} className={cn("flex-1 h-12 font-bold", showFeedback && q.respuestaCorrecta === val ? "bg-green-600 text-white" : "")} onClick={() => !showFeedback && setUserAnswers({...userAnswers, [q.id]: val})} disabled={showFeedback}>{val}</Button>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 ))}
-                {!showFeedback && <Button className="w-full h-12 font-bold" onClick={handleGradeAssessment}>Finalizar y Enviar</Button>}
+                {!showFeedback && <Button className="w-full h-14 bg-primary text-lg font-bold shadow-lg shadow-primary/20" onClick={handleGradeAssessment}>Finalizar y Enviar Evaluación</Button>}
+                {showFeedback && <div className="p-6 bg-primary/10 rounded-2xl text-center border-2 border-primary/20"><Trophy className="h-10 w-10 text-primary mx-auto mb-2" /><h3 className="text-2xl font-bold">¡Evaluación Enviada!</h3><p className="text-muted-foreground mt-1">Tus respuestas han sido enviadas al docente para su revisión final.</p></div>}
              </div>
            )}
         </DialogContent>
       </Dialog>
+
+      <Dialog open={isSubmitDialogOpen} onOpenChange={setIsSubmitDialogOpen}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader><DialogTitle>Subir Entrega</DialogTitle><DialogDescription>Actividad: {selectedActivity?.titulo}</DialogDescription></DialogHeader>
+          <div className="py-4 space-y-4">
+            <Label>Desarrollo de la actividad o enlace del trabajo</Label>
+            <Textarea placeholder="Pega aquí el enlace de tu documento de Google Drive, o redacta tu respuesta directamente..." value={submitText} onChange={e => setSubmitText(e.target.value)} rows={10} className="rounded-xl shadow-inner" />
+            <p className="text-[10px] text-muted-foreground">Nota: Si usas enlaces externos, asegúrate de que tengan permisos de lectura.</p>
+          </div>
+          <DialogFooter><Button variant="outline" onClick={() => setIsSubmitDialogOpen(false)}>Cancelar</Button><Button onClick={handleSubmitWork} disabled={isProcessing} className="bg-primary">{isProcessing ? <Loader2 className="animate-spin h-4 w-4" /> : 'Confirmar Envío'}</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent className="rounded-3xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-2xl font-headline">¿Estás completamente seguro?</AlertDialogTitle>
+            <AlertDialogDescription className="text-base">Esta acción es permanente. Se eliminará el {itemToDelete?.type} de la base de datos de MongoDB y no se podrá recuperar.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="rounded-2xl h-12" disabled={isProcessing}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={(e) => { e.preventDefault(); handleDeleteConfirm(); }} className="bg-red-600 hover:bg-red-700 text-white rounded-2xl h-12 px-8 shadow-lg shadow-red-200" disabled={isProcessing}>
+              {isProcessing ? <Loader2 className="animate-spin h-4 w-4 mr-2" /> : <Trash2 className="w-4 h-4 mr-2" />} Confirmar Eliminación
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
