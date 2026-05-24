@@ -28,7 +28,13 @@ import {
   Save,
   FileCode,
   Download,
-  FileUp
+  FileUp,
+  Bold,
+  Italic,
+  AlignLeft,
+  AlignCenter,
+  AlignRight,
+  Type
 } from "lucide-react";
 import Link from "next/link";
 import api from "@/lib/api";
@@ -174,8 +180,16 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
   const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
   const [selectedSubmission, setSelectedSubmission] = useState<Submission | null>(null);
   const [gradingForm, setGradingForm] = useState({ puntaje: 0, recomendaciones: "" });
-  const [activitySubmissionText, setActivitySubmissionText] = useState("");
-  const [submissionFile, setSubmissionFile] = useState<File | null>(null);
+  
+  // Estado para la entrega enriquecida
+  const [activitySubmission, setActivitySubmission] = useState({
+    text: "",
+    bold: false,
+    italic: false,
+    align: "left" as "left" | "center" | "right",
+    fontSize: "text-base",
+    file: null as File | null
+  });
   
   const [editingResource, setEditingResource] = useState<Resource | null>(null);
   const [editingActivity, setEditingActivity] = useState<Activity | null>(null);
@@ -288,27 +302,37 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
   };
 
   const handleSubmitActivity = async () => {
-    if (!selectedActivity || (!activitySubmissionText && !submissionFile)) return;
+    if (!selectedActivity || (!activitySubmission.text && !activitySubmission.file)) return;
     setIsProcessing(true);
     try {
-      let detalle = activitySubmissionText;
-      
-      if (submissionFile) {
-        detalle = await fileToBase64(submissionFile);
+      let fileData = "";
+      let fileName = "";
+      if (activitySubmission.file) {
+        fileData = await fileToBase64(activitySubmission.file);
+        fileName = activitySubmission.file.name;
       }
 
-      await api.post("/performance-reports", {
+      const payload = {
         usuarioNombre: user?.name || "Estudiante",
         usuarioEmail: user?.email,
         tipoEnvio: "actividad",
         moduloId: id,
         tituloContenido: selectedActivity.titulo,
-        detalleEnvio: detalle,
+        detalleEnvio: JSON.stringify({
+          text: activitySubmission.text,
+          bold: activitySubmission.bold,
+          italic: activitySubmission.italic,
+          align: activitySubmission.align,
+          fontSize: activitySubmission.fontSize,
+          file: fileData,
+          fileName: fileName
+        }),
         estado: "enviado"
-      });
+      };
+
+      await api.post("/performance-reports", payload);
       setIsSubmitActivityOpen(false);
-      setActivitySubmissionText("");
-      setSubmissionFile(null);
+      setActivitySubmission({ text: "", bold: false, italic: false, align: "left", fontSize: "text-base", file: null });
       toast({ title: "Actividad enviada con éxito", description: "El docente revisará tu entrega pronto." });
       if (isAdmin) fetchData();
     } catch (error) {
@@ -477,51 +501,49 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
   const formatSubmissionDetail = (detail: string) => {
     if (!detail) return <p className="italic text-muted-foreground">Sin contenido.</p>;
 
-    // Caso 1: Es un archivo en DataURI
-    if (detail.startsWith('data:')) {
-      const isImage = detail.includes('image/');
-      const isVideo = detail.includes('video/');
-      const isPdf = detail.includes('application/pdf');
-
-      return (
-        <div className="space-y-4">
-          <div className="p-4 border rounded-xl bg-slate-50 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              {isImage ? <FileCode className="text-blue-500" /> : isVideo ? <Video className="text-red-500" /> : <FileText className="text-orange-500" />}
-              <div>
-                <p className="text-sm font-bold">Documento adjunto</p>
-                <p className="text-[10px] text-muted-foreground uppercase">Archivo Base64</p>
-              </div>
-            </div>
-            <Button size="sm" variant="outline" className="h-8" asChild>
-              <a href={detail} download="entrega-estudiante">
-                <Download className="mr-2 h-3 w-3" /> Descargar Archivo
-              </a>
-            </Button>
-          </div>
-          
-          {isImage && (
-            <div className="border rounded-xl overflow-hidden shadow-sm">
-              <img src={detail} alt="Previsualización" className="max-w-full h-auto" />
-            </div>
-          )}
-          {isVideo && (
-            <video controls className="w-full rounded-xl border">
-              <source src={detail} />
-            </video>
-          )}
-          {isPdf && (
-            <div className="aspect-[4/3] w-full border rounded-xl overflow-hidden">
-              <iframe src={detail} className="w-full h-full border-0" />
-            </div>
-          )}
-        </div>
-      );
-    }
-
-    // Caso 2: Es JSON (Evaluación)
     try {
       const parsed = JSON.parse(detail);
+      
+      // Caso 1: Es la nueva entrega enriquecida (Actividad)
+      if (parsed.text !== undefined || parsed.file !== undefined) {
+        return (
+          <div className="space-y-6">
+            {parsed.text && (
+              <div 
+                className={cn(
+                  "p-4 bg-muted/30 rounded-xl border",
+                  parsed.bold && "font-bold",
+                  parsed.italic && "italic",
+                  parsed.align === "center" && "text-center",
+                  parsed.align === "right" && "text-right",
+                  parsed.fontSize || "text-base"
+                )}
+              >
+                {parsed.text}
+              </div>
+            )}
+
+            {parsed.file && (
+              <div className="p-4 border rounded-xl bg-slate-50 flex items-center justify-between shadow-sm">
+                <div className="flex items-center gap-3">
+                  <FileText className="text-primary h-8 w-8" />
+                  <div>
+                    <p className="text-sm font-bold">{parsed.fileName || "Archivo adjunto"}</p>
+                    <p className="text-[10px] text-muted-foreground uppercase">Documento de entrega</p>
+                  </div>
+                </div>
+                <Button size="sm" variant="default" className="bg-slate-900" asChild>
+                  <a href={parsed.file} download={parsed.fileName || "entrega-datanexus"}>
+                    <Download className="mr-2 h-4 w-4" /> Descargar
+                  </a>
+                </Button>
+              </div>
+            )}
+          </div>
+        );
+      }
+
+      // Caso 2: Es un array de respuestas (Evaluación)
       if (Array.isArray(parsed)) {
         return (
           <div className="space-y-4">
@@ -536,7 +558,6 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
       }
     } catch (e) {}
 
-    // Caso 3: Es texto plano o URL
     return <div className="p-4 bg-muted rounded-lg text-sm whitespace-pre-wrap">{detail}</div>;
   };
 
@@ -746,33 +767,128 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
       </Dialog>
 
       <Dialog open={isSubmitActivityOpen} onOpenChange={setIsSubmitActivityOpen}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
             <DialogTitle>Entregar: {selectedActivity?.titulo}</DialogTitle>
-            <DialogDescription>Sube un archivo o escribe tu respuesta directamente.</DialogDescription>
+            <DialogDescription>Completa tu respuesta con formato y adjunta archivos si es necesario.</DialogDescription>
           </DialogHeader>
-          <div className="py-4 space-y-4">
-            <div className="space-y-2">
-              <Label className="flex items-center gap-2"><FileUp className="h-4 w-4 text-primary" /> Adjuntar archivo (Opcional)</Label>
-              <Input type="file" onChange={e => setSubmissionFile(e.target.files?.[0] || null)} className="cursor-pointer" />
-              <p className="text-[10px] text-muted-foreground">Soporta PDF, imágenes y videos.</p>
+          <div className="py-4 space-y-6">
+            {/* Barra de herramientas del editor */}
+            <div className="space-y-4">
+              <Label className="text-sm font-bold flex items-center gap-2"><MessageSquare className="h-4 w-4" /> Desarrollo de la Actividad</Label>
+              <div className="border rounded-xl overflow-hidden shadow-sm">
+                <div className="bg-slate-50 p-2 border-b flex flex-wrap gap-1">
+                  <Button 
+                    type="button" 
+                    variant={activitySubmission.bold ? "default" : "ghost"} 
+                    size="icon" 
+                    className="h-8 w-8" 
+                    onClick={() => setActivitySubmission({...activitySubmission, bold: !activitySubmission.bold})}
+                  >
+                    <Bold className="h-4 w-4" />
+                  </Button>
+                  <Button 
+                    type="button" 
+                    variant={activitySubmission.italic ? "default" : "ghost"} 
+                    size="icon" 
+                    className="h-8 w-8" 
+                    onClick={() => setActivitySubmission({...activitySubmission, italic: !activitySubmission.italic})}
+                  >
+                    <Italic className="h-4 w-4" />
+                  </Button>
+                  <Separator orientation="vertical" className="mx-1 h-8" />
+                  <Button 
+                    type="button" 
+                    variant={activitySubmission.align === "left" ? "default" : "ghost"} 
+                    size="icon" 
+                    className="h-8 w-8" 
+                    onClick={() => setActivitySubmission({...activitySubmission, align: "left"})}
+                  >
+                    <AlignLeft className="h-4 w-4" />
+                  </Button>
+                  <Button 
+                    type="button" 
+                    variant={activitySubmission.align === "center" ? "default" : "ghost"} 
+                    size="icon" 
+                    className="h-8 w-8" 
+                    onClick={() => setActivitySubmission({...activitySubmission, align: "center"})}
+                  >
+                    <AlignCenter className="h-4 w-4" />
+                  </Button>
+                  <Button 
+                    type="button" 
+                    variant={activitySubmission.align === "right" ? "default" : "ghost"} 
+                    size="icon" 
+                    className="h-8 w-8" 
+                    onClick={() => setActivitySubmission({...activitySubmission, align: "right"})}
+                  >
+                    <AlignRight className="h-4 w-4" />
+                  </Button>
+                  <Separator orientation="vertical" className="mx-1 h-8" />
+                  <Select 
+                    value={activitySubmission.fontSize} 
+                    onValueChange={(v) => setActivitySubmission({...activitySubmission, fontSize: v})}
+                  >
+                    <SelectTrigger className="h-8 w-[120px] bg-transparent border-none">
+                      <SelectValue placeholder="Tamaño" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="text-xs">Pequeño</SelectItem>
+                      <SelectItem value="text-base">Normal</SelectItem>
+                      <SelectItem value="text-xl">Grande</SelectItem>
+                      <SelectItem value="text-3xl">Título</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Textarea 
+                  placeholder="Escribe aquí tu respuesta..." 
+                  value={activitySubmission.text} 
+                  onChange={e => setActivitySubmission({...activitySubmission, text: e.target.value})} 
+                  rows={8}
+                  className={cn(
+                    "border-none focus-visible:ring-0 rounded-none bg-white",
+                    activitySubmission.bold && "font-bold",
+                    activitySubmission.italic && "italic",
+                    activitySubmission.align === "center" && "text-center",
+                    activitySubmission.align === "right" && "text-right",
+                    activitySubmission.fontSize
+                  )}
+                />
+              </div>
             </div>
             
             <Separator />
             
-            <div className="space-y-2">
-              <Label>Respuesta o Enlace</Label>
-              <Textarea 
-                placeholder="Escribe aquí tu respuesta, enlace de Drive o descripción del archivo..." 
-                value={activitySubmissionText} 
-                onChange={e => setActivitySubmissionText(e.target.value)} 
-                rows={6} 
-              />
+            <div className="space-y-4">
+              <Label className="text-sm font-bold flex items-center gap-2"><FileUp className="h-4 w-4 text-primary" /> Adjuntar archivo (Opcional)</Label>
+              <div 
+                className="border-2 border-dashed rounded-xl p-6 text-center cursor-pointer hover:bg-slate-50 transition-colors"
+                onClick={() => document.getElementById('submissionFile')?.click()}
+              >
+                <input 
+                  id="submissionFile" 
+                  type="file" 
+                  className="hidden" 
+                  onChange={e => setActivitySubmission({...activitySubmission, file: e.target.files?.[0] || null})} 
+                />
+                {activitySubmission.file ? (
+                  <div className="flex items-center justify-center gap-2">
+                    <CheckSquare className="h-5 w-5 text-green-500" />
+                    <span className="text-sm font-bold">{activitySubmission.file.name}</span>
+                  </div>
+                ) : (
+                  <div className="space-y-1">
+                    <Upload className="h-8 w-8 mx-auto mb-2 opacity-40 text-primary" />
+                    <p className="text-xs font-medium">Haz clic o arrastra para subir un documento</p>
+                    <p className="text-[10px] text-muted-foreground uppercase">Soporta PDF, Word e Imágenes</p>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
           <DialogFooter>
-            <Button onClick={handleSubmitActivity} disabled={isProcessing} className="w-full">
-              {isProcessing ? <Loader2 className="animate-spin mr-2" /> : <Upload className="mr-2 h-4 w-4" />}
+            <Button onClick={handleSubmitActivity} disabled={isProcessing} className="w-full h-12 text-base font-bold shadow-lg shadow-primary/20">
+              {isProcessing ? <Loader2 className="animate-spin mr-2" /> : <Save className="mr-2 h-5 w-5" />}
               Finalizar y Enviar Entrega
             </Button>
           </DialogFooter>
@@ -887,7 +1003,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                   <Label>Preguntas actualizadas ({assessmentForm.preguntas.length})</Label>
                   <div className="space-y-2">
                     {assessmentForm.preguntas.map((q, i) => (
-                      <div key={q.id} className="flex items-center justify-between p-2 border rounded text-sm bg-white">
+                      <div key={q.id} className="flex items-center justify-between p-2 border rounded text-sm bg-white shadow-sm">
                         <span>{i+1}. {q.texto} ({q.tipo})</span>
                         <Button variant="ghost" size="icon" onClick={() => setAssessmentForm({...assessmentForm, preguntas: assessmentForm.preguntas.filter(item => item.id !== q.id)})}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                       </div>
@@ -912,8 +1028,8 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                       <RadioGroup value={userAnswers[q.id]} onValueChange={v => !showFeedback && setUserAnswers({...userAnswers, [q.id]: v})} className="space-y-2">
                         {q.opciones.map((opt, i) => (
                           <div key={i} className={cn("flex items-center space-x-3 p-3 border rounded-xl bg-white", 
-                            showFeedback && q.respuestaCorrecta === opt ? "bg-green-100 border-green-500" : 
-                            showFeedback && userAnswers[q.id] === opt && q.respuestaCorrecta !== opt ? "bg-red-100 border-red-500" : "hover:bg-muted/50")}>
+                            showFeedback && q.respuestaCorrecta === opt ? "bg-green-100 border-green-500 shadow-sm" : 
+                            showFeedback && userAnswers[q.id] === opt && q.respuestaCorrecta !== opt ? "bg-red-100 border-red-500 shadow-sm" : "hover:bg-muted/50")}>
                             <RadioGroupItem value={opt} id={`q${idx}o${i}`} disabled={showFeedback} />
                             <Label htmlFor={`q${idx}o${i}`} className="flex-1 cursor-pointer font-medium">{opt}</Label>
                           </div>
@@ -923,12 +1039,12 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                     {q.tipo === 'verdadero-falso' && (
                       <div className="flex gap-4">
                          {['Verdadero', 'Falso'].map(val => (
-                           <Button key={val} variant={userAnswers[q.id] === val ? 'default' : 'outline'} className={cn("flex-1", showFeedback && q.respuestaCorrecta === val ? "bg-green-500 text-white" : showFeedback && userAnswers[q.id] === val ? "bg-red-500 text-white" : "")} onClick={() => !showFeedback && setUserAnswers({...userAnswers, [q.id]: val})} disabled={showFeedback}>{val}</Button>
+                           <Button key={val} variant={userAnswers[q.id] === val ? 'default' : 'outline'} className={cn("flex-1 h-12 font-bold", showFeedback && q.respuestaCorrecta === val ? "bg-green-600 text-white" : showFeedback && userAnswers[q.id] === val ? "bg-red-600 text-white" : "")} onClick={() => !showFeedback && setUserAnswers({...userAnswers, [q.id]: val})} disabled={showFeedback}>{val}</Button>
                          ))}
                       </div>
                     )}
                     {q.tipo === 'escrita' && (
-                      <Textarea placeholder="Escribe tu respuesta aquí..." value={userAnswers[q.id] || ""} onChange={e => !showFeedback && setUserAnswers({...userAnswers, [q.id]: e.target.value})} disabled={showFeedback} rows={4} className="bg-white" />
+                      <Textarea placeholder="Escribe tu respuesta aquí..." value={userAnswers[q.id] || ""} onChange={e => !showFeedback && setUserAnswers({...userAnswers, [q.id]: e.target.value})} disabled={showFeedback} rows={6} className="bg-white" />
                     )}
                   </div>
                 </div>
@@ -942,13 +1058,13 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent className="rounded-3xl">
           <AlertDialogHeader>
-            <AlertDialogTitle>¿Confirmar eliminación?</AlertDialogTitle>
-            <AlertDialogDescription>Esta acción eliminará permanentemente el {itemToDelete?.type} de la base de datos de MongoDB.</AlertDialogDescription>
+            <AlertDialogTitle className="text-2xl font-headline">¿Estás seguro?</AlertDialogTitle>
+            <AlertDialogDescription className="text-base">Esta acción es irreversible. Se eliminará el {itemToDelete?.type} de la base de datos de MongoDB.</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isProcessing}>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={(e) => { e.preventDefault(); handleDeleteConfirm(); }} className="bg-red-600 hover:bg-red-700 text-white" disabled={isProcessing}>
-              {isProcessing ? <Loader2 className="animate-spin h-4 w-4 mr-2" /> : <Trash2 className="w-4 h-4 mr-2" />} Confirmar Eliminación
+            <AlertDialogCancel disabled={isProcessing} className="rounded-2xl h-12">Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={(e) => { e.preventDefault(); handleDeleteConfirm(); }} className="bg-red-600 hover:bg-red-700 text-white rounded-2xl h-12 px-8" disabled={isProcessing}>
+              {isProcessing ? <Loader2 className="animate-spin h-4 w-4 mr-2" /> : <Trash2 className="w-4 h-4 mr-2" />} Eliminar permanentemente
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
