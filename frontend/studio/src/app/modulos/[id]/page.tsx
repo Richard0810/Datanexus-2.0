@@ -150,12 +150,10 @@ interface Submission {
   moduloId: string;
 }
 
-// Componente para previsualizar recursos de forma segura (PDFs locales con Blob URLs)
 function ResourcePreview({ url, title }: { url: string; title: string }) {
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
 
   useEffect(() => {
-    // Si es un archivo local (Base64), lo convertimos en Blob URL para evitar bloqueos del navegador
     if (url && url.startsWith('data:')) {
       try {
         const parts = url.split(',');
@@ -195,7 +193,6 @@ function ResourcePreview({ url, title }: { url: string; title: string }) {
 
   if (!url) return null;
 
-  // Priorizar visualización de Blob para archivos subidos (PDF, imágenes, videos)
   if (url.startsWith('data:image/')) {
     return <div className="w-full h-full flex items-center justify-center bg-slate-50"><img src={url} alt={title} className="max-w-full max-h-full object-contain" /></div>;
   }
@@ -253,7 +250,6 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
   const [isAssessmentDialogOpen, setIsAssessmentDialogOpen] = useState(false);
   const [isSubmitActivityOpen, setIsSubmitActivityOpen] = useState(false);
   const [isGradingDialogOpen, setIsGradingDialogOpen] = useState(false);
-  const [isViewOwnSubmissionOpen, setIsViewOwnSubmissionOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   
   const [itemToDelete, setItemToDelete] = useState<{ id: string, type: 'recurso' | 'actividad' | 'evaluacion' | 'entrega' } | null>(null);
@@ -320,7 +316,10 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
         api.get("/performance-reports")
       ]);
       
-      setResources(resResponse.data.filter((res: any) => res.unidad === `Módulo ${id}`));
+      // Ajuste de filtrado flexible para aceptar "Módulo X" o "Unidad X"
+      setResources(resResponse.data.filter((res: any) => 
+        res.unidad === `Módulo ${id}` || res.unidad === `Unidad ${id}`
+      ));
       setActivities(actResponse.data.filter((act: any) => String(act.moduloId) === String(id)));
       setAssessments(assResponse.data.filter((ass: any) => String(ass.moduloId) === String(id)));
 
@@ -336,6 +335,12 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (user) {
+      fetchData();
+    }
+  }, [id, user, isAdmin]);
 
   const execCommand = (command: string, value?: string) => {
     document.execCommand(command, false, value);
@@ -579,34 +584,47 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
               </Button>
             )}
           </div>
-          <div className="grid grid-cols-1 gap-8">
-            {resources.map((res) => {
-              const resId = getObjectId(res);
-              return (
-                <Card key={resId} className="overflow-hidden group relative shadow-md">
-                  {isAdmin && (
-                    <div className="absolute top-4 right-4 flex gap-2 z-20">
-                      <Button variant="default" size="icon" className="h-9 w-9 bg-blue-600 hover:bg-blue-700 text-white shadow-lg rounded-full" onClick={() => { setEditingResource(res); setResourceForm(res); setIsResourceDialogOpen(true); }}><Pencil className="h-4 w-4" /></Button>
-                      <Button variant="destructive" size="icon" className="h-9 w-9 bg-red-600 text-white shadow-lg rounded-full" onClick={() => { setItemToDelete({ id: resId, type: 'recurso' }); setIsDeleteDialogOpen(true); }}><Trash2 className="h-4 w-4" /></Button>
-                    </div>
-                  )}
-                  <CardHeader>
-                    <div className="flex items-center gap-2 mb-2">
-                       {res.tipo === "video" ? <Video className="h-4 w-4 text-red-500" /> : <FileText className="h-4 w-4 text-blue-500" />}
-                       <Badge variant="outline" className="uppercase tracking-widest text-[9px] font-bold">{res.tipo}</Badge>
-                    </div>
-                    <CardTitle className="text-2xl font-bold">{res.titulo}</CardTitle>
-                    <CardDescription>{res.descripcion}</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="aspect-video rounded-xl overflow-hidden bg-black border shadow-inner">
-                      <ResourcePreview url={res.url} title={res.titulo} />
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
+          
+          {loading ? (
+            <div className="flex flex-col items-center justify-center py-20 gap-4">
+              <Loader2 className="h-10 w-10 animate-spin text-primary" />
+              <p className="text-muted-foreground animate-pulse">Cargando materiales...</p>
+            </div>
+          ) : resources.length > 0 ? (
+            <div className="grid grid-cols-1 gap-8">
+              {resources.map((res) => {
+                const resId = getObjectId(res);
+                return (
+                  <Card key={resId} className="overflow-hidden group relative shadow-md">
+                    {isAdmin && (
+                      <div className="absolute top-4 right-4 flex gap-2 z-20">
+                        <Button variant="default" size="icon" className="h-9 w-9 bg-blue-600 hover:bg-blue-700 text-white shadow-lg rounded-full" onClick={() => { setEditingResource(res); setResourceForm(res); setIsResourceDialogOpen(true); }}><Pencil className="h-4 w-4" /></Button>
+                        <Button variant="destructive" size="icon" className="h-9 w-9 bg-red-600 text-white shadow-lg rounded-full" onClick={() => { setItemToDelete({ id: resId, type: 'recurso' }); setIsDeleteDialogOpen(true); }}><Trash2 className="h-4 w-4" /></Button>
+                      </div>
+                    )}
+                    <CardHeader>
+                      <div className="flex items-center gap-2 mb-2">
+                        {res.tipo === "video" ? <Video className="h-4 w-4 text-red-500" /> : <FileText className="h-4 w-4 text-blue-500" />}
+                        <Badge variant="outline" className="uppercase tracking-widest text-[9px] font-bold">{res.tipo}</Badge>
+                      </div>
+                      <CardTitle className="text-2xl font-bold">{res.titulo}</CardTitle>
+                      <CardDescription>{res.descripcion}</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="aspect-video rounded-xl overflow-hidden bg-black border shadow-inner">
+                        <ResourcePreview url={res.url} title={res.titulo} />
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="py-20 text-center border-2 border-dashed rounded-3xl bg-muted/20">
+               <Layers className="h-12 w-12 text-muted-foreground/30 mx-auto mb-4" />
+               <p className="text-muted-foreground italic">No hay recursos disponibles para este módulo.</p>
+            </div>
+          )}
         </TabsContent>
 
         <TabsContent value="actividades" className="space-y-6">
@@ -693,7 +711,6 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
         )}
       </Tabs>
 
-      {/* DIÁLOGOS (AUTO-AJUSTABLES Y ESTABLES) */}
       <Dialog open={isResourceDialogOpen} onOpenChange={setIsResourceDialogOpen}>
         <DialogContent className="sm:max-w-[600px] p-0 overflow-hidden rounded-2xl">
           <div className="bg-[#1a2744] px-6 py-5 flex items-center justify-between text-white">
