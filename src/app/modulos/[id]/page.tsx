@@ -175,7 +175,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
   const [selectedSubmission, setSelectedSubmission] = useState<Submission | null>(null);
   const [gradingForm, setGradingForm] = useState({ puntaje: 0, recomendaciones: "" });
   
-  // Estado para la entrega enriquecida
+  // Estado para la entrega enriquecida del estudiante
   const [activitySubmission, setActivitySubmission] = useState({
     text: "",
     bold: false,
@@ -191,7 +191,6 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
   
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [sourceTab, setSourceTab] = useState<"url" | "file">("url");
-  const [pdfUrls, setPdfUrls] = useState<Record<string, string>>({});
 
   const { toast } = useToast();
   const moduleInfo = modulesData[id as keyof typeof modulesData] || { title: `Módulo ${id}`, objective: "" };
@@ -498,6 +497,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
     try {
       const parsed = JSON.parse(detail);
       
+      // Caso de entrega enriquecida (Actividad)
       if (parsed.text !== undefined || parsed.file !== undefined) {
         return (
           <div className="space-y-6">
@@ -536,6 +536,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
         );
       }
 
+      // Caso de evaluación
       if (Array.isArray(parsed)) {
         return (
           <div className="space-y-4">
@@ -579,7 +580,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
         <TabsContent value="recursos" className="space-y-6">
           <div className="flex justify-between items-center">
             <h2 className="text-xl font-headline">Materiales de Estudio</h2>
-            {isAdmin && <Button onClick={() => { setEditingResource(null); setResourceForm({ titulo: "", descripcion: "", url: "", unidad: `Módulo ${id}`, tipo: "guia", formato: "URL" }); setSourceTab("url"); setIsResourceDialogOpen(true); }} size="sm"><PlusCircle className="mr-2 h-4 w-4" /> Añadir Recurso</Button>}
+            {isAdmin && <Button onClick={() => { setEditingResource(null); setResourceForm({ titulo: "", descripcion: "", url: "", unidad: `Módulo ${id}`, tipo: "guia", formato: "URL" }); setIsResourceDialogOpen(true); }} size="sm"><PlusCircle className="mr-2 h-4 w-4" /> Añadir Recurso</Button>}
           </div>
           {loading ? <div className="py-20 flex justify-center"><Loader2 className="animate-spin" /></div> : resources.length > 0 ? (
             <div className="grid grid-cols-1 gap-8">
@@ -590,7 +591,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                   <Card key={resId} className="overflow-hidden group relative shadow-md">
                     {isAdmin && (
                       <div className="absolute top-4 right-4 flex gap-2 z-20">
-                        <Button variant="default" size="icon" className="h-9 w-9 bg-blue-600 hover:bg-blue-700 text-white shadow-lg rounded-full" onClick={() => { setEditingResource(res); setResourceForm(res); setSourceTab(res.url?.startsWith('data:') ? "file" : "url"); setIsResourceDialogOpen(true); }}><Pencil className="h-4 w-4" /></Button>
+                        <Button variant="default" size="icon" className="h-9 w-9 bg-blue-600 hover:bg-blue-700 text-white shadow-lg rounded-full" onClick={() => { setEditingResource(res); setResourceForm(res); setIsResourceDialogOpen(true); }}><Pencil className="h-4 w-4" /></Button>
                         <Button variant="destructive" size="icon" className="h-9 w-9 bg-red-600 text-white shadow-lg rounded-full" onClick={() => { setItemToDelete({ id: resId, type: 'recurso' }); setIsDeleteDialogOpen(true); }}><Trash2 className="h-4 w-4" /></Button>
                       </div>
                     )}
@@ -769,60 +770,15 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
               <Label className="text-sm font-bold flex items-center gap-2"><MessageSquare className="h-4 w-4" /> Desarrollo de la Actividad</Label>
               <div className="border rounded-xl overflow-hidden shadow-sm">
                 <div className="bg-slate-50 p-2 border-b flex flex-wrap gap-1">
-                  <Button 
-                    type="button" 
-                    variant={activitySubmission.bold ? "default" : "ghost"} 
-                    size="icon" 
-                    className="h-8 w-8" 
-                    onClick={() => setActivitySubmission({...activitySubmission, bold: !activitySubmission.bold})}
-                  >
-                    <Bold className="h-4 w-4" />
-                  </Button>
-                  <Button 
-                    type="button" 
-                    variant={activitySubmission.italic ? "default" : "ghost"} 
-                    size="icon" 
-                    className="h-8 w-8" 
-                    onClick={() => setActivitySubmission({...activitySubmission, italic: !activitySubmission.italic})}
-                  >
-                    <Italic className="h-4 w-4" />
-                  </Button>
+                  <Button type="button" variant={activitySubmission.bold ? "default" : "ghost"} size="icon" className="h-8 w-8" onClick={() => setActivitySubmission({...activitySubmission, bold: !activitySubmission.bold})}><Bold className="h-4 w-4" /></Button>
+                  <Button type="button" variant={activitySubmission.italic ? "default" : "ghost"} size="icon" className="h-8 w-8" onClick={() => setActivitySubmission({...activitySubmission, italic: !activitySubmission.italic})}><Italic className="h-4 w-4" /></Button>
                   <Separator orientation="vertical" className="mx-1 h-8" />
-                  <Button 
-                    type="button" 
-                    variant={activitySubmission.align === "left" ? "default" : "ghost"} 
-                    size="icon" 
-                    className="h-8 w-8" 
-                    onClick={() => setActivitySubmission({...activitySubmission, align: "left"})}
-                  >
-                    <AlignLeft className="h-4 w-4" />
-                  </Button>
-                  <Button 
-                    type="button" 
-                    variant={activitySubmission.align === "center" ? "default" : "ghost"} 
-                    size="icon" 
-                    className="h-8 w-8" 
-                    onClick={() => setActivitySubmission({...activitySubmission, align: "center"})}
-                  >
-                    <AlignCenter className="h-4 w-4" />
-                  </Button>
-                  <Button 
-                    type="button" 
-                    variant={activitySubmission.align === "right" ? "default" : "ghost"} 
-                    size="icon" 
-                    className="h-8 w-8" 
-                    onClick={() => setActivitySubmission({...activitySubmission, align: "right"})}
-                  >
-                    <AlignRight className="h-4 w-4" />
-                  </Button>
+                  <Button type="button" variant={activitySubmission.align === "left" ? "default" : "ghost"} size="icon" className="h-8 w-8" onClick={() => setActivitySubmission({...activitySubmission, align: "left"})}><AlignLeft className="h-4 w-4" /></Button>
+                  <Button type="button" variant={activitySubmission.align === "center" ? "default" : "ghost"} size="icon" className="h-8 w-8" onClick={() => setActivitySubmission({...activitySubmission, align: "center"})}><AlignCenter className="h-4 w-4" /></Button>
+                  <Button type="button" variant={activitySubmission.align === "right" ? "default" : "ghost"} size="icon" className="h-8 w-8" onClick={() => setActivitySubmission({...activitySubmission, align: "right"})}><AlignRight className="h-4 w-4" /></Button>
                   <Separator orientation="vertical" className="mx-1 h-8" />
-                  <Select 
-                    value={activitySubmission.fontSize} 
-                    onValueChange={(v) => setActivitySubmission({...activitySubmission, fontSize: v})}
-                  >
-                    <SelectTrigger className="h-8 w-[120px] bg-transparent border-none">
-                      <SelectValue placeholder="Tamaño" />
-                    </SelectTrigger>
+                  <Select value={activitySubmission.fontSize} onValueChange={(v) => setActivitySubmission({...activitySubmission, fontSize: v})}>
+                    <SelectTrigger className="h-8 w-[120px] bg-transparent border-none"><SelectValue placeholder="Tamaño" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="text-xs">Pequeño</SelectItem>
                       <SelectItem value="text-base">Normal</SelectItem>
@@ -847,21 +803,11 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                 />
               </div>
             </div>
-            
             <Separator />
-            
             <div className="space-y-4">
               <Label className="text-sm font-bold flex items-center gap-2"><FileUp className="h-4 w-4 text-primary" /> Adjuntar archivo (Opcional)</Label>
-              <div 
-                className="border-2 border-dashed rounded-xl p-6 text-center cursor-pointer hover:bg-slate-50 transition-colors"
-                onClick={() => document.getElementById('submissionFile')?.click()}
-              >
-                <input 
-                  id="submissionFile" 
-                  type="file" 
-                  className="hidden" 
-                  onChange={e => setActivitySubmission({...activitySubmission, file: e.target.files?.[0] || null})} 
-                />
+              <div className="border-2 border-dashed rounded-xl p-6 text-center cursor-pointer hover:bg-slate-50 transition-colors" onClick={() => document.getElementById('submissionFile')?.click()}>
+                <input id="submissionFile" type="file" className="hidden" onChange={e => setActivitySubmission({...activitySubmission, file: e.target.files?.[0] || null})} />
                 {activitySubmission.file ? (
                   <div className="flex items-center justify-center gap-2">
                     <CheckSquare className="h-5 w-5 text-green-500" />
@@ -877,12 +823,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
               </div>
             </div>
           </div>
-          <DialogFooter>
-            <Button onClick={handleSubmitActivity} disabled={isProcessing} className="w-full h-12 text-base font-bold shadow-lg shadow-primary/20">
-              {isProcessing ? <Loader2 className="animate-spin mr-2" /> : <Save className="mr-2 h-5 w-5" />}
-              Finalizar y Enviar Entrega
-            </Button>
-          </DialogFooter>
+          <DialogFooter><Button onClick={handleSubmitActivity} disabled={isProcessing} className="w-full h-12 text-base font-bold shadow-lg shadow-primary/20">{isProcessing ? <Loader2 className="animate-spin mr-2" /> : <Save className="mr-2 h-5 w-5" />} Finalizar y Enviar Entrega</Button></DialogFooter>
         </DialogContent>
       </Dialog>
 
