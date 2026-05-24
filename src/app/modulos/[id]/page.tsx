@@ -241,6 +241,20 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
     }
   };
 
+  const getEmbedUrl = (url: string) => {
+    if (!url || typeof url !== 'string' || !url.startsWith("http")) return null;
+    // Si es Google Drive, convertir /view a /preview para evitar errores de acceso incrustado
+    if (url.includes("drive.google.com")) {
+      if (url.includes("/view")) return url.split("/view")[0] + "/preview";
+      return url;
+    }
+    if (url.includes("youtube.com") || url.includes("youtu.be")) {
+      let vId = url.includes("youtu.be/") ? url.split("youtu.be/")[1].split("?")[0] : url.split("v=")[1]?.split("&")[0];
+      return vId ? `https://www.youtube.com/embed/${vId}` : url;
+    }
+    return url;
+  };
+
   const fetchData = async () => {
     try {
       setLoading(true);
@@ -255,7 +269,6 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
       setActivities(actResponse.data.filter((act: any) => String(act.moduloId) === String(id)));
       setAssessments(assResponse.data.filter((ass: any) => String(ass.moduloId) === String(id)));
       
-      // Seguimiento: admin ve todo, estudiante solo lo suyo
       const filteredSubs = subResponse.data.filter((sub: any) => 
         String(sub.moduloId) === String(id) && (isAdmin ? true : sub.usuarioEmail === user?.email)
       );
@@ -421,19 +434,6 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
     }
   };
 
-  const getEmbedUrl = (url: string) => {
-    if (!url || typeof url !== 'string' || !url.startsWith("http")) return null;
-    if (url.includes("drive.google.com")) {
-      if (url.includes("/view")) return url.split("/view")[0] + "/preview";
-      return url;
-    }
-    if (url.includes("youtube.com") || url.includes("youtu.be")) {
-      let vId = url.includes("youtu.be/") ? url.split("youtu.be/")[1].split("?")[0] : url.split("v=")[1]?.split("&")[0];
-      return vId ? `https://www.youtube.com/embed/${vId}` : url;
-    }
-    return url;
-  };
-
   return (
     <div className="space-y-8">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -483,18 +483,28 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                   </CardHeader>
                   <CardContent>
                     {embedUrl ? (
-                      <div className="aspect-video rounded-xl overflow-hidden bg-black border"><iframe src={embedUrl} className="w-full h-full border-0" allowFullScreen /></div>
+                      <div className="aspect-video rounded-xl overflow-hidden bg-black border shadow-inner">
+                        <iframe src={embedUrl} className="w-full h-full border-0" allowFullScreen />
+                      </div>
                     ) : isPdf ? (
-                      <div className="aspect-video rounded-xl overflow-hidden border bg-background"><iframe src={pdfUrls[resId]} className="w-full h-full border-0" /></div>
+                      <div className="aspect-video rounded-xl overflow-hidden border bg-background">
+                        <iframe src={pdfUrls[resId]} className="w-full h-full border-0" />
+                      </div>
                     ) : isVideo ? (
-                      <div className="aspect-video rounded-xl overflow-hidden bg-black"><video controls className="w-full h-full"><source src={res.url} /></video></div>
+                      <div className="aspect-video rounded-xl overflow-hidden bg-black">
+                        <video controls className="w-full h-full"><source src={res.url} /></video>
+                      </div>
                     ) : (
-                      <div className="p-12 text-center border rounded-xl bg-muted/20"><FileCode className="h-12 w-12 mx-auto mb-2 opacity-20" /><Button variant="link" onClick={() => handleViewFull(res)}>Abrir Recurso</Button></div>
+                      <div className="p-12 text-center border rounded-xl bg-muted/20">
+                        <FileCode className="h-12 w-12 mx-auto mb-2 opacity-20" />
+                        <Button variant="link" onClick={() => handleViewFull(res)}>Abrir Recurso Externo</Button>
+                      </div>
                     )}
                   </CardContent>
                 </Card>
               );
             })}
+            {resources.length === 0 && <p className="text-center py-10 text-muted-foreground italic">No hay recursos en este módulo.</p>}
           </div>
         </TabsContent>
 
@@ -534,6 +544,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                 </Card>
               );
             })}
+            {activities.length === 0 && <p className="text-center py-10 text-muted-foreground italic col-span-2">No hay actividades para este módulo.</p>}
           </div>
         </TabsContent>
 
@@ -565,6 +576,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                 </Card>
               );
             })}
+            {assessments.length === 0 && <p className="text-center py-10 text-muted-foreground italic">No hay evaluaciones para este módulo.</p>}
           </div>
         </TabsContent>
 
@@ -573,9 +585,9 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
             <h2 className="text-xl font-headline">{isAdmin ? "Entregas Recibidas" : "Mi Seguimiento"}</h2>
           </div>
 
-          <Card className="shadow-sm">
+          <Card className="shadow-sm overflow-hidden">
             <Table>
-              <TableHeader>
+              <TableHeader className="bg-slate-50">
                 <TableRow>
                   <TableHead>Fecha</TableHead>
                   {isAdmin && <TableHead>Estudiante</TableHead>}
@@ -590,7 +602,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                   const subId = getObjectId(sub);
                   return (
                     <TableRow key={subId}>
-                      <TableCell className="text-xs">{sub.createdAt ? new Date(sub.createdAt).toLocaleDateString() : 'Pendiente'}</TableCell>
+                      <TableCell className="text-xs">{sub.createdAt ? new Date(sub.createdAt).toLocaleDateString() : '—'}</TableCell>
                       {isAdmin && <TableCell className="font-medium text-xs">{sub.usuarioNombre}</TableCell>}
                       <TableCell className="max-w-[200px] truncate text-xs font-semibold">{sub.tituloContenido}</TableCell>
                       <TableCell>
@@ -609,7 +621,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                     </TableRow>
                   );
                 })}
-                {submissions.length === 0 && <TableRow><TableCell colSpan={6} className="text-center py-10 text-muted-foreground italic">No hay registros de seguimiento.</TableCell></TableRow>}
+                {submissions.length === 0 && <TableRow><TableCell colSpan={6} className="text-center py-10 text-muted-foreground italic">No hay registros de seguimiento para mostrar.</TableCell></TableRow>}
               </TableBody>
             </Table>
           </Card>
@@ -638,6 +650,39 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
             </div>
           </div>
           <DialogFooter><Button variant="outline" onClick={() => setIsResourceDialogOpen(false)}>Cancelar</Button><Button onClick={handleSaveResource} disabled={isProcessing}>{isProcessing ? <Loader2 className="animate-spin h-4 w-4" /> : 'Guardar'}</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* DIÁLOGOS DE ACTIVIDADES */}
+      <Dialog open={isActivityDialogOpen} onOpenChange={setIsActivityDialogOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader><DialogTitle>{editingActivity ? 'Editar' : 'Nueva'} Actividad</DialogTitle></DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2"><Label>Título *</Label><Input value={activityForm.titulo} onChange={e => setActivityForm({...activityForm, titulo: e.target.value})} /></div>
+            <div className="space-y-2"><Label>Descripción</Label><Textarea value={activityForm.descripcion} onChange={e => setActivityForm({...activityForm, descripcion: e.target.value})} /></div>
+            <div className="space-y-2"><Label>Criterios de Evaluación</Label><Textarea value={activityForm.criterios_evaluacion} onChange={e => setActivityForm({...activityForm, criterios_evaluacion: e.target.value})} /></div>
+            <div className="space-y-2">
+              <Label>Tipo</Label>
+              <Select value={activityForm.tipo} onValueChange={v => setActivityForm({...activityForm, tipo: v})}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent><SelectItem value="tarea">Tarea</SelectItem><SelectItem value="foro">Foro</SelectItem><SelectItem value="simulacion">Simulación</SelectItem></SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter><Button variant="outline" onClick={() => setIsActivityDialogOpen(false)}>Cancelar</Button><Button onClick={handleSaveActivity} disabled={isProcessing}>{isProcessing ? <Loader2 className="animate-spin h-4 w-4" /> : 'Guardar'}</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* DIÁLOGOS DE EVALUACIONES */}
+      <Dialog open={isAssessmentDialogOpen} onOpenChange={setIsAssessmentDialogOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader><DialogTitle>{editingAssessment ? 'Editar' : 'Nueva'} Evaluación</DialogTitle></DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2"><Label>Título *</Label><Input value={assessmentForm.titulo} onChange={e => setAssessmentForm({...assessmentForm, titulo: e.target.value})} /></div>
+            <div className="space-y-2"><Label>Descripción</Label><Textarea value={assessmentForm.descripcion} onChange={e => setAssessmentForm({...assessmentForm, descripcion: e.target.value})} /></div>
+            <div className="space-y-2"><Label>Puntuación Máxima</Label><Input type="number" step="0.1" value={assessmentForm.puntuacion} onChange={e => setAssessmentForm({...assessmentForm, puntuacion: e.target.value})} /></div>
+          </div>
+          <DialogFooter><Button variant="outline" onClick={() => setIsAssessmentDialogOpen(false)}>Cancelar</Button><Button onClick={handleSaveAssessment} disabled={isProcessing}>{isProcessing ? <Loader2 className="animate-spin h-4 w-4" /> : 'Guardar'}</Button></DialogFooter>
         </DialogContent>
       </Dialog>
 
@@ -676,7 +721,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
             <DialogDescription>Estudiante: {selectedSubmission?.usuarioNombre}</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
-            <div className="p-4 bg-muted/30 rounded-lg text-sm border-l-4 border-l-primary">
+            <div className="p-4 bg-muted/30 rounded-lg text-sm border-l-4 border-l-primary max-h-[200px] overflow-y-auto">
               <p className="font-bold mb-1">Contenido Recibido:</p>
               <p className="whitespace-pre-wrap">{selectedSubmission?.detalleEnvio}</p>
             </div>
@@ -709,45 +754,11 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
         </DialogContent>
       </Dialog>
 
-      {/* DIÁLOGOS DE ACTIVIDADES */}
-      <Dialog open={isActivityDialogOpen} onOpenChange={setIsActivityDialogOpen}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader><DialogTitle>{editingActivity ? 'Editar' : 'Nueva'} Actividad</DialogTitle></DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2"><Label>Título *</Label><Input value={activityForm.titulo} onChange={e => setActivityForm({...activityForm, titulo: e.target.value})} /></div>
-            <div className="space-y-2"><Label>Descripción</Label><Textarea value={activityForm.descripcion} onChange={e => setActivityForm({...activityForm, descripcion: e.target.value})} /></div>
-            <div className="space-y-2"><Label>Criterios de Evaluación</Label><Textarea value={activityForm.criterios_evaluacion} onChange={e => setActivityForm({...activityForm, criterios_evaluacion: e.target.value})} /></div>
-            <div className="space-y-2">
-              <Label>Tipo</Label>
-              <Select value={activityForm.tipo} onValueChange={v => setActivityForm({...activityForm, tipo: v})}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent><SelectItem value="tarea">Tarea</SelectItem><SelectItem value="foro">Foro</SelectItem><SelectItem value="simulacion">Simulación</SelectItem></SelectContent>
-              </Select>
-            </div>
-          </div>
-          <DialogFooter><Button variant="outline" onClick={() => setIsActivityDialogOpen(false)}>Cancelar</Button><Button onClick={handleSaveActivity} disabled={isProcessing}>{isProcessing ? <Loader2 className="animate-spin h-4 w-4" /> : 'Guardar'}</Button></DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* DIÁLOGOS DE EVALUACIONES */}
-      <Dialog open={isAssessmentDialogOpen} onOpenChange={setIsAssessmentDialogOpen}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader><DialogTitle>{editingAssessment ? 'Editar' : 'Nueva'} Evaluación</DialogTitle></DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2"><Label>Título *</Label><Input value={assessmentForm.titulo} onChange={e => setAssessmentForm({...assessmentForm, titulo: e.target.value})} /></div>
-            <div className="space-y-2"><Label>Descripción</Label><Textarea value={assessmentForm.descripcion} onChange={e => setAssessmentForm({...assessmentForm, descripcion: e.target.value})} /></div>
-            <div className="space-y-2"><Label>Instrucciones</Label><Textarea value={assessmentForm.criterios_evaluacion} onChange={e => setAssessmentForm({...assessmentForm, criterios_evaluacion: e.target.value})} /></div>
-            <div className="space-y-2"><Label>Puntuación Máxima</Label><Input type="number" step="0.1" value={assessmentForm.puntuacion} onChange={e => setAssessmentForm({...assessmentForm, puntuacion: e.target.value})} /></div>
-          </div>
-          <DialogFooter><Button variant="outline" onClick={() => setIsAssessmentDialogOpen(false)}>Cancelar</Button><Button onClick={handleSaveAssessment} disabled={isProcessing}>{isProcessing ? <Loader2 className="animate-spin h-4 w-4" /> : 'Guardar'}</Button></DialogFooter>
-        </DialogContent>
-      </Dialog>
-
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>¿Confirmar eliminación?</AlertDialogTitle>
-            <AlertDialogDescription>Esta acción eliminará permanentemente el registro seleccionado.</AlertDialogDescription>
+            <AlertDialogDescription>Esta acción eliminará permanentemente el registro de la base de datos. No se puede deshacer.</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={isProcessing}>Cancelar</AlertDialogCancel>
