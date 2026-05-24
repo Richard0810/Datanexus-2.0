@@ -6,11 +6,9 @@ import { json, urlencoded } from 'express';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  // Aumentamos los límites para permitir subida de archivos Base64 en las actividades
   app.use(json({ limit: '50mb' }));
   app.use(urlencoded({ extended: true, limit: '50mb' }));
 
-  // CORS configurado para producción y desarrollo
   app.enableCors({
     origin: true, 
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
@@ -27,7 +25,6 @@ async function bootstrap() {
   const documentFactory = () => SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api', app, documentFactory);
 
-  // Puerto dinámico para Render/Railway o 3001 por defecto
   const port = process.env.PORT || 3001;
 
   try {

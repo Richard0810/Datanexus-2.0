@@ -1,7 +1,6 @@
 import { initializeApp, getApps, getApp, type FirebaseApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 
-// Configuración cargada desde variables de entorno para mayor seguridad en el despliegue
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "AIzaSyDj1kI2I9QVPkdtRadwfVCC-NzablKdQbo",
   authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || "studio-9921318265-313d2.firebaseapp.com",

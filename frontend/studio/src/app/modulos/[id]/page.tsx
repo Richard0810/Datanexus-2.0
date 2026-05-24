@@ -176,7 +176,6 @@ function ResourcePreview({ url, title }: { url: string; title: string }) {
   const getEmbedUrl = (url: string) => {
     if (!url || !url.startsWith("http")) return null;
     
-    // YouTube
     if (url.includes("youtube.com") || url.includes("youtu.be")) {
       let videoId = "";
       if (url.includes("youtu.be/")) videoId = url.split("youtu.be/")[1].split("?")[0];
@@ -184,22 +183,18 @@ function ResourcePreview({ url, title }: { url: string; title: string }) {
       return videoId ? `https://www.youtube.com/embed/${videoId}` : url;
     }
     
-    // Gamma
     if (url.includes("gamma.app/docs/")) return url.replace("gamma.app/docs/", "gamma.app/embed/");
     
-    // Google Slides
     if (url.includes("docs.google.com/presentation/d/")) {
       const match = url.match(/\/d\/(.+?)(\/|$)/);
       return match ? `https://docs.google.com/presentation/d/${match[1]}/embed` : url;
     }
     
-    // Google Drive Generic Files
     if (url.includes("drive.google.com/file/d/")) {
       const match = url.match(/\/d\/(.+?)(\/|$)/);
       return match ? `https://drive.google.com/file/d/${match[1]}/preview` : url;
     }
     
-    // Google Docs
     if (url.includes("docs.google.com/document/d/")) {
       const match = url.match(/\/d\/(.+?)(\/|$)/);
       return match ? `https://docs.google.com/document/d/${match[1]}/preview` : url;
