@@ -11,7 +11,6 @@ import {
   BookMarked,
   BarChart3,
   UserCircle,
-  DatabaseZap,
   Users,
   type LucideIcon,
 } from 'lucide-react';
@@ -41,7 +40,6 @@ const navItems: NavItem[] = [
   { href: '/reportes', label: 'Reportes', icon: BarChart3 },
   { href: '/perfil', label: 'Perfil', icon: UserCircle },
   { href: '/usuarios', label: 'Usuarios', icon: Users, adminOnly: true },
-  { href: '/modelo', label: 'Modelo de Datos', icon: DatabaseZap },
 ];
 
 export function NavMenu() {
