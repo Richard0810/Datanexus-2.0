@@ -21,5 +21,22 @@
     - **Normalización de IDs**: Función `getReportId` para manejar indistintamente IDs de MongoDB como strings u objetos `$oid`.
 - **Formateo Seguro**: Implementación de `safeFormatDate` y renderizado defensivo (`|| 'enviado'`) para prevenir errores de ejecución por datos nulos.
 
+## 💡 Lecciones Aprendidas y Soluciones Reales
+
+### Gestión de Roles y Permisos
+- **Sincronización Frontend-Backend**: Se identificó una discrepancia entre `user.rol` (MongoDB) y `user.role` (AuthContext). La solución definitiva fue estandarizar el uso de `user.role` en el frontend para que la lógica `isAdmin` habilitara correctamente las pestañas de seguimiento y botones de edición.
+
+### Diseño y Experiencia de Usuario (UX)
+- **Visibilidad de Controles de Admin**: Se eliminaron las clases de opacidad condicional (`opacity-0` / `group-hover`) en los botones de editar y eliminar. La visibilidad permanente con colores sólidos (`bg-blue-600` para editar y `bg-red-600` para eliminar) y forma circular (`rounded-full`) mejoró significativamente la eficiencia operativa del docente.
+- **Fluidez del Layout**: Se restauró el ancho total (`w-full`) en la barra de pestañas de módulos. Restringir el ancho causaba problemas de renderizado al añadir la cuarta pestaña de "Seguimiento".
+
+### Sistema de Evaluación y Calificación
+- **Escala de Calificación**: Implementación de una escala estricta de **0 a 5.0**. Se añadió lógica de "clamping" en las funciones de guardado para impedir notas fuera de rango, asegurando la integridad de los promedios académicos.
+- **Visibilidad Pedagógica**: En el panel de revisión, se modificó el renderizado de detalles para mostrar el **enunciado completo de la pregunta** en lugar de IDs técnicos, facilitando la calificación de preguntas abiertas.
+
+### Entregas de Actividades
+- **Editor Enriquecido**: La implementación de un editor con soporte para negrita, alineación y tamaño de fuente permitió a los estudiantes realizar entregas profesionales directamente en la plataforma.
+- **Descarga de Adjuntos**: Se integró un botón de descarga dinámica en la vista del docente que extrae el archivo Base64 almacenado en MongoDB, permitiendo la revisión local de documentos complejos (infografías, documentos extensos).
+
 ---
 *Última actualización: Mayo 2026*
