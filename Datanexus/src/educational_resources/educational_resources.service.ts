@@ -13,7 +13,7 @@ export class EducationalResourcesService {
   ) {}
 
   private fileToDataUri(file: any): string {
-    if (!file) return null;
+    if (!file) return '';
     const base64 = file.buffer.toString('base64');
     return `data:${file.mimetype};base64,${base64}`;
   }
