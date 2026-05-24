@@ -63,7 +63,7 @@ export function ReportsDashboard() {
       const modId = sub.moduloId || "N/A";
       if (!modules[modId]) modules[modId] = { total: 0, count: 0 };
       
-      if (sub.puntaje !== undefined) {
+      if (sub.puntaje !== undefined && sub.puntaje !== null) {
         modules[modId].total += Number(sub.puntaje);
         modules[modId].count += 1;
       }
@@ -206,14 +206,14 @@ export function ReportsDashboard() {
                   </TableCell>
                   {isAdmin && <TableCell className="text-xs">{sub.usuarioNombre}</TableCell>}
                   <TableCell>
-                    <Badge variant="outline">Módulo {sub.moduloId}</Badge>
+                    <Badge variant="outline">Módulo {sub.moduloId || '?'}</Badge>
                   </TableCell>
-                  <TableCell className="max-w-[200px] truncate font-semibold">{sub.tituloContenido}</TableCell>
+                  <TableCell className="max-w-[200px] truncate font-semibold">{sub.tituloContenido || 'Sin título'}</TableCell>
                   <TableCell>
-                    <span className="text-[10px] font-bold uppercase text-muted-foreground">{sub.tipoEnvio}</span>
+                    <span className="text-[10px] font-bold uppercase text-muted-foreground">{sub.tipoEnvio || 'Envío'}</span>
                   </TableCell>
                   <TableCell>
-                     {sub.puntaje !== undefined ? (
+                     {sub.puntaje !== undefined && sub.puntaje !== null ? (
                        <span className={cn(
                          "font-bold",
                          sub.puntaje >= 3.5 ? "text-green-600" : "text-amber-600"
@@ -231,7 +231,7 @@ export function ReportsDashboard() {
                          sub.estado === 'calificado' ? "bg-green-100 text-green-700" : "bg-blue-100 text-blue-700"
                        )}
                      >
-                      {sub.estado.toUpperCase()}
+                      {(sub.estado || 'enviado').toUpperCase()}
                     </Badge>
                   </TableCell>
                 </TableRow>
