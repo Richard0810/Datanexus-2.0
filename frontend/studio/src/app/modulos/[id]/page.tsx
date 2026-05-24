@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useState, use } from "react";
@@ -26,8 +27,8 @@ import {
   GraduationCap as GradeIcon,
   Save,
   FileCode,
-  Send,
-  FileCheck
+  Download,
+  FileUp
 } from "lucide-react";
 import Link from "next/link";
 import api from "@/lib/api";
@@ -130,24 +131,24 @@ interface Assessment {
 }
 
 interface Submission {
-  _id: any;
+  _id: string;
   usuarioNombre: string;
   usuarioEmail: string;
   tipoEnvio: string;
-  moduloId: string;
   tituloContenido: string;
   detalleEnvio: string;
-  puntaje?: number;
+  puntaje: number;
   estado: string;
   recomendaciones?: string;
-  createdAt?: string;
+  createdAt: string;
+  moduloId: string;
 }
 
 export default function ModuloDetallePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const { user } = useAuth();
   
-  const userRole = (user?.role || '').trim().toLowerCase();
+  const userRole = user?.role?.trim().toLowerCase();
   const isAdmin = userRole === 'admin' || userRole === 'administrador';
   
   const [resources, setResources] = useState<Resource[]>([]);
@@ -174,6 +175,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
   const [selectedSubmission, setSelectedSubmission] = useState<Submission | null>(null);
   const [gradingForm, setGradingForm] = useState({ puntaje: 0, recomendaciones: "" });
   const [activitySubmissionText, setActivitySubmissionText] = useState("");
+  const [submissionFile, setSubmissionFile] = useState<File | null>(null);
   
   const [editingResource, setEditingResource] = useState<Resource | null>(null);
   const [editingActivity, setEditingActivity] = useState<Activity | null>(null);
@@ -224,55 +226,23 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
     });
   };
 
-  const base64ToBlobUrl = (dataUri: string) => {
-    try {
-      const parts = dataUri.split(',');
-      if (parts.length < 2) return null;
-      const mime = parts[0].match(/:(.*?);/)?.[1] || 'application/octet-stream';
-      const b64Data = parts[1];
-      const byteCharacters = atob(b64Data);
-      const byteArrays = [];
-      for (let offset = 0; offset < byteCharacters.length; offset += 512) {
-        const slice = byteCharacters.slice(offset, offset + 512);
-        const byteNumbers = new Array(slice.length);
-        for (let i = 0; i < slice.length; i++) byteNumbers[i] = slice.charCodeAt(i);
-        byteArrays.push(new Uint8Array(byteNumbers));
-      }
-      return URL.createObjectURL(new Blob(byteArrays, { type: mime }));
-    } catch (e) { return null; }
-  };
-
-  const getEmbedUrl = (url: string) => {
-    if (!url || typeof url !== 'string' || !url.startsWith("http")) return null;
-    if (url.includes("drive.google.com")) {
-      if (url.includes("/view")) return url.split("/view")[0] + "/preview";
-      return url;
-    }
-    if (url.includes("youtube.com") || url.includes("youtu.be")) {
-      let vId = url.includes("youtu.be/") ? url.split("youtu.be/")[1].split("?")[0] : url.split("v=")[1]?.split("&")[0];
-      return vId ? `https://www.youtube.com/embed/${vId}` : url;
-    }
-    return url;
-  };
-
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [resResponse, actResponse, assResponse, subResponse] = await Promise.all([
+      const [resResponse, actResponse, assResponse] = await Promise.all([
         api.get("/educational-resources"),
         api.get("/activities"),
-        api.get("/assessments"),
-        api.get("/performance-reports")
+        api.get("/assessments")
       ]);
-      
       setResources(resResponse.data.filter((res: any) => res.unidad === `Módulo ${id}`));
       setActivities(actResponse.data.filter((act: any) => String(act.moduloId) === String(id)));
       setAssessments(assResponse.data.filter((ass: any) => String(ass.moduloId) === String(id)));
-      
-      const filteredSubs = subResponse.data.filter((sub: any) => 
-        String(sub.moduloId) === String(id) && (isAdmin ? true : sub.usuarioEmail === user?.email)
-      );
-      setSubmissions(filteredSubs);
+
+      if (isAdmin) {
+        const subResponse = await api.get("/performance-reports");
+        const filteredSubmissions = subResponse.data.filter((sub: any) => String(sub.moduloId) === String(id));
+        setSubmissions(filteredSubmissions);
+      }
     } catch (error) {
       console.error("Error fetching data:", error);
     } finally {
@@ -283,21 +253,6 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
   useEffect(() => {
     if (user) fetchData();
   }, [id, user, isAdmin]);
-
-  useEffect(() => {
-    Object.values(pdfUrls).forEach(url => URL.revokeObjectURL(url));
-    const newUrls: Record<string, string> = {};
-    resources.forEach(res => {
-      const isBase64 = res.url?.startsWith('data:');
-      const isPdf = isBase64 && (res.url.includes('pdf') || res.formato?.toLowerCase() === 'pdf');
-      if (isPdf) {
-        const blobUrl = base64ToBlobUrl(res.url);
-        if (blobUrl) newUrls[getObjectId(res)] = blobUrl;
-      }
-    });
-    setPdfUrls(newUrls);
-    return () => Object.values(newUrls).forEach(url => URL.revokeObjectURL(url));
-  }, [resources]);
 
   const handleSaveResource = async () => {
     if (!resourceForm.titulo) return;
@@ -332,54 +287,30 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
     finally { setIsProcessing(false); }
   };
 
-  const handleSaveAssessment = async () => {
-    if (!assessmentForm.titulo || assessmentForm.preguntas.length === 0) return;
-    setIsProcessing(true);
-    try {
-      const assessmentId = getObjectId(editingAssessment);
-      if (assessmentId) await api.patch(`/assessments/${assessmentId}`, assessmentForm);
-      else await api.post("/assessments", assessmentForm);
-      setIsAssessmentDialogOpen(false);
-      fetchData();
-      toast({ title: "Evaluación guardada" });
-    } catch (error) { toast({ title: "Error", variant: "destructive" }); }
-    finally { setIsProcessing(false); }
-  };
-
-  const handleDeleteConfirm = async () => {
-    if (!itemToDelete) return;
-    setIsProcessing(true);
-    try {
-      const endpoint = itemToDelete.type === 'recurso' ? 'educational-resources' : itemToDelete.type === 'actividad' ? 'activities' : 'assessments';
-      await api.delete(`/${endpoint}/${itemToDelete.id}`);
-      toast({ title: "Eliminado con éxito" });
-      fetchData();
-    } catch (error) {
-      toast({ title: "Error al eliminar", variant: "destructive" });
-    } finally {
-      setIsProcessing(false);
-      setIsDeleteDialogOpen(false);
-      setItemToDelete(null);
-    }
-  };
-
   const handleSubmitActivity = async () => {
-    if (!selectedActivity || !activitySubmissionText) return;
+    if (!selectedActivity || (!activitySubmissionText && !submissionFile)) return;
     setIsProcessing(true);
     try {
+      let detalle = activitySubmissionText;
+      
+      if (submissionFile) {
+        detalle = await fileToBase64(submissionFile);
+      }
+
       await api.post("/performance-reports", {
         usuarioNombre: user?.name || "Estudiante",
         usuarioEmail: user?.email,
         tipoEnvio: "actividad",
         moduloId: id,
         tituloContenido: selectedActivity.titulo,
-        detalleEnvio: activitySubmissionText,
+        detalleEnvio: detalle,
         estado: "enviado"
       });
       setIsSubmitActivityOpen(false);
       setActivitySubmissionText("");
-      toast({ title: "Actividad enviada con éxito" });
-      fetchData();
+      setSubmissionFile(null);
+      toast({ title: "Actividad enviada con éxito", description: "El docente revisará tu entrega pronto." });
+      if (isAdmin) fetchData();
     } catch (error) {
       toast({ title: "Error al enviar", variant: "destructive" });
     } finally {
@@ -416,17 +347,25 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
         puntaje: finalScoreValue,
         estado: "enviado"
       });
-      toast({ title: "Evaluación enviada" });
-      fetchData();
+      toast({ title: "Evaluación enviada", description: "Tus respuestas han sido registradas." });
+      if (isAdmin) fetchData();
     } catch (e) {
       toast({ title: "Error al registrar", variant: "destructive" });
     }
   };
 
+  const handleOpenGrading = (sub: Submission) => {
+    setSelectedSubmission(sub);
+    setGradingForm({ 
+      puntaje: sub.puntaje || 0, 
+      recomendaciones: sub.recomendaciones || "" 
+    });
+    setIsGradingDialogOpen(true);
+  };
+
   const handleSaveGrade = async () => {
     if (!selectedSubmission) return;
     
-    // Validación rigurosa 0-5
     if (gradingForm.puntaje > 5) {
       toast({ title: "Puntaje inválido", description: "La calificación máxima es 5.0", variant: "destructive" });
       return;
@@ -438,8 +377,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
 
     setIsProcessing(true);
     try {
-      const subId = getObjectId(selectedSubmission);
-      await api.patch(`/performance-reports/${subId}`, {
+      await api.patch(`/performance-reports/${selectedSubmission._id}`, {
         ...gradingForm,
         estado: "calificado"
       });
@@ -480,30 +418,108 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
     setCurrentQuestion({ ...currentQuestion, opciones: newOptions });
   };
 
+  const handleSaveAssessment = async () => {
+    if (!assessmentForm.titulo || assessmentForm.preguntas.length === 0) return;
+    setIsProcessing(true);
+    try {
+      const assessmentId = getObjectId(editingAssessment);
+      if (assessmentId) await api.patch(`/assessments/${assessmentId}`, assessmentForm);
+      else await api.post("/assessments", assessmentForm);
+      setIsAssessmentDialogOpen(false);
+      fetchData();
+      toast({ title: "Evaluación guardada" });
+    } catch (error) { toast({ title: "Error", variant: "destructive" }); }
+    finally { setIsProcessing(false); }
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!itemToDelete) return;
+    setIsProcessing(true);
+    try {
+      const endpoint = itemToDelete.type === 'recurso' ? 'educational-resources' : itemToDelete.type === 'actividad' ? 'activities' : 'assessments';
+      await api.delete(`/${endpoint}/${itemToDelete.id}`);
+      toast({ title: "Eliminado con éxito" });
+      fetchData();
+    } catch (error) {
+      toast({ title: "Error al eliminar", variant: "destructive" });
+    } finally {
+      setIsProcessing(false);
+      setIsDeleteDialogOpen(false);
+      setItemToDelete(null);
+    }
+  };
+
   const handleResetPreview = () => {
     setUserAnswers({});
     setShowFeedback(false);
     setScore(null);
   };
 
+  const getEmbedUrl = (url: string) => {
+    if (!url || typeof url !== 'string' || !url.startsWith("http")) return null;
+    if (url.includes("drive.google.com")) {
+      if (url.includes("/view")) return url.split("/view")[0] + "/preview";
+      return url;
+    }
+    if (url.includes("youtube.com") || url.includes("youtu.be")) {
+      let vId = url.includes("youtu.be/") ? url.split("youtu.be/")[1].split("?")[0] : url.split("v=")[1]?.split("&")[0];
+      return vId ? `https://www.youtube.com/embed/${vId}` : url;
+    }
+    return url;
+  };
+
   const handleViewFull = (res: Resource) => {
     const url = res.url;
     if (!url) return;
-    if (url.startsWith('data:')) {
-      const resId = getObjectId(res);
-      if (pdfUrls[resId]) {
-        window.open(pdfUrls[resId], '_blank');
-        return;
-      }
-      const blobUrl = base64ToBlobUrl(url);
-      if (blobUrl) window.open(blobUrl, '_blank');
-    } else {
-      const embedUrl = getEmbedUrl(url);
-      window.open(embedUrl || url, '_blank');
-    }
+    window.open(url, '_blank');
   };
 
   const formatSubmissionDetail = (detail: string) => {
+    if (!detail) return <p className="italic text-muted-foreground">Sin contenido.</p>;
+
+    // Caso 1: Es un archivo en DataURI
+    if (detail.startsWith('data:')) {
+      const isImage = detail.includes('image/');
+      const isVideo = detail.includes('video/');
+      const isPdf = detail.includes('application/pdf');
+
+      return (
+        <div className="space-y-4">
+          <div className="p-4 border rounded-xl bg-slate-50 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              {isImage ? <FileCode className="text-blue-500" /> : isVideo ? <Video className="text-red-500" /> : <FileText className="text-orange-500" />}
+              <div>
+                <p className="text-sm font-bold">Documento adjunto</p>
+                <p className="text-[10px] text-muted-foreground uppercase">Archivo Base64</p>
+              </div>
+            </div>
+            <Button size="sm" variant="outline" className="h-8" asChild>
+              <a href={detail} download="entrega-estudiante">
+                <Download className="mr-2 h-3 w-3" /> Descargar Archivo
+              </a>
+            </Button>
+          </div>
+          
+          {isImage && (
+            <div className="border rounded-xl overflow-hidden shadow-sm">
+              <img src={detail} alt="Previsualización" className="max-w-full h-auto" />
+            </div>
+          )}
+          {isVideo && (
+            <video controls className="w-full rounded-xl border">
+              <source src={detail} />
+            </video>
+          )}
+          {isPdf && (
+            <div className="aspect-[4/3] w-full border rounded-xl overflow-hidden">
+              <iframe src={detail} className="w-full h-full border-0" />
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // Caso 2: Es JSON (Evaluación)
     try {
       const parsed = JSON.parse(detail);
       if (Array.isArray(parsed)) {
@@ -511,7 +527,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
           <div className="space-y-4">
             {parsed.map((item: any, idx) => (
               <div key={idx} className="p-3 bg-muted rounded-lg border-l-4 border-primary">
-                <p className="text-sm font-bold text-primary mb-1 uppercase">{item.pregunta || 'Pregunta'}</p>
+                <p className="text-sm font-bold text-primary mb-1">{item.pregunta}</p>
                 <p className="text-sm">{String(item.respuesta)}</p>
               </div>
             ))}
@@ -519,6 +535,8 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
         );
       }
     } catch (e) {}
+
+    // Caso 3: Es texto plano o URL
     return <div className="p-4 bg-muted rounded-lg text-sm whitespace-pre-wrap">{detail}</div>;
   };
 
@@ -539,32 +557,28 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
 
       <Tabs defaultValue="recursos" className="w-full">
         <TabsList className={cn("grid w-full mb-8", isAdmin ? "grid-cols-4" : "grid-cols-3")}>
-          <TabsTrigger value="recursos" className="flex items-center gap-2"><Layers className="h-4 w-4" /> Recursos</TabsTrigger>
-          <TabsTrigger value="actividades" className="flex items-center gap-2"><ClipboardList className="h-4 w-4" /> Actividades</TabsTrigger>
-          <TabsTrigger value="evaluaciones" className="flex items-center gap-2"><FileQuestion className="h-4 w-4" /> Evaluaciones</TabsTrigger>
-          {isAdmin && <TabsTrigger value="seguimiento" className="flex items-center gap-2 text-accent font-bold"><History className="h-4 w-4" /> Seguimiento</TabsTrigger>}
+          <TabsTrigger value="recursos" className="flex items-center gap-2 font-bold h-12"><Layers className="h-4 w-4" /> Recursos</TabsTrigger>
+          <TabsTrigger value="actividades" className="flex items-center gap-2 font-bold h-12"><ClipboardList className="h-4 w-4" /> Actividades</TabsTrigger>
+          <TabsTrigger value="evaluaciones" className="flex items-center gap-2 font-bold h-12"><FileQuestion className="h-4 w-4" /> Evaluaciones</TabsTrigger>
+          {isAdmin && <TabsTrigger value="seguimiento" className="flex items-center gap-2 text-accent font-bold h-12"><History className="h-4 w-4" /> Seguimiento</TabsTrigger>}
         </TabsList>
 
         <TabsContent value="recursos" className="space-y-6">
           <div className="flex justify-between items-center">
             <h2 className="text-xl font-headline">Materiales de Estudio</h2>
-            {isAdmin && <Button onClick={() => { setEditingResource(null); setResourceForm({ titulo: "", descripcion: "", url: "", unidad: `Módulo ${id}`, tipo: "guia", formato: "URL" }); setSourceTab("url"); setIsResourceDialogOpen(true); }} size="sm" className="bg-primary"><PlusCircle className="mr-2 h-4 w-4" /> Añadir Recurso</Button>}
+            {isAdmin && <Button onClick={() => { setEditingResource(null); setResourceForm({ titulo: "", descripcion: "", url: "", unidad: `Módulo ${id}`, tipo: "guia", formato: "URL" }); setSourceTab("url"); setIsResourceDialogOpen(true); }} size="sm"><PlusCircle className="mr-2 h-4 w-4" /> Añadir Recurso</Button>}
           </div>
           {loading ? <div className="py-20 flex justify-center"><Loader2 className="animate-spin" /></div> : resources.length > 0 ? (
             <div className="grid grid-cols-1 gap-8">
               {resources.map((res) => {
                 const resId = getObjectId(res);
                 const embedUrl = getEmbedUrl(res.url);
-                const isBase64 = res.url?.startsWith('data:');
-                const isPdf = isBase64 && (res.url.includes('pdf') || res.formato?.toLowerCase() === 'pdf');
-                const isVideo = isBase64 && res.url.includes('video/');
-
                 return (
-                  <Card key={resId} className="overflow-hidden shadow-md relative group">
+                  <Card key={resId} className="overflow-hidden group relative shadow-md">
                     {isAdmin && (
                       <div className="absolute top-4 right-4 flex gap-2 z-20">
-                        <Button variant="default" size="icon" className="h-8 w-8 rounded-full bg-blue-600 hover:bg-blue-700 text-white shadow-lg" onClick={() => { setEditingResource(res); setResourceForm(res); setSourceTab(res.url?.startsWith('data:') ? "file" : "url"); setIsResourceDialogOpen(true); }}><Pencil className="h-4 w-4" /></Button>
-                        <Button variant="destructive" size="icon" className="h-8 w-8 rounded-full bg-red-600 text-white shadow-lg" onClick={() => { setItemToDelete({ id: resId, type: 'recurso' }); setIsDeleteDialogOpen(true); }}><Trash2 className="h-4 w-4" /></Button>
+                        <Button variant="default" size="icon" className="h-9 w-9 bg-blue-600 hover:bg-blue-700 text-white shadow-lg rounded-full" onClick={() => { setEditingResource(res); setResourceForm(res); setSourceTab(res.url?.startsWith('data:') ? "file" : "url"); setIsResourceDialogOpen(true); }}><Pencil className="h-4 w-4" /></Button>
+                        <Button variant="destructive" size="icon" className="h-9 w-9 bg-red-600 text-white shadow-lg rounded-full" onClick={() => { setItemToDelete({ id: resId, type: 'recurso' }); setIsDeleteDialogOpen(true); }}><Trash2 className="h-4 w-4" /></Button>
                       </div>
                     )}
                     <CardHeader>
@@ -581,10 +595,6 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                     <CardContent>
                       {embedUrl ? (
                         <div className="aspect-video rounded-xl overflow-hidden bg-black border shadow-inner"><iframe src={embedUrl} className="w-full h-full border-0" allowFullScreen /></div>
-                      ) : isPdf ? (
-                        <div className="aspect-video rounded-xl overflow-hidden border bg-background shadow-inner"><iframe src={pdfUrls[resId]} className="w-full h-full border-0" /></div>
-                      ) : isVideo ? (
-                        <div className="aspect-video rounded-xl overflow-hidden bg-black shadow-inner"><video controls className="w-full h-full"><source src={res.url} /></video></div>
                       ) : (
                         <div className="p-12 text-center border rounded-xl bg-muted/20"><FileCode className="h-12 w-12 mx-auto mb-2 opacity-20" /><Button variant="link" onClick={() => handleViewFull(res)}>Abrir Recurso</Button></div>
                       )}
@@ -608,8 +618,8 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                 <Card key={actId} className="flex flex-col shadow-md border-t-4 border-t-accent/50 group relative">
                   {isAdmin && (
                     <div className="absolute top-4 right-4 flex gap-2 z-10">
-                       <Button variant="default" size="icon" className="h-8 w-8 rounded-full bg-blue-600 hover:bg-blue-700 text-white shadow-sm" onClick={() => { setEditingActivity(act); setActivityForm(act); setIsActivityDialogOpen(true); }}><Pencil className="h-4 w-4" /></Button>
-                       <Button variant="destructive" size="icon" className="h-8 w-8 rounded-full bg-red-600 text-white shadow-sm" onClick={() => { setItemToDelete({ id: actId, type: 'actividad' }); setIsDeleteDialogOpen(true); }}><Trash2 className="h-4 w-4" /></Button>
+                       <Button variant="default" size="icon" className="h-9 w-9 bg-blue-600 hover:bg-blue-700 text-white shadow-lg rounded-full" onClick={() => { setEditingActivity(act); setActivityForm(act); setIsActivityDialogOpen(true); }}><Pencil className="h-4 w-4" /></Button>
+                       <Button variant="destructive" size="icon" className="h-9 w-9 bg-red-600 text-white shadow-lg rounded-full" onClick={() => { setItemToDelete({ id: actId, type: 'actividad' }); setIsDeleteDialogOpen(true); }}><Trash2 className="h-4 w-4" /></Button>
                     </div>
                   )}
                   <CardHeader>
@@ -642,8 +652,8 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                 <Card key={assId} className="hover:border-primary transition-all cursor-pointer group shadow-md relative" onClick={() => { setEditingAssessment(ass); setAssessmentForm(ass); setViewMode(isAdmin ? 'edit' : 'preview'); handleResetPreview(); setIsAssessmentDialogOpen(true); }}>
                   {isAdmin && (
                     <div className="absolute top-2 right-2 flex gap-1 z-10">
-                      <Button variant="default" size="icon" className="h-7 w-7 rounded-full bg-blue-600 hover:bg-blue-700 text-white shadow-md" onClick={(e) => { e.stopPropagation(); setEditingAssessment(ass); setAssessmentForm(ass); setViewMode('edit'); setIsAssessmentDialogOpen(true); }}><Pencil className="h-3 w-3" /></Button>
-                      <Button variant="destructive" size="icon" className="h-7 w-7 rounded-full bg-red-600 text-white shadow-md" onClick={(e) => { e.stopPropagation(); setItemToDelete({ id: assId, type: 'evaluacion' }); setIsDeleteDialogOpen(true); }}><Trash2 className="h-3 w-3" /></Button>
+                      <Button variant="default" size="icon" className="h-8 w-8 bg-blue-600 hover:bg-blue-700 text-white rounded-full" onClick={(e) => { e.stopPropagation(); setEditingAssessment(ass); setAssessmentForm(ass); setViewMode('edit'); setIsAssessmentDialogOpen(true); }}><Pencil className="h-3 w-3" /></Button>
+                      <Button variant="destructive" size="icon" className="h-8 w-8 bg-red-600 text-white rounded-full" onClick={(e) => { e.stopPropagation(); setItemToDelete({ id: assId, type: 'evaluacion' }); setIsDeleteDialogOpen(true); }}><Trash2 className="h-3 w-3" /></Button>
                     </div>
                   )}
                   <CardHeader>
@@ -660,50 +670,45 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
 
         {isAdmin && (
           <TabsContent value="seguimiento" className="space-y-6">
-            <Card className="shadow-sm border-none rounded-2xl overflow-hidden">
+            <Card className="shadow-sm overflow-hidden border-none rounded-2xl">
               <CardHeader className="bg-slate-50 border-b">
                 <CardTitle className="flex items-center gap-2"><History className="h-5 w-5 text-primary" /> Panel de Seguimiento</CardTitle>
                 <CardDescription>Revisa y califica el desempeño de tus estudiantes.</CardDescription>
               </CardHeader>
-              <CardContent className="p-0">
-                <Table>
-                  <TableHeader className="bg-slate-50">
-                    <TableRow>
-                      <TableHead className="pl-6">Estudiante</TableHead>
-                      <TableHead>Contenido</TableHead>
-                      <TableHead>Puntaje</TableHead>
-                      <TableHead>Estado</TableHead>
-                      <TableHead className="text-right pr-6">Acción</TableHead>
+              <Table>
+                <TableHeader className="bg-slate-50">
+                  <TableRow>
+                    <TableHead>Estudiante</TableHead>
+                    <TableHead>Contenido</TableHead>
+                    <TableHead>Puntaje</TableHead>
+                    <TableHead>Estado</TableHead>
+                    <TableHead className="text-right">Acción</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {submissions.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).map((sub) => (
+                    <TableRow key={sub._id}>
+                      <TableCell className="font-medium text-xs">
+                        <div className="font-bold">{sub.usuarioNombre}</div>
+                        <div className="text-[10px] text-muted-foreground">{sub.usuarioEmail}</div>
+                      </TableCell>
+                      <TableCell className="max-w-[200px] truncate text-xs font-semibold">{sub.tituloContenido}</TableCell>
+                      <TableCell>
+                        {sub.puntaje !== undefined ? (
+                          <Badge className={cn("px-2 font-bold", sub.puntaje >= 3.5 ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700")}>{Number(sub.puntaje).toFixed(1)} / 5.0</Badge>
+                        ) : <span className="text-slate-300 italic text-[10px]">Pendiente</span>}
+                      </TableCell>
+                      <TableCell><Badge variant={sub.estado === "calificado" ? "default" : "secondary"} className="text-[10px]">{sub.estado.toUpperCase()}</Badge></TableCell>
+                      <TableCell className="text-right">
+                        <Button size="sm" variant="outline" onClick={() => handleOpenGrading(sub)}>
+                          <GradeIcon className="mr-2 h-4 w-4" /> Calificar
+                        </Button>
+                      </TableCell>
                     </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {submissions.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()).map((sub) => {
-                      const subId = getObjectId(sub);
-                      return (
-                        <TableRow key={subId}>
-                          <TableCell className="font-medium text-xs pl-6">
-                            <div className="font-bold">{sub.usuarioNombre}</div>
-                            <div className="text-[10px] text-muted-foreground">{sub.usuarioEmail}</div>
-                          </TableCell>
-                          <TableCell className="max-w-[200px] truncate text-xs font-semibold">{sub.tituloContenido}</TableCell>
-                          <TableCell>
-                            {sub.puntaje !== undefined ? (
-                              <Badge className={cn("px-2 font-bold", sub.puntaje >= 3.5 ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700")}>{Number(sub.puntaje).toFixed(1)} / 5.0</Badge>
-                            ) : <span className="text-slate-300 italic text-[10px]">Pendiente</span>}
-                          </TableCell>
-                          <TableCell><Badge variant={sub.estado === "calificado" ? "default" : "secondary"} className="text-[10px]">{sub.estado.toUpperCase()}</Badge></TableCell>
-                          <TableCell className="text-right pr-6">
-                            <Button size="sm" variant="outline" onClick={() => { setSelectedSubmission(sub); setGradingForm({ puntaje: sub.puntaje || 0, recomendaciones: sub.recomendaciones || "" }); setIsGradingDialogOpen(true); }}>
-                              <FileCheck className="mr-2 h-4 w-4" /> Calificar
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                    {submissions.length === 0 && <TableRow><TableCell colSpan={5} className="text-center py-20 italic text-muted-foreground">No hay envíos registrados.</TableCell></TableRow>}
-                  </TableBody>
-                </Table>
-              </CardContent>
+                  ))}
+                  {submissions.length === 0 && <TableRow><TableCell colSpan={5} className="text-center py-20 italic text-muted-foreground">No hay envíos registrados.</TableCell></TableRow>}
+                </TableBody>
+              </Table>
             </Card>
           </TabsContent>
         )}
@@ -717,14 +722,14 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
           </DialogHeader>
           <div className="flex-1 overflow-y-auto pr-2 py-4 space-y-6">
             <div className="space-y-2">
-              <Label className="text-xs uppercase font-bold text-primary">Respuesta Enviada</Label>
+              <Label className="text-xs uppercase font-bold text-primary">Contenido Enviado</Label>
               {selectedSubmission && formatSubmissionDetail(selectedSubmission.detalleEnvio)}
             </div>
             <Separator />
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="space-y-2">
                 <Label>Puntaje (0 - 5.0)</Label>
-                <Input type="number" step="0.1" min="0" max="5" value={gradingForm.puntaje} onChange={e => setGradingForm({...gradingForm, puntaje: Math.min(5, Math.max(0, parseFloat(e.target.value) || 0))})} />
+                <Input type="number" step="0.1" min="0" max="5" value={gradingForm.puntaje} onChange={e => setGradingForm({...gradingForm, puntaje: parseFloat(e.target.value) || 0})} />
                 <p className="text-[10px] text-muted-foreground italic">Calificación máxima permitida: 5.0</p>
               </div>
               <div className="md:col-span-2 space-y-2">
@@ -742,9 +747,35 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
 
       <Dialog open={isSubmitActivityOpen} onOpenChange={setIsSubmitActivityOpen}>
         <DialogContent>
-          <DialogHeader><DialogTitle>Entregar: {selectedActivity?.titulo}</DialogTitle><DialogDescription>Pega el enlace de tu trabajo o escribe tu respuesta.</DialogDescription></DialogHeader>
-          <div className="py-4 space-y-4"><Textarea placeholder="Escribe aquí tu respuesta o enlace..." value={activitySubmissionText} onChange={e => setActivitySubmissionText(e.target.value)} rows={6} /></div>
-          <DialogFooter><Button onClick={handleSubmitActivity} disabled={isProcessing} className="w-full">{isProcessing ? <Loader2 className="animate-spin" /> : "Enviar Entrega"}</Button></DialogFooter>
+          <DialogHeader>
+            <DialogTitle>Entregar: {selectedActivity?.titulo}</DialogTitle>
+            <DialogDescription>Sube un archivo o escribe tu respuesta directamente.</DialogDescription>
+          </DialogHeader>
+          <div className="py-4 space-y-4">
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2"><FileUp className="h-4 w-4 text-primary" /> Adjuntar archivo (Opcional)</Label>
+              <Input type="file" onChange={e => setSubmissionFile(e.target.files?.[0] || null)} className="cursor-pointer" />
+              <p className="text-[10px] text-muted-foreground">Soporta PDF, imágenes y videos.</p>
+            </div>
+            
+            <Separator />
+            
+            <div className="space-y-2">
+              <Label>Respuesta o Enlace</Label>
+              <Textarea 
+                placeholder="Escribe aquí tu respuesta, enlace de Drive o descripción del archivo..." 
+                value={activitySubmissionText} 
+                onChange={e => setActivitySubmissionText(e.target.value)} 
+                rows={6} 
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button onClick={handleSubmitActivity} disabled={isProcessing} className="w-full">
+              {isProcessing ? <Loader2 className="animate-spin mr-2" /> : <Upload className="mr-2 h-4 w-4" />}
+              Finalizar y Enviar Entrega
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
@@ -757,7 +788,10 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
             <div className="space-y-2">
               <Label>Fuente</Label>
               <Tabs value={sourceTab} onValueChange={(v:any) => setSourceTab(v)}>
-                <TabsList className="grid w-full grid-cols-2"><TabsTrigger value="url">URL</TabsTrigger><TabsTrigger value="file">Archivo</TabsTrigger></TabsList>
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="url">URL</TabsTrigger>
+                  <TabsTrigger value="file">Archivo</TabsTrigger>
+                </TabsList>
                 <TabsContent value="url" className="pt-2"><Input value={resourceForm.url} onChange={e => setResourceForm({...resourceForm, url: e.target.value})} placeholder="https://..." /></TabsContent>
                 <TabsContent value="file" className="pt-2">
                   <div className="border-2 border-dashed rounded-xl p-6 text-center cursor-pointer hover:bg-muted/50" onClick={() => document.getElementById('resFile')?.click()}>
@@ -846,22 +880,22 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                     </RadioGroup>
                   </div>
                 )}
-                <Button variant="default" onClick={handleAddQuestion} className="w-full bg-slate-900">Añadir Pregunta</Button>
+                <Button variant="default" onClick={handleAddQuestion} className="w-full">Agregar Pregunta</Button>
               </div>
               {assessmentForm.preguntas?.length > 0 && (
-                <div className="space-y-2 border-t pt-4">
-                  <Label className="font-bold">Preguntas actualizadas ({assessmentForm.preguntas.length})</Label>
+                <div className="space-y-2">
+                  <Label>Preguntas actualizadas ({assessmentForm.preguntas.length})</Label>
                   <div className="space-y-2">
                     {assessmentForm.preguntas.map((q, i) => (
-                      <div key={q.id} className="flex items-center justify-between p-3 border rounded-xl bg-white shadow-sm">
-                        <span className="text-sm font-medium">{i+1}. {q.texto} <Badge variant="secondary" className="ml-2 text-[10px]">{q.tipo}</Badge></span>
+                      <div key={q.id} className="flex items-center justify-between p-2 border rounded text-sm bg-white">
+                        <span>{i+1}. {q.texto} ({q.tipo})</span>
                         <Button variant="ghost" size="icon" onClick={() => setAssessmentForm({...assessmentForm, preguntas: assessmentForm.preguntas.filter(item => item.id !== q.id)})}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                       </div>
                     ))}
                   </div>
                 </div>
               )}
-              <DialogFooter><Button onClick={handleSaveAssessment} disabled={isProcessing} className="w-full h-12 bg-primary font-bold">Guardar Evaluación Completa</Button></DialogFooter>
+              <DialogFooter><Button onClick={handleSaveAssessment} disabled={isProcessing} className="w-full">Guardar Evaluación Completa</Button></DialogFooter>
             </div>
           ) : (
             <div className="py-6 space-y-8">
@@ -871,14 +905,14 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                  {score && <div className="mt-4 p-4 bg-primary/10 rounded-xl flex items-center justify-between"><span className="font-bold">Resultado:</span><Badge className="text-lg px-4">{score.correct} / {score.total}</Badge></div>}
               </div>
               {assessmentForm.preguntas?.map((q, idx) => (
-                <div key={q.id} className="space-y-4 bg-muted/10 p-6 rounded-2xl border">
+                <div key={q.id} className="space-y-4 p-4 border rounded-xl bg-slate-50/50">
                   <p className="text-lg font-bold">{idx + 1}. {q.texto}</p>
                   <div className="pl-4">
                     {q.tipo === 'opcion-multiple' && (
                       <RadioGroup value={userAnswers[q.id]} onValueChange={v => !showFeedback && setUserAnswers({...userAnswers, [q.id]: v})} className="space-y-2">
                         {q.opciones.map((opt, i) => (
-                          <div key={i} className={cn("flex items-center space-x-3 p-3 border rounded-xl transition-all", 
-                            showFeedback && q.respuestaCorrecta === opt ? "bg-green-100 border-green-500 shadow-sm" : 
+                          <div key={i} className={cn("flex items-center space-x-3 p-3 border rounded-xl bg-white", 
+                            showFeedback && q.respuestaCorrecta === opt ? "bg-green-100 border-green-500" : 
                             showFeedback && userAnswers[q.id] === opt && q.respuestaCorrecta !== opt ? "bg-red-100 border-red-500" : "hover:bg-muted/50")}>
                             <RadioGroupItem value={opt} id={`q${idx}o${i}`} disabled={showFeedback} />
                             <Label htmlFor={`q${idx}o${i}`} className="flex-1 cursor-pointer font-medium">{opt}</Label>
@@ -889,7 +923,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                     {q.tipo === 'verdadero-falso' && (
                       <div className="flex gap-4">
                          {['Verdadero', 'Falso'].map(val => (
-                           <Button key={val} variant={userAnswers[q.id] === val ? 'default' : 'outline'} className={cn("flex-1 h-12 font-bold", showFeedback && q.respuestaCorrecta === val ? "bg-green-600 text-white" : showFeedback && userAnswers[q.id] === val ? "bg-red-600 text-white" : "")} onClick={() => !showFeedback && setUserAnswers({...userAnswers, [q.id]: val})} disabled={showFeedback}>{val}</Button>
+                           <Button key={val} variant={userAnswers[q.id] === val ? 'default' : 'outline'} className={cn("flex-1", showFeedback && q.respuestaCorrecta === val ? "bg-green-500 text-white" : showFeedback && userAnswers[q.id] === val ? "bg-red-500 text-white" : "")} onClick={() => !showFeedback && setUserAnswers({...userAnswers, [q.id]: val})} disabled={showFeedback}>{val}</Button>
                          ))}
                       </div>
                     )}
@@ -899,7 +933,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                   </div>
                 </div>
               ))}
-              {!showFeedback ? <Button className="w-full h-14 bg-primary text-lg font-bold shadow-lg" onClick={handleGradeAssessment}>Finalizar y Enviar Evaluación</Button> : <div className="p-6 bg-primary/10 rounded-2xl text-center border-2 border-primary/20"><Trophy className="h-10 w-10 text-primary mx-auto mb-2" /><h3 className="text-2xl font-bold">¡Evaluación Enviada!</h3><p className="text-muted-foreground mt-1">Tus respuestas han sido enviadas para revisión.</p></div>}
+              {!showFeedback ? <Button className="w-full h-14 font-bold text-lg shadow-lg" onClick={handleGradeAssessment}>Finalizar y Enviar Evaluación</Button> : <Button variant="outline" className="w-full h-12" onClick={handleResetPreview}>Reintentar (Simulado)</Button>}
             </div>
           )}
         </DialogContent>
@@ -908,12 +942,12 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent className="rounded-3xl">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-2xl font-headline">¿Confirmar eliminación?</AlertDialogTitle>
-            <AlertDialogDescription className="text-base">Esta acción es permanente. Se eliminará el {itemToDelete?.type} de la base de datos de MongoDB.</AlertDialogDescription>
+            <AlertDialogTitle>¿Confirmar eliminación?</AlertDialogTitle>
+            <AlertDialogDescription>Esta acción eliminará permanentemente el {itemToDelete?.type} de la base de datos de MongoDB.</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="rounded-2xl h-12" disabled={isProcessing}>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={(e) => { e.preventDefault(); handleDeleteConfirm(); }} className="bg-red-600 hover:bg-red-700 text-white rounded-2xl h-12 px-8 shadow-lg" disabled={isProcessing}>
+            <AlertDialogCancel disabled={isProcessing}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={(e) => { e.preventDefault(); handleDeleteConfirm(); }} className="bg-red-600 hover:bg-red-700 text-white" disabled={isProcessing}>
               {isProcessing ? <Loader2 className="animate-spin h-4 w-4 mr-2" /> : <Trash2 className="w-4 h-4 mr-2" />} Confirmar Eliminación
             </AlertDialogAction>
           </AlertDialogFooter>
