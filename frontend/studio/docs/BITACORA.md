@@ -23,6 +23,7 @@ Este documento registra los hitos técnicos y cambios estructurales realizados e
     - **Manejo de IDs**: Implementación de `getResourceId` para procesar identificadores de MongoDB en formato string u objeto (`$oid`).
     - **Visualización Multimedia**: Implementación de previsualización inteligente para archivos Base64 (PDF, JPG, MP4).
     - **Estrategia de Visualización Automática**: Se ha robustecido la detección de MIME types para archivos locales, permitiendo previsualizaciones instantáneas de PDF e imágenes sin depender estrictamente de la extensión del archivo.
+    - **Soporte Universal de Office**: Se ha añadido una interfaz dedicada para archivos de Word, PowerPoint y Excel subidos localmente, con iconos específicos y apertura optimizada por Blobs.
     - **Apertura por Blobs**: Los archivos locales ahora se abren en pestañas nuevas usando `URL.createObjectURL(blob)` para evitar descargas forzadas y errores de seguridad.
 - **Panel de Seguimiento**: Pestaña exclusiva para administradores que permite visualizar envíos de estudiantes, calificar (0-5) y dejar retroalimentación.
 - **Editor de Texto**: Reparación del icono de cursiva (`Italic`) en el editor de entregas.

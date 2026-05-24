@@ -49,7 +49,9 @@ import {
   BookOpen,
   Monitor,
   Database,
-  MoreHorizontal
+  MoreHorizontal,
+  FileCode,
+  FileOutput
 } from "lucide-react";
 import Link from "next/link";
 import api from "@/lib/api";
@@ -735,11 +737,16 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                 const resourceId = getResourceId(res);
                 const embedUrl = getEmbedUrl(res.url);
                 
-                // Estrategia de detección automática de Base64 por contenido
                 const isBase64 = res.url && res.url.startsWith('data:');
                 const isPdf = isBase64 && res.url.includes('application/pdf');
                 const isVideo = isBase64 && res.url.includes('video/');
                 const isImage = isBase64 && res.url.includes('image/');
+                
+                // Nuevas detecciones para Office
+                const isWord = isBase64 && res.url.includes('wordprocessingml');
+                const isPpt = isBase64 && res.url.includes('presentationml');
+                const isExcel = isBase64 && res.url.includes('spreadsheetml');
+                const isOffice = isWord || isPpt || isExcel;
                 
                 return (
                   <Card key={resourceId} className="overflow-hidden group relative shadow-md">
@@ -787,7 +794,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                             onClick={() => handleViewFull(res.url)}
                           >
                             <ExternalLink className="mr-2 h-3 w-3" />
-                            Ver en ventana completa
+                            {isOffice ? "Descargar / Abrir Archivo" : "Ver en ventana completa"}
                           </Button>
                         )}
                       </div>
@@ -824,13 +831,25 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                              <Button size="sm" onClick={() => handleViewFull(res.url)} className="bg-primary/90">Ampliar PDF</Button>
                           </div>
                         </div>
+                      ) : isOffice ? (
+                        <div className="rounded-xl border bg-blue-50/30 w-full flex flex-col items-center justify-center p-12 aspect-video text-center">
+                           <div className="w-20 h-20 rounded-2xl bg-white shadow-sm flex items-center justify-center mb-6">
+                              {isPpt ? <Monitor className="h-10 w-10 text-orange-500" /> : isWord ? <FileText className="h-10 w-10 text-blue-600" /> : <Database className="h-10 w-10 text-emerald-600" />}
+                           </div>
+                           <h4 className="text-lg font-bold text-slate-800">Documento de Office</h4>
+                           <p className="text-sm text-muted-foreground mt-2 max-w-xs">
+                             Este archivo ({res.formato.toUpperCase()}) debe abrirse en tu equipo para una mejor visualización.
+                           </p>
+                           <Button variant="outline" className="mt-6 bg-white" onClick={() => handleViewFull(res.url)}>
+                              <Download className="mr-2 h-4 w-4" /> Abrir Documento
+                           </Button>
+                        </div>
                       ) : (
                         <div className="rounded-xl border border-dashed bg-muted/30 w-full flex items-center justify-center p-12 aspect-video">
                           <div className="text-center">
-                             <FileText className="h-16 w-16 text-muted-foreground opacity-20 mx-auto mb-4" />
-                             <p className="text-sm font-medium text-muted-foreground">Vista previa generada automáticamente</p>
-                             <p className="text-xs text-muted-foreground mt-2 max-w-xs mx-auto">Si el visor no carga, utiliza el botón superior "Ver en ventana completa" para acceder al material.</p>
-                             <Button variant="outline" size="sm" className="mt-6" onClick={() => handleViewFull(res.url)}>Forzar Apertura</Button>
+                             <FileCode className="h-16 w-16 text-muted-foreground opacity-20 mx-auto mb-4" />
+                             <p className="text-sm font-medium text-muted-foreground">Archivo de sistema ({res.formato.toUpperCase()})</p>
+                             <Button variant="outline" size="sm" className="mt-6" onClick={() => handleViewFull(res.url)}>Forzar Apertura / Descarga</Button>
                           </div>
                         </div>
                       )}
@@ -1305,7 +1324,8 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                       }}
                     />
                     <Upload className="w-6 h-6 text-blue-500" />
-                    <p className="text-sm text-muted-foreground">Arrastra o selecciona un archivo</p>
+                    <p className="text-sm text-muted-foreground text-center">Arrastra tu archivo aquí o <span className="text-blue-500 font-medium">selecciona uno</span></p>
+                    <p className="text-[10px] text-muted-foreground">Soporta PDF, Word, PPTX, Excel, MP4, PNG/JPG</p>
                   </div>
 
                   {uploadedFile && (
