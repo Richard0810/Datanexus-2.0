@@ -35,7 +35,7 @@ async function bootstrap() {
     console.log(`Backend de DataNexus corriendo exitosamente en el puerto: ${port}`);
   } catch (error: any) {
     if (error.code === 'EADDRINUSE') {
-      console.error(`ERROR: El puerto ${port} está ocupado. Intenta cerrar el proceso anterior.`);
+      console.error(`ERROR: El puerto ${port} está ocupado. Intentando liberar puerto.`);
       process.exit(1);
     } else {
       console.error('Error al iniciar el servidor:', error);
