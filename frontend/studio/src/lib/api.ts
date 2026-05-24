@@ -1,8 +1,13 @@
 import axios from 'axios';
 
-// Función robusta para determinar la URL del backend
+// Función robusta para determinar la URL del backend en desarrollo y producción
 const getBackendUrl = () => {
-  // 1. Detectar si estamos en un entorno de Cloud Workstations (Prioridad para desarrollo local)
+  // 1. Prioridad: Variable de entorno explícita (Ideal para Producción en Vercel)
+  if (process.env.NEXT_PUBLIC_BACKEND_URL) {
+    return process.env.NEXT_PUBLIC_BACKEND_URL;
+  }
+
+  // 2. Detección dinámica para Cloud Workstations (Entorno de desarrollo actual)
   if (typeof window !== 'undefined') {
     const hostname = window.location.hostname;
     const protocol = window.location.protocol;
@@ -18,12 +23,7 @@ const getBackendUrl = () => {
     }
   }
 
-  // 2. Si hay una variable de entorno definida (Producción en Vercel)
-  if (process.env.NEXT_PUBLIC_BACKEND_URL) {
-    return process.env.NEXT_PUBLIC_BACKEND_URL;
-  }
-
-  // 3. Fallback por defecto para localhost tradicional
+  // 3. Fallback para localhost tradicional
   return 'http://localhost:3001';
 };
 
@@ -39,18 +39,9 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (!error.response) {
-      console.error('CRITICAL: Error de red o servidor no disponible:', error.message);
+      console.error('Error de red: El backend no responde en ' + getBackendUrl());
       return Promise.reject(error);
     }
-
-    const errorInfo = {
-      url: error.config?.url,
-      method: error.config?.method,
-      status: error.response?.status,
-      data: error.response?.data
-    };
-    
-    console.error('API Error:', `[${errorInfo.method}] ${errorInfo.url} - Status: ${errorInfo.status}`, errorInfo.data);
     return Promise.reject(error);
   }
 );

@@ -12,7 +12,7 @@ async function bootstrap() {
 
   // CORS configurado para producción y desarrollo
   app.enableCors({
-    origin: true, 
+    origin: true, // En producción puedes cambiarlo a tu dominio de Vercel específico
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     credentials: true,
     allowedHeaders: '*',
@@ -27,7 +27,7 @@ async function bootstrap() {
   const documentFactory = () => SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api', app, documentFactory);
 
-  // Puerto asignado dinámicamente o 3001 por defecto
+  // Puerto dinámico para Render/Railway o 3001 por defecto
   const port = process.env.PORT || 3001;
 
   try {
@@ -35,10 +35,10 @@ async function bootstrap() {
     console.log(`Backend de DataNexus corriendo exitosamente en el puerto: ${port}`);
   } catch (error) {
     if (error.code === 'EADDRINUSE') {
-      console.error(`ERROR CRÍTICO: El puerto ${port} está ocupado. Intenta matar el proceso anterior o cambia el puerto en el archivo .env`);
+      console.error(`ERROR: El puerto ${port} está ocupado. Intenta cerrar el proceso anterior.`);
       process.exit(1);
     } else {
-      console.error('Error fatal al iniciar el servidor:', error);
+      console.error('Error al iniciar el servidor:', error);
     }
   }
 }
