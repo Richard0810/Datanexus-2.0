@@ -360,16 +360,27 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
     }
   };
 
-  const handleViewFull = (url: string) => {
+  const handleViewFull = (res: Resource) => {
+    const url = res.url;
     if (!url) return;
     
     if (url.startsWith('data:')) {
       try {
         const parts = url.split(',');
+        let mime = 'application/octet-stream';
         const mimeMatch = parts[0].match(/:(.*?);/);
-        const mime = mimeMatch ? mimeMatch[1] : 'application/octet-stream';
+        if (mimeMatch) {
+          mime = mimeMatch[1];
+        } else {
+          // Fallback para extensiones comunes si falla el regex
+          const ext = res.formato?.toLowerCase();
+          if (ext === 'pptx') mime = 'application/vnd.openxmlformats-officedocument.presentationml.presentation';
+          else if (ext === 'docx') mime = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+          else if (ext === 'xlsx') mime = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+          else if (ext === 'pdf') mime = 'application/pdf';
+        }
+
         const b64Data = parts[1];
-        
         const byteCharacters = atob(b64Data);
         const byteArrays = [];
         
@@ -388,10 +399,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
         window.open(blobUrl, '_blank');
       } catch (e) {
         console.error("Error opening data URI:", e);
-        const newWindow = window.open();
-        if (newWindow) {
-          newWindow.document.write(`<iframe src="${url}" frameborder="0" style="border:0; top:0px; left:0px; bottom:0px; right:0px; width:100%; height:100%;" allowfullscreen></iframe>`);
-        }
+        window.open(url, '_blank');
       }
     } else {
       window.open(url, '_blank');
@@ -742,10 +750,9 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                 const isVideo = isBase64 && res.url.includes('video/');
                 const isImage = isBase64 && res.url.includes('image/');
                 
-                // Nuevas detecciones para Office
-                const isWord = isBase64 && res.url.includes('wordprocessingml');
-                const isPpt = isBase64 && res.url.includes('presentationml');
-                const isExcel = isBase64 && res.url.includes('spreadsheetml');
+                const isWord = isBase64 && (res.url.includes('wordprocessingml') || res.formato?.toLowerCase() === 'docx' || res.formato?.toLowerCase() === 'doc');
+                const isPpt = isBase64 && (res.url.includes('presentationml') || res.formato?.toLowerCase() === 'pptx' || res.formato?.toLowerCase() === 'ppt');
+                const isExcel = isBase64 && (res.url.includes('spreadsheetml') || res.formato?.toLowerCase() === 'xlsx' || res.formato?.toLowerCase() === 'xls');
                 const isOffice = isWord || isPpt || isExcel;
                 
                 return (
@@ -791,10 +798,10 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                             variant="default" 
                             size="sm" 
                             className="h-8 bg-slate-900 hover:bg-slate-800 text-white font-bold"
-                            onClick={() => handleViewFull(res.url)}
+                            onClick={() => handleViewFull(res)}
                           >
                             <ExternalLink className="mr-2 h-3 w-3" />
-                            {isOffice ? "Descargar / Abrir Archivo" : "Ver en ventana completa"}
+                            {isOffice ? "Visualizar Documento" : "Ver en ventana completa"}
                           </Button>
                         )}
                       </div>
@@ -828,28 +835,35 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                             title={res.titulo}
                           />
                           <div className="absolute bottom-4 right-4 md:hidden">
-                             <Button size="sm" onClick={() => handleViewFull(res.url)} className="bg-primary/90">Ampliar PDF</Button>
+                             <Button size="sm" onClick={() => handleViewFull(res)} className="bg-primary/90">Ampliar PDF</Button>
                           </div>
                         </div>
                       ) : isOffice ? (
-                        <div className="rounded-xl border bg-blue-50/30 w-full flex flex-col items-center justify-center p-12 aspect-video text-center">
+                        <div className="rounded-xl border bg-blue-50/30 w-full flex flex-col items-center justify-center p-12 aspect-video text-center border-dashed">
                            <div className="w-20 h-20 rounded-2xl bg-white shadow-sm flex items-center justify-center mb-6">
                               {isPpt ? <Monitor className="h-10 w-10 text-orange-500" /> : isWord ? <FileText className="h-10 w-10 text-blue-600" /> : <Database className="h-10 w-10 text-emerald-600" />}
                            </div>
-                           <h4 className="text-lg font-bold text-slate-800">Documento de Office</h4>
+                           <h4 className="text-lg font-bold text-slate-800">Documento de Productividad</h4>
                            <p className="text-sm text-muted-foreground mt-2 max-w-xs">
-                             Este archivo ({res.formato.toUpperCase()}) debe abrirse en tu equipo para una mejor visualización.
+                             Este archivo ({res.formato.toUpperCase()}) se abrirá con el visor de tu navegador para una experiencia completa.
                            </p>
-                           <Button variant="outline" className="mt-6 bg-white" onClick={() => handleViewFull(res.url)}>
-                              <Download className="mr-2 h-4 w-4" /> Abrir Documento
-                           </Button>
+                           <div className="flex gap-3 mt-6">
+                             <Button variant="outline" className="bg-white shadow-sm" onClick={() => handleViewFull(res)}>
+                                <Eye className="mr-2 h-4 w-4" /> Abrir Visor
+                             </Button>
+                             <Button variant="secondary" className="shadow-sm" asChild>
+                                <a href={res.url} download={`${res.titulo}.${res.formato}`}>
+                                   <Download className="mr-2 h-4 w-4" /> Descargar
+                                </a>
+                             </Button>
+                           </div>
                         </div>
                       ) : (
                         <div className="rounded-xl border border-dashed bg-muted/30 w-full flex items-center justify-center p-12 aspect-video">
                           <div className="text-center">
                              <FileCode className="h-16 w-16 text-muted-foreground opacity-20 mx-auto mb-4" />
                              <p className="text-sm font-medium text-muted-foreground">Archivo de sistema ({res.formato.toUpperCase()})</p>
-                             <Button variant="outline" size="sm" className="mt-6" onClick={() => handleViewFull(res.url)}>Forzar Apertura / Descarga</Button>
+                             <Button variant="outline" size="sm" className="mt-6" onClick={() => handleViewFull(res)}>Forzar Apertura / Descarga</Button>
                           </div>
                         </div>
                       )}
