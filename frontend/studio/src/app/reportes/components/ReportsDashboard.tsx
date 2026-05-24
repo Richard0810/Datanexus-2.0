@@ -4,7 +4,7 @@ import { useEffect, useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { FileDown, ListChecks, Loader2, Trophy, AlertCircle, Users } from "lucide-react";
+import { FileDown, ListChecks, Loader2, Trophy, AlertCircle, Users, Trash2, Eraser } from "lucide-react";
 import { Bar, BarChart as RechartsBarChart, CartesianGrid, XAxis, YAxis, Tooltip, Legend } from "recharts";
 import { ChartConfig, ChartContainer, ChartTooltipContent } from "@/components/ui/chart";
 import api from "@/lib/api";
@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { format, isValid } from "date-fns";
 import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
 
 interface Submission {
   _id: string;
@@ -28,36 +29,73 @@ interface Submission {
 
 export function ReportsDashboard() {
   const { user } = useAuth();
+  const { toast } = useToast();
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   const userRole = user?.role?.trim().toLowerCase();
   const isAdmin = userRole === 'admin' || userRole === 'administrador';
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        const response = await api.get("/performance-reports");
-        // Si no es admin, filtramos solo sus propios reportes
-        // Si es admin, mostramos TODO lo que hay en MongoDB
-        const data = response.data.filter((sub: any) => 
-          isAdmin ? true : sub.usuarioEmail === user?.email
-        );
-        setSubmissions(data);
-      } catch (error) {
-        console.error("Error fetching performance reports:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      const response = await api.get("/performance-reports");
+      const data = response.data.filter((sub: any) => 
+        isAdmin ? true : sub.usuarioEmail === user?.email
+      );
+      setSubmissions(data);
+    } catch (error) {
+      console.error("Error fetching performance reports:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     if (user) {
       fetchData();
     }
   }, [user, isAdmin]);
 
-  // Procesamos los datos para la gráfica: Promedio de puntaje por módulo
+  const handleDelete = async (id: string) => {
+    if (!window.confirm("¿Seguro que quieres eliminar este registro permanentemente?")) return;
+    
+    setIsProcessing(true);
+    try {
+      await api.delete(`/performance-reports/${id}`);
+      setSubmissions(prev => prev.filter(s => s._id !== id));
+      toast({ title: "Registro eliminado con éxito" });
+    } catch (e) {
+      toast({ title: "Error al eliminar", variant: "destructive" });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleClearNonGraded = async () => {
+    const nonGraded = submissions.filter(s => s.estado !== 'calificado');
+    if (nonGraded.length === 0) {
+      toast({ title: "No hay registros pendientes de limpieza" });
+      return;
+    }
+    
+    if (!window.confirm(`¿Estás seguro de eliminar los ${nonGraded.length} registros que NO están calificados? Esta acción limpiará tu base de datos.`)) return;
+    
+    setIsProcessing(true);
+    try {
+      for (const sub of nonGraded) {
+        await api.delete(`/performance-reports/${sub._id}`);
+      }
+      toast({ title: "Limpieza completada", description: "Se han mantenido solo los registros calificados." });
+      fetchData();
+    } catch (e) {
+      toast({ title: "Error durante la limpieza", variant: "destructive" });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   const chartData = useMemo(() => {
     const modules: Record<string, { total: number; count: number }> = {};
     
@@ -88,7 +126,6 @@ export function ReportsDashboard() {
     },
   } satisfies ChartConfig;
 
-  // Función para formatear fechas de forma segura
   const safeFormatDate = (dateStr: string) => {
     if (!dateStr) return "S/F";
     const date = new Date(dateStr);
@@ -115,7 +152,7 @@ export function ReportsDashboard() {
             </CardTitle>
             <CardDescription>
               {isAdmin 
-                ? "Rendimiento general de todos los estudiantes registrados." 
+                ? "Rendimiento general basado en registros calificados." 
                 : "Tu desempeño académico basado en actividades calificadas."}
             </CardDescription>
           </CardHeader>
@@ -187,12 +224,26 @@ export function ReportsDashboard() {
       </div>
 
       <Card className="shadow-md border-none overflow-hidden rounded-[2rem]">
-        <CardHeader className="bg-slate-50 border-b px-8 py-6">
-          <CardTitle className="flex items-center gap-3">
-            <ListChecks className="h-6 w-6 text-primary" />
-            {isAdmin ? "Registro Global de Actividades" : "Mi Historial de Actividades"}
-          </CardTitle>
-          <CardDescription>Visualizando todos los registros encontrados en el servidor.</CardDescription>
+        <CardHeader className="bg-slate-50 border-b px-8 py-6 flex flex-row items-center justify-between gap-4 flex-wrap">
+          <div className="space-y-1">
+            <CardTitle className="flex items-center gap-3">
+              <ListChecks className="h-6 w-6 text-primary" />
+              {isAdmin ? "Registro Global de Actividades" : "Mi Historial de Actividades"}
+            </CardTitle>
+            <CardDescription>Visualizando registros encontrados en el servidor.</CardDescription>
+          </div>
+          {isAdmin && (
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="text-destructive hover:bg-destructive/10 border-destructive/20"
+              onClick={handleClearNonGraded}
+              disabled={isProcessing}
+            >
+              {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Eraser className="mr-2 h-4 w-4" />}
+              Limpiar registros no calificados
+            </Button>
+          )}
         </CardHeader>
         <CardContent className="p-0">
           <Table>
@@ -203,7 +254,8 @@ export function ReportsDashboard() {
                 <TableHead>Módulo</TableHead>
                 <TableHead>Contenido / Tarea</TableHead>
                 <TableHead>Calificación</TableHead>
-                <TableHead className="px-8">Estado</TableHead>
+                <TableHead>Estado</TableHead>
+                {isAdmin && <TableHead className="px-8 text-right">Acciones</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -242,7 +294,7 @@ export function ReportsDashboard() {
                        <span className="text-slate-300 italic text-xs">Pendiente</span>
                      )}
                   </TableCell>
-                  <TableCell className="px-8">
+                  <TableCell>
                      <Badge 
                        className={cn(
                          "rounded-full px-3 text-[10px] font-bold border-none",
@@ -252,11 +304,24 @@ export function ReportsDashboard() {
                       {(sub.estado || 'enviado').toUpperCase()}
                     </Badge>
                   </TableCell>
+                  {isAdmin && (
+                    <TableCell className="px-8 text-right">
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-8 w-8 text-destructive hover:bg-destructive/10"
+                        onClick={() => handleDelete(sub._id)}
+                        disabled={isProcessing}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
+                  )}
                 </TableRow>
               ))}
               {submissions.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={isAdmin ? 6 : 5} className="text-center py-20 text-muted-foreground italic">
+                  <TableCell colSpan={isAdmin ? 7 : 5} className="text-center py-20 text-muted-foreground italic">
                     No hay registros en la base de datos para mostrar.
                   </TableCell>
                 </TableRow>
