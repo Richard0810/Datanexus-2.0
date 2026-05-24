@@ -26,18 +26,15 @@ import {
   MessageSquare,
   GraduationCap as GradeIcon,
   Save,
-  FileCode,
-  Download,
-  FileUp,
+  Link2,
   Bold,
   Italic,
   Underline,
   AlignLeft,
   AlignCenter,
   AlignRight,
-  CheckSquare,
-  ExternalLink,
-  Link2,
+  Download,
+  FileUp,
   Plus,
   PlayCircle,
   BookOpen,
@@ -196,7 +193,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
   const editorRef = useRef<HTMLDivElement>(null);
   const [attachedFile, setAttachedFile] = useState<{ name: string, data: string } | null>(null);
   
-  // Nuevos estados para la gestión de recursos moderna
+  // Nuevos estados para la gestión de recursos avanzada
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [sourceTab, setSourceTab] = useState<"url" | "file">("url");
   const [isDragging, setIsDragging] = useState(false);
@@ -228,7 +225,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
     respuestaCorrecta: ""
   });
 
-  const getObjectId = (item: any): string => {
+  const getResourceId = (item: any): string => {
     if (!item) return '';
     if (item._id) {
       if (typeof item._id === 'string') return item._id;
@@ -300,7 +297,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
     setIsProcessing(true);
 
     try {
-      const resourceId = getObjectId(editingResource);
+      const resourceId = getResourceId(editingResource);
 
       if (uploadedFile && sourceTab === "file") {
         const formData = new FormData();
@@ -344,12 +341,9 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
     if (!activityForm.titulo) return;
     setIsProcessing(true);
     try {
-      const activityId = getObjectId(editingActivity);
-      if (activityId) {
-        await api.patch(`/activities/${activityId}`, activityForm);
-      } else {
-        await api.post("/activities", activityForm);
-      }
+      const activityId = getResourceId(editingActivity);
+      if (activityId) await api.patch(`/activities/${activityId}`, activityForm);
+      else await api.post("/activities", activityForm);
       setIsActivityDialogOpen(false);
       fetchData();
       toast({ title: "Actividad guardada" });
@@ -485,20 +479,9 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
 
   const handleSaveGrade = async () => {
     if (!selectedSubmission) return;
-    
-    if (gradingForm.puntaje > 5) {
-      toast({ title: "Puntaje inválido", description: "La calificación máxima permitida es 5.", variant: "destructive" });
-      return;
-    }
-    if (gradingForm.puntaje < 0) {
-      toast({ title: "Puntaje inválido", description: "La calificación mínima permitida es 0.", variant: "destructive" });
-      return;
-    }
-
+    const clampedScore = Math.min(5, Math.max(0, Number(gradingForm.puntaje) || 0));
     setIsProcessing(true);
     try {
-      const clampedScore = Math.min(5, Math.max(0, gradingForm.puntaje));
-      
       await api.patch(`/performance-reports/${selectedSubmission._id}`, {
         ...gradingForm,
         puntaje: clampedScore,
@@ -506,7 +489,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
       });
       setIsGradingDialogOpen(false);
       fetchData();
-      toast({ title: "Calificación guardada", description: "El estudiante podrá ver su nota pronto." });
+      toast({ title: "Calificación guardada" });
     } catch (error) {
       toast({ title: "Error al calificar", variant: "destructive" });
     } finally {
@@ -516,7 +499,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
 
   const handleAddQuestion = () => {
     if (!currentQuestion.texto) {
-      toast({ title: "Atención", description: "Escribe el enunciado de la pregunta.", variant: "destructive" });
+      toast({ title: "Atención", description: "Escribe el enunciado.", variant: "destructive" });
       return;
     }
     setAssessmentForm({
@@ -549,7 +532,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
     if (!assessmentForm.titulo || assessmentForm.preguntas.length === 0) return;
     setIsProcessing(true);
     try {
-      const assessmentId = getObjectId(editingAssessment);
+      const assessmentId = getResourceId(editingAssessment);
       if (assessmentId) await api.patch(`/assessments/${assessmentId}`, assessmentForm);
       else await api.post("/assessments", assessmentForm);
       setIsAssessmentDialogOpen(false);
@@ -606,35 +589,26 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
     return url;
   };
 
-  const handleViewFull = (res: Resource) => {
-    const url = res.url;
-    if (!url) return;
-    window.open(url, '_blank');
-  };
-
   const formatSubmissionDetail = (detail: string) => {
     try {
       const parsed = JSON.parse(detail);
-      
       if (parsed.text !== undefined) {
           return (
               <div className="space-y-6">
                   <div className="p-5 border rounded-xl bg-background shadow-sm">
-                      <p className="text-[10px] font-bold text-muted-foreground uppercase mb-4 tracking-widest">Respuesta del Estudiante:</p>
+                      <p className="text-xs font-bold text-muted-foreground uppercase mb-4 tracking-widest">Respuesta del Estudiante:</p>
                       <div className="prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: parsed.text }} />
                   </div>
                   {parsed.file && (
-                      <div className="flex items-center justify-between p-4 bg-primary/5 border border-primary/20 rounded-xl shadow-sm">
+                      <div className="flex items-center justify-between p-4 bg-primary/5 border border-primary/20 rounded-xl">
                           <div className="flex items-center gap-3">
-                              <div className="p-3 bg-white rounded-lg shadow-inner">
-                                <FileText className="h-8 w-8 text-primary" />
-                              </div>
+                              <FileText className="h-8 w-8 text-primary" />
                               <div>
                                   <p className="font-bold text-sm">{parsed.file.name}</p>
-                                  <p className="text-[10px] text-muted-foreground uppercase">Documento adjunto para calificar</p>
+                                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Documento adjunto</p>
                               </div>
                           </div>
-                          <Button asChild variant="default" className="bg-slate-900" size="sm">
+                          <Button asChild variant="default" size="sm" className="bg-slate-900">
                               <a href={parsed.file.data} download={parsed.file.name}>
                                   <Download className="mr-2 h-4 w-4" /> Descargar
                               </a>
@@ -644,13 +618,14 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
               </div>
           );
       }
-      
       if (Array.isArray(parsed)) {
         return (
           <div className="space-y-4">
             {parsed.map((item: any, idx) => (
               <div key={idx} className="p-3 bg-muted rounded-lg border-l-4 border-primary">
-                <p className="text-sm font-bold text-primary mb-1">{item.pregunta || `Pregunta ${idx + 1}`}</p>
+                <p className="text-sm font-bold text-primary mb-1">
+                  {item.pregunta || `Pregunta ${idx + 1}`}
+                </p>
                 <p className="text-sm">{String(item.respuesta)}</p>
               </div>
             ))}
@@ -669,7 +644,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-3xl font-headline font-bold">{moduleInfo.title}</h1>
-              {isAdmin && <Badge className="bg-primary/20 text-primary border-primary/30">Modo Docente</Badge>}
+              {isAdmin && <Badge className="bg-primary/20 text-primary border-primary/30 font-bold uppercase tracking-widest text-[9px]">Modo Docente</Badge>}
             </div>
             <p className="text-muted-foreground mt-1 flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-primary" />{moduleInfo.objective}</p>
           </div>
@@ -702,7 +677,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
           {loading ? <div className="py-20 flex justify-center"><Loader2 className="animate-spin" /></div> : resources.length > 0 ? (
             <div className="grid grid-cols-1 gap-8">
               {resources.map((res) => {
-                const resId = getObjectId(res);
+                const resId = getResourceId(res);
                 return (
                   <Card key={resId} className="overflow-hidden group relative shadow-md">
                     {isAdmin && (
@@ -720,12 +695,12 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                       <div className="flex justify-between items-start mb-2">
                          <div className="flex items-center gap-2">
                            {res.tipo === "video" ? <Video className="h-4 w-4 text-red-500" /> : <FileText className="h-4 w-4 text-blue-500" />}
-                           <Badge variant="outline" className="uppercase">{res.tipo}</Badge>
+                           <Badge variant="outline" className="uppercase tracking-widest text-[9px] font-bold">{res.tipo}</Badge>
                          </div>
-                         <Button size="sm" className="bg-slate-900 text-white" onClick={() => handleViewFull(res)}>Ver Pantalla Completa</Button>
+                         <Button size="sm" className="bg-slate-900 text-white font-bold" onClick={() => window.open(res.url, '_blank')}>Ver Completo</Button>
                       </div>
-                      <CardTitle className="text-2xl">{res.titulo}</CardTitle>
-                      <CardDescription className="text-base">{res.descripcion}</CardDescription>
+                      <CardTitle className="text-2xl font-bold">{res.titulo}</CardTitle>
+                      <CardDescription className="text-base leading-relaxed">{res.descripcion}</CardDescription>
                     </CardHeader>
                     <CardContent>
                       <div className="aspect-video rounded-xl overflow-hidden bg-black border shadow-inner">
@@ -755,7 +730,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {activities.map((act) => {
-              const actId = getObjectId(act);
+              const actId = getResourceId(act);
               const userSub = submissions.find(s => s.tituloContenido === act.titulo && s.usuarioEmail === user?.email);
               
               return (
@@ -767,24 +742,22 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                     </div>
                   )}
                   <CardHeader>
-                    <div className="flex justify-between items-start">
-                      <div className="flex gap-2">
-                        <Badge variant="secondary">{act.tipo.toUpperCase()}</Badge>
-                        {userSub && (
-                          <Badge variant="default" className={cn(userSub.estado === 'calificado' ? 'bg-green-500' : 'bg-blue-500')}>
-                            {userSub.estado === 'calificado' ? 'CALIFICADO' : 'ENTREGADO'}
-                          </Badge>
-                        )}
-                      </div>
+                    <div className="flex gap-2">
+                      <Badge variant="secondary" className="uppercase tracking-widest text-[9px] font-bold">{act.tipo}</Badge>
+                      {userSub && (
+                        <Badge variant="default" className={cn("text-[9px] font-bold tracking-widest", userSub.estado === 'calificado' ? 'bg-green-500' : 'bg-blue-500')}>
+                          {userSub.estado === 'calificado' ? 'CALIFICADO' : 'ENTREGADO'}
+                        </Badge>
+                      )}
                     </div>
-                    <CardTitle className="mt-2">{act.titulo}</CardTitle>
-                    <CardDescription>{act.descripcion}</CardDescription>
+                    <CardTitle className="mt-2 text-xl font-bold">{act.titulo}</CardTitle>
+                    <CardDescription className="line-clamp-2">{act.descripcion}</CardDescription>
                   </CardHeader>
                   <CardContent className="flex-1 space-y-4">
                     <Separator />
                     <p className="text-sm"><strong>Criterios:</strong> {act.criterios_evaluacion}</p>
                     {act.archivoUrl && (
-                      <Button asChild variant="outline" size="sm" className="w-full">
+                      <Button asChild variant="outline" size="sm" className="w-full rounded-xl">
                         <a href={getEmbedUrl(act.archivoUrl)} target="_blank" rel="noopener noreferrer">
                           <Link2 className="mr-2 h-4 w-4" /> Ver Material de Referencia
                         </a>
@@ -793,13 +766,13 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                   </CardContent>
                   <CardFooter className="flex flex-col gap-2">
                     {!isAdmin && !userSub && (
-                      <Button variant="default" className="w-full bg-accent hover:bg-accent/90" onClick={() => { setSelectedActivity(act); setEditingSubmissionId(null); setAttachedFile(null); setIsSubmitActivityOpen(true); }}><Upload className="mr-2 h-4 w-4" /> Entregar Tarea</Button>
+                      <Button variant="default" className="w-full bg-accent hover:bg-accent/90 h-12 font-bold rounded-xl" onClick={() => { setSelectedActivity(act); setEditingSubmissionId(null); setAttachedFile(null); setIsSubmitActivityOpen(true); }}><Upload className="mr-2 h-4 w-4" /> Entregar Tarea</Button>
                     )}
                     {!isAdmin && userSub && (
                       <div className="grid grid-cols-3 gap-2 w-full">
-                        <Button variant="outline" size="sm" onClick={() => { setSelectedSubmission(userSub); setIsViewOwnSubmissionOpen(true); }}><Eye className="mr-1 h-3 w-3" /> Ver</Button>
-                        <Button variant="outline" size="sm" disabled={userSub.estado === 'calificado'} onClick={() => handleOpenEditSubmission(userSub, act)}><Pencil className="mr-1 h-3 w-3" /> Editar</Button>
-                        <Button variant="outline" size="sm" className="text-destructive" disabled={userSub.estado === 'calificado'} onClick={() => handleDeleteSubmission(userSub._id)}><Trash2 className="mr-1 h-3 w-3" /> Borrar</Button>
+                        <Button variant="outline" size="sm" className="rounded-xl font-bold" onClick={() => { setSelectedSubmission(userSub); setIsViewOwnSubmissionOpen(true); }}><Eye className="mr-1 h-3 w-3" /> Ver</Button>
+                        <Button variant="outline" size="sm" className="rounded-xl font-bold" disabled={userSub.estado === 'calificado'} onClick={() => handleOpenEditSubmission(userSub, act)}><Pencil className="mr-1 h-3 w-3" /> Editar</Button>
+                        <Button variant="outline" size="sm" className="text-destructive rounded-xl font-bold" disabled={userSub.estado === 'calificado'} onClick={async () => { if(confirm('¿Borrar entrega?')) { await api.delete(`/performance-reports/${userSub._id}`); fetchData(); } }}><Trash2 className="mr-1 h-3 w-3" /> Borrar</Button>
                       </div>
                     )}
                     {userSub?.recomendaciones && (
@@ -822,11 +795,11 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {assessments.map((ass) => {
-              const assId = getObjectId(ass);
+              const assId = getResourceId(ass);
               const userSub = submissions.find(s => s.tituloContenido === ass.titulo && s.usuarioEmail === user?.email);
               
               return (
-                <Card key={assId} className="hover:border-primary transition-all cursor-pointer group shadow-md relative" onClick={() => { setEditingAssessment(ass); setAssessmentForm(ass); setViewMode(isAdmin ? 'edit' : 'preview'); handleResetPreview(); setIsAssessmentDialogOpen(true); }}>
+                <Card key={assId} className="hover:border-primary transition-all cursor-pointer group shadow-md relative rounded-2xl" onClick={() => { setEditingAssessment(ass); setAssessmentForm(ass); setViewMode(isAdmin ? 'edit' : 'preview'); handleResetPreview(); setIsAssessmentDialogOpen(true); }}>
                   {isAdmin && (
                     <div className="absolute top-2 right-2 flex gap-1 z-10">
                       <Button variant="default" size="icon" className="h-8 w-8 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-md" onClick={(e) => { e.stopPropagation(); setEditingAssessment(ass); setAssessmentForm(ass); setViewMode('edit'); setIsAssessmentDialogOpen(true); }}><Pencil className="h-3 w-3" /></Button>
@@ -835,18 +808,18 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                   )}
                   <CardHeader>
                     <div className="flex justify-between items-center mb-1">
-                        <CardTitle className="text-lg">{ass.titulo}</CardTitle>
-                        {userSub && <Badge className="bg-green-500">Realizado</Badge>}
+                        <CardTitle className="text-lg font-bold">{ass.titulo}</CardTitle>
+                        {userSub && <Badge className="bg-green-500 font-bold uppercase text-[9px] tracking-widest">Realizado</Badge>}
                     </div>
-                    <CardDescription className="line-clamp-2">{ass.descripcion}</CardDescription>
+                    <CardDescription className="line-clamp-2 leading-relaxed">{ass.descripcion}</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-sm text-muted-foreground flex items-center gap-2 mb-2"><HelpCircle className="h-4 w-4" /> {ass.preguntas?.length || 0} Preguntas</div>
+                    <div className="text-sm text-muted-foreground flex items-center gap-2 mb-2"><HelpCircle className="h-4 w-4" /> {ass.preguntas.length} Preguntas</div>
                     {userSub && userSub.puntaje !== undefined && (
                         <div className="text-xs font-bold text-primary">Nota Final: {Number(userSub.puntaje).toFixed(1)}/5.0</div>
                     )}
                   </CardContent>
-                  <CardFooter><Button className="w-full" variant={userSub ? "secondary" : "default"}>{userSub ? "Ver Resultados" : "Empezar Test"}</Button></CardFooter>
+                  <CardFooter><Button className="w-full rounded-xl font-bold h-10" variant={userSub ? "secondary" : "default"}>{userSub ? "Ver Resultados" : "Empezar Test"}</Button></CardFooter>
                 </Card>
               );
             })}
@@ -857,19 +830,19 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
           <TabsContent value="seguimiento" className="space-y-6">
             <Card className="shadow-md overflow-hidden border-none rounded-2xl">
               <CardHeader className="bg-slate-50 border-b">
-                <CardTitle className="flex items-center gap-2"><History className="h-5 w-5 text-primary" /> Panel de Seguimiento</CardTitle>
+                <CardTitle className="flex items-center gap-2 font-bold"><History className="h-5 w-5 text-primary" /> Panel de Seguimiento</CardTitle>
                 <CardDescription>Revisa y califica el desempeño de tus estudiantes en este módulo.</CardDescription>
               </CardHeader>
               <CardContent className="p-0">
                 <Table>
                   <TableHeader className="bg-slate-50">
                     <TableRow>
-                      <TableHead className="px-6">Estudiante</TableHead>
-                      <TableHead>Tipo</TableHead>
-                      <TableHead>Contenido</TableHead>
-                      <TableHead>Puntaje</TableHead>
-                      <TableHead>Estado</TableHead>
-                      <TableHead className="text-right px-6">Acción</TableHead>
+                      <TableHead className="px-6 font-bold uppercase tracking-widest text-[10px]">Estudiante</TableHead>
+                      <TableHead className="font-bold uppercase tracking-widest text-[10px]">Tipo</TableHead>
+                      <TableHead className="font-bold uppercase tracking-widest text-[10px]">Contenido</TableHead>
+                      <TableHead className="font-bold uppercase tracking-widest text-[10px]">Puntaje</TableHead>
+                      <TableHead className="font-bold uppercase tracking-widest text-[10px]">Estado</TableHead>
+                      <TableHead className="text-right px-6 font-bold uppercase tracking-widest text-[10px]">Acción</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -881,7 +854,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                             <span className="text-[10px] text-muted-foreground">{sub.usuarioEmail}</span>
                           </div>
                         </TableCell>
-                        <TableCell><Badge variant="outline" className="text-[10px]">{sub.tipoEnvio.toUpperCase()}</Badge></TableCell>
+                        <TableCell><Badge variant="outline" className="text-[9px] font-bold tracking-widest">{sub.tipoEnvio.toUpperCase()}</Badge></TableCell>
                         <TableCell className="max-w-[200px] truncate text-xs font-semibold">{sub.tituloContenido}</TableCell>
                         <TableCell>
                           {sub.puntaje !== undefined ? (
@@ -891,12 +864,12 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                           ) : <span className="text-slate-300 italic text-[10px]">Pendiente</span>}
                         </TableCell>
                         <TableCell>
-                          <Badge variant={sub.estado === "calificado" ? "default" : "secondary"} className="text-[10px]">
+                          <Badge variant={sub.estado === "calificado" ? "default" : "secondary"} className="text-[9px] font-bold tracking-widest">
                             {sub.estado.toUpperCase()}
                           </Badge>
                         </TableCell>
                         <TableCell className="text-right px-6">
-                          <Button variant="outline" size="sm" onClick={() => handleOpenGrading(sub)}>
+                          <Button variant="outline" size="sm" className="rounded-xl font-bold text-xs" onClick={() => handleOpenGrading(sub)}>
                             <GradeIcon className="mr-2 h-4 w-4" /> {sub.estado === "calificado" ? "Ver" : "Calificar"}
                           </Button>
                         </TableCell>
@@ -911,30 +884,33 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
         )}
       </Tabs>
 
-      {/* DIÁLOGOS DE GESTIÓN (RECURSOS MODERNO) */}
-      <Dialog open={isResourceDialogOpen} onOpenChange={(open) => { 
-        setIsResourceDialogOpen(open); 
-        if (!open) { setUploadedFile(null); setSourceTab("url"); } 
-      }}>
-        <DialogContent className="sm:max-w-[600px] p-0 overflow-hidden rounded-2xl">
-          {/* Header */}
-          <div className="bg-[#1a2744] px-6 py-5 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-lg bg-blue-500/20 flex items-center justify-center">
-                <Plus className="w-5 h-5 text-blue-400" />
-              </div>
-              <div>
-                <DialogTitle className="text-white text-base font-medium">
-                  {editingResource ? "Editar recurso" : "Nuevo recurso"}
-                </DialogTitle>
-                <p className="text-slate-400 text-xs mt-0.5">
-                  {moduleInfo.title}
-                </p>
-              </div>
-            </div>
+      {/* DIÁLOGO DE RECURSOS (NUEVO DISEÑO RESTAURADO) */}
+      <Dialog 
+        open={isResourceDialogOpen} 
+        onOpenChange={(open) => { 
+          setIsResourceDialogOpen(open); 
+          if (!open) { setUploadedFile(null); setSourceTab("url"); } 
+        }} 
+      > 
+        <DialogContent className="sm:max-w-[600px] p-0 overflow-hidden rounded-2xl"> 
+          {/* Header */} 
+          <div className="bg-[#1a2744] px-6 py-5 flex items-center justify-between"> 
+            <div className="flex items-center gap-3"> 
+              <div className="w-9 h-9 rounded-lg bg-blue-500/20 flex items-center justify-center"> 
+                <Plus className="w-5 h-5 text-blue-400" /> 
+              </div> 
+              <div> 
+                <DialogTitle className="text-white text-base font-medium"> 
+                  {editingResource ? "Editar recurso" : "Nuevo recurso"} 
+                </DialogTitle> 
+                <p className="text-slate-400 text-xs mt-0.5 uppercase tracking-widest font-bold"> 
+                  Módulo {id} 
+                </p> 
+              </div> 
+            </div> 
           </div>
 
-          {/* Body - Auto-ajustable con scroll interno */}
+          {/* Body - Auto-ajustable para móviles */}
           <div className="p-6 flex flex-col gap-5 max-h-[60vh] overflow-y-auto">
             {/* Título */}
             <div className="flex flex-col gap-1.5">
@@ -943,12 +919,14 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
               </Label>
               <Input
                 value={resourceForm.titulo}
-                onChange={(e) => setResourceForm({ ...resourceForm, titulo: e.target.value })}
+                onChange={(e) =>
+                  setResourceForm({ ...resourceForm, titulo: e.target.value })
+                }
                 placeholder="Ej: Introducción a SQL"
                 maxLength={80}
                 className="focus-visible:ring-blue-500 rounded-xl"
               />
-              <span className="text-xs text-muted-foreground text-right">
+              <span className="text-[10px] text-muted-foreground text-right uppercase font-bold">
                 {resourceForm.titulo.length}/80
               </span>
             </div>
@@ -960,7 +938,9 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
               </Label>
               <Textarea
                 value={resourceForm.descripcion}
-                onChange={(e) => setResourceForm({ ...resourceForm, descripcion: e.target.value })}
+                onChange={(e) =>
+                  setResourceForm({ ...resourceForm, descripcion: e.target.value })
+                }
                 placeholder="Breve descripción del recurso..."
                 className="resize-none min-h-[80px] focus-visible:ring-blue-500 rounded-xl"
               />
@@ -983,15 +963,18 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                   <button
                     key={value}
                     type="button"
-                    onClick={() => setResourceForm({ ...resourceForm, tipo: value })}
+                    onClick={() =>
+                      setResourceForm({ ...resourceForm, tipo: value })
+                    }
                     className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border transition-all text-sm
-                      ${resourceForm.tipo === value
-                        ? "border-blue-500 bg-blue-500/10 text-blue-600"
-                        : "border-border bg-muted/40 text-muted-foreground hover:border-blue-400 hover:bg-blue-500/5"
+                      ${
+                        resourceForm.tipo === value
+                          ? "border-blue-500 bg-blue-500/10 text-blue-600"
+                          : "border-border bg-muted/40 text-muted-foreground hover:border-blue-400 hover:bg-blue-500/5"
                       }`}
                   >
                     <Icon className="w-5 h-5" />
-                    <span className="text-[10px] font-bold uppercase">{label}</span>
+                    <span className="text-[10px] font-bold uppercase tracking-wider">{label}</span>
                   </button>
                 ))}
               </div>
@@ -1032,7 +1015,9 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
               {sourceTab === "url" ? (
                 <Input
                   value={resourceForm.url}
-                  onChange={(e) => setResourceForm({ ...resourceForm, url: e.target.value })}
+                  onChange={(e) =>
+                    setResourceForm({ ...resourceForm, url: e.target.value })
+                  }
                   placeholder="https://..."
                   className="focus-visible:ring-blue-500 rounded-xl"
                 />
@@ -1051,7 +1036,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                     className={`border-2 border-dashed rounded-2xl p-6 flex flex-col items-center justify-center gap-2 cursor-pointer transition-all
                       ${isDragging
                         ? "border-blue-500 bg-blue-500/5"
-                        : "border-slate-200 hover:border-blue-400 hover:bg-blue-500/5"
+                        : "border-border hover:border-blue-400 hover:bg-blue-500/5"
                       }`}
                   >
                     <input
@@ -1066,10 +1051,11 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                     />
                     <Upload className="w-7 h-7 text-blue-500" />
                     <p className="text-sm text-muted-foreground text-center">
-                      Arrastra tu archivo aquí o <span className="text-blue-500 font-medium">selecciona uno</span>
+                      Arrastra tu archivo aquí o{" "}
+                      <span className="text-blue-500 font-medium">selecciona uno</span>
                     </p>
-                    <span className="text-[10px] text-muted-foreground uppercase tracking-widest">
-                      PDF, Word, MP4 · máx. 50 MB
+                    <span className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold">
+                      PDF, Word, PPT, MP4 · máx. 50 MB
                     </span>
                   </div>
 
@@ -1080,7 +1066,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-xs font-bold truncate">{uploadedFile.name}</p>
-                        <p className="text-[10px] text-muted-foreground">
+                        <p className="text-[10px] text-muted-foreground font-medium">
                           {formatFileSize(uploadedFile.size)}
                         </p>
                       </div>
@@ -1125,92 +1111,94 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
               )}
             </Button>
           </div>
-        </DialogContent>
+        </DialogContent> 
       </Dialog>
 
       {/* DIÁLOGOS DE REVISIÓN */}
       <Dialog open={isGradingDialogOpen} onOpenChange={setIsGradingDialogOpen}>
-        <DialogContent className="sm:max-w-[800px] max-h-[85vh] overflow-hidden flex flex-col rounded-[2rem]">
+        <DialogContent className="sm:max-w-[800px] max-h-[85vh] overflow-hidden flex flex-col rounded-2xl">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2"><GradeIcon className="h-5 w-5 text-primary" /> Revisión Pedagógica</DialogTitle>
-            <DialogDescription>Calificando a: <strong>{selectedSubmission?.usuarioNombre}</strong></DialogDescription>
+            <DialogTitle className="flex items-center gap-2"><GradeIcon className="h-5 w-5 text-primary" /> Revisión de Entrega</DialogTitle>
+            <DialogDescription>Viendo el trabajo de <strong>{selectedSubmission?.usuarioNombre}</strong> para "{selectedSubmission?.tituloContenido}"</DialogDescription>
           </DialogHeader>
           <div className="flex-1 overflow-y-auto pr-2 py-4 space-y-6">
             <div className="space-y-2">
-              <Label className="text-xs uppercase font-bold text-primary tracking-widest">Contenido de la Entrega:</Label>
+              <Label className="text-xs uppercase text-muted-foreground font-bold tracking-widest">Contenido de la Entrega:</Label>
               {selectedSubmission && formatSubmissionDetail(selectedSubmission.detalleEnvio)}
             </div>
             <Separator />
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="md:col-span-1 space-y-3">
-                <Label htmlFor="puntaje" className="flex items-center gap-2 font-bold">Puntaje (0-5.0) <Trophy className="h-3 w-3 text-amber-500" /></Label>
-                <Input id="puntaje" type="number" min={0} max={5} step={0.1} value={gradingForm.puntaje} onChange={e => { const val = Number(e.target.value); if (val <= 5) setGradingForm({...gradingForm, puntaje: val}); }} className="rounded-xl h-12 text-lg font-bold" />
-                <p className="text-[10px] text-muted-foreground italic">Nota: 3.5 es el mínimo aprobatorio.</p>
+                <Label htmlFor="puntaje" className="flex items-center gap-2 font-bold">Puntaje (0-5) <Trophy className="h-3 w-3 text-yellow-500" /></Label>
+                <Input id="puntaje" type="number" min={0} max={5} step={0.1} value={gradingForm.puntaje} onChange={e => { const val = Number(e.target.value); if (val <= 5) setGradingForm({...gradingForm, puntaje: val}); }} className="rounded-xl" />
               </div>
               <div className="md:col-span-2 space-y-3">
-                <Label htmlFor="recomendaciones" className="font-bold">Observaciones y Retroalimentación</Label>
-                <Textarea id="recomendaciones" placeholder="Escribe aquí tus recomendaciones para el estudiante..." value={gradingForm.recomendaciones} onChange={e => setGradingForm({...gradingForm, recomendaciones: e.target.value})} rows={4} className="rounded-xl" />
+                <Label htmlFor="recomendaciones" className="font-bold">Recomendaciones y Retroalimentación</Label>
+                <Textarea id="recomendaciones" placeholder="Escribe tus observaciones para el estudiante..." value={gradingForm.recomendaciones} onChange={e => setGradingForm({...gradingForm, recomendaciones: e.target.value})} rows={4} className="rounded-xl" />
               </div>
             </div>
           </div>
-          <DialogFooter className="border-t pt-4">
-            <Button variant="outline" onClick={() => setIsGradingDialogOpen(false)} className="rounded-xl">Cancelar</Button>
-            {isAdmin && (
-                <Button onClick={handleSaveGrade} disabled={isProcessing} className="bg-primary px-8 rounded-xl font-bold shadow-lg shadow-primary/20">
-                    {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                    Guardar Calificación
-                </Button>
-            )}
+          <DialogFooter className="mt-2 border-t pt-4">
+            <Button variant="outline" onClick={() => setIsGradingDialogOpen(false)} className="rounded-xl">Cerrar</Button>
+            {isAdmin && <Button onClick={handleSaveGrade} disabled={isProcessing} className="bg-primary rounded-xl px-8 font-bold shadow-lg shadow-primary/20">{isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />} Guardar Calificación</Button>}
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       <Dialog open={isViewOwnSubmissionOpen} onOpenChange={setIsViewOwnSubmissionOpen}>
-        <DialogContent className="sm:max-w-[700px] max-h-[80vh] overflow-hidden flex flex-col rounded-[2rem]">
-          <DialogHeader><DialogTitle>Mi Entrega Registrada</DialogTitle><DialogDescription>Visualización del material enviado para "{selectedSubmission?.tituloContenido}"</DialogDescription></DialogHeader>
-          <div className="flex-1 overflow-y-auto py-4">{selectedSubmission && formatSubmissionDetail(selectedSubmission.detalleEnvio)}</div>
-          <DialogFooter><Button variant="outline" onClick={() => setIsViewOwnSubmissionOpen(false)}>Cerrar</Button></DialogFooter>
+        <DialogContent className="sm:max-w-[700px] max-h-[80vh] overflow-hidden flex flex-col rounded-2xl">
+          <DialogHeader><DialogTitle>Mi Entrega</DialogTitle><DialogDescription>Material enviado para "{selectedSubmission?.tituloContenido}"</DialogDescription></DialogHeader>
+          <div className="flex-1 overflow-y-auto py-4">
+            {selectedSubmission && formatSubmissionDetail(selectedSubmission.detalleEnvio)}
+            {selectedSubmission?.estado === 'calificado' && (
+                <div className="mt-6 p-4 bg-primary/10 rounded-xl border border-primary/20">
+                    <p className="font-bold text-primary mb-2 flex items-center gap-2"><Trophy className="h-4 w-4"/> Calificación: {selectedSubmission.puntaje}/5</p>
+                    {selectedSubmission.recomendaciones && <p className="text-sm italic">"{selectedSubmission.recomendaciones}"</p>}
+                </div>
+            )}
+          </div>
+          <DialogFooter><Button variant="outline" onClick={() => setIsViewOwnSubmissionOpen(false)} className="rounded-xl">Cerrar</Button></DialogFooter>
         </DialogContent>
       </Dialog>
 
       <Dialog open={isSubmitActivityOpen} onOpenChange={setIsSubmitActivityOpen}>
-        <DialogContent className="sm:max-w-[800px] max-h-[90vh] flex flex-col rounded-[2rem]">
+        <DialogContent className="sm:max-w-[800px] max-h-[90vh] flex flex-col rounded-2xl">
           <DialogHeader>
-            <DialogTitle className="text-2xl font-headline">{editingSubmissionId ? "Actualizar Mi Entrega" : "Realizar Entrega de Tarea"}</DialogTitle>
-            <DialogDescription>Completa el desarrollo de tu actividad. Puedes usar el editor para formatear tu respuesta o adjuntar un archivo local.</DialogDescription>
+            <DialogTitle className="text-2xl font-bold">{editingSubmissionId ? "Editar Entrega" : "Realizar Entrega"}: {selectedActivity?.titulo}</DialogTitle>
+            <DialogDescription>{editingSubmissionId ? "Modifica tu respuesta anterior." : "Completa tu respuesta y adjunta un archivo si es necesario."}</DialogDescription>
           </DialogHeader>
-          <div className="flex-1 overflow-y-auto pr-2 py-4 space-y-8">
-            <div className="space-y-4">
-                <Label className="text-sm font-bold flex items-center gap-2"><MessageSquare className="h-4 w-4 text-primary" /> Desarrollo Escrito (Texto Enriquecido)</Label>
-                <div className="border rounded-2xl overflow-hidden shadow-sm focus-within:ring-2 focus-within:ring-primary/30 transition-all">
-                    <div className="bg-slate-50 p-2 border-b flex flex-wrap gap-1">
+          <div className="flex-1 overflow-y-auto pr-2 py-4 space-y-6">
+            <div className="space-y-3">
+                <Label className="font-bold">Respuesta Escrita</Label>
+                <div className="border rounded-2xl overflow-hidden focus-within:ring-2 focus-within:ring-primary/50 transition-all shadow-sm">
+                    <div className="bg-muted p-2 border-b flex flex-wrap gap-1">
                         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => execCommand('bold')}><Bold className="h-4 w-4" /></Button>
                         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => execCommand('italic')}><Italic className="h-4 w-4" /></Button>
                         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => execCommand('underline')}><Underline className="h-4 w-4" /></Button>
-                        <Separator orientation="vertical" className="h-6 mx-1" />
+                        <Separator orientation="vertical" className="h-8 mx-1" />
                         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => execCommand('justifyLeft')}><AlignLeft className="h-4 w-4" /></Button>
                         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => execCommand('justifyCenter')}><AlignCenter className="h-4 w-4" /></Button>
                         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => execCommand('justifyRight')}><AlignRight className="h-4 w-4" /></Button>
                     </div>
-                    <div ref={editorRef} contentEditable className="p-6 min-h-[300px] bg-background outline-none prose prose-sm max-w-none" />
+                    <div ref={editorRef} contentEditable className="p-5 min-h-[250px] bg-background outline-none prose prose-sm max-w-none" />
                 </div>
             </div>
-            <div className="space-y-4">
-                <Label className="text-sm font-bold flex items-center gap-2"><FileUp className="h-4 w-4 text-primary" /> Adjuntar Documento de Respaldo</Label>
-                <div className={cn("relative border-2 border-dashed rounded-2xl p-10 transition-all text-center", attachedFile ? "border-primary bg-primary/5" : "border-slate-200 hover:border-primary/50 hover:bg-slate-50")}>
+            <div className="space-y-3">
+                <Label className="font-bold">Adjuntar Documento (PDF, Word, Imágenes)</Label>
+                <div className={cn("relative border-2 border-dashed rounded-2xl p-8 transition-all", attachedFile ? "border-primary bg-primary/5" : "border-muted-foreground/20 hover:border-primary/50 hover:bg-slate-50")}>
                     <input type="file" onChange={handleFileChange} className="absolute inset-0 opacity-0 cursor-pointer" />
-                    <div className="flex flex-col items-center">
+                    <div className="flex flex-col items-center justify-center text-center">
                         {attachedFile ? (
                             <>
-                                <CheckSquare className="h-12 w-12 text-green-500 mb-3" />
-                                <p className="font-bold text-slate-800">{attachedFile.name}</p>
-                                <Button variant="link" size="sm" onClick={(e) => { e.stopPropagation(); setAttachedFile(null); }} className="text-destructive mt-2">Eliminar archivo seleccionado</Button>
+                                <CheckCircle2 className="h-10 w-10 text-primary mb-2" />
+                                <p className="font-bold text-sm">{attachedFile.name}</p>
+                                <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); setAttachedFile(null); }} className="mt-2 text-destructive font-bold uppercase text-[10px]">Quitar archivo</Button>
                             </>
                         ) : (
                             <>
-                                <Upload className="h-12 w-12 text-slate-300 mb-3" />
-                                <p className="text-sm font-bold text-slate-600">Haz clic o arrastra un archivo aquí</p>
-                                <p className="text-xs text-muted-foreground mt-2 uppercase tracking-widest">PDF, Word, JPG, PNG (Hasta 50MB)</p>
+                                <FileUp className="h-10 w-10 text-muted-foreground mb-2" />
+                                <p className="text-sm font-medium">Arrastra o haz clic para subir un archivo</p>
+                                <p className="text-[10px] text-muted-foreground mt-2 uppercase tracking-widest font-bold">Soportado: PDF, DOCX, JPG, PNG (Max 50MB)</p>
                             </>
                         )}
                     </div>
@@ -1218,104 +1206,96 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
             </div>
           </div>
           <DialogFooter className="border-t pt-4">
-            <Button variant="outline" onClick={() => { setIsSubmitActivityOpen(false); setEditingSubmissionId(null); }} className="rounded-xl h-12 px-6">Cancelar</Button>
-            <Button onClick={handleSubmitActivity} disabled={isProcessing} className="bg-primary rounded-xl h-12 px-10 font-bold shadow-lg shadow-primary/30">
-                {isProcessing ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <Save className="mr-2 h-5 w-5" />}
-                {editingSubmissionId ? "Actualizar Mi Tarea" : "Enviar Tarea Final"}
+            <Button variant="outline" onClick={() => { setIsSubmitActivityOpen(false); setEditingSubmissionId(null); }} className="rounded-xl h-11">Cancelar</Button>
+            <Button onClick={handleSubmitActivity} disabled={isProcessing} className="bg-primary px-10 rounded-xl h-11 font-bold shadow-lg shadow-primary/20">
+                {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
+                {editingSubmissionId ? "Actualizar Mi Entrega" : "Enviar Entrega Final"}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       <Dialog open={isActivityDialogOpen} onOpenChange={setIsActivityDialogOpen}>
-        <DialogContent className="rounded-[2rem]">
-          <DialogHeader><DialogTitle className="text-2xl font-headline">Configurar Actividad</DialogTitle></DialogHeader>
-          <div className="grid gap-6 py-6">
-            <div className="grid gap-2"><Label>Nombre de la Actividad</Label><Input value={activityForm.titulo} onChange={e => setActivityForm({...activityForm, titulo: e.target.value})} className="rounded-xl h-11" /></div>
-            <div className="grid gap-2"><Label>Instrucciones Paso a Paso</Label><Textarea value={activityForm.descripcion} onChange={e => setActivityForm({...activityForm, descripcion: e.target.value})} rows={4} className="rounded-xl" /></div>
-            <div className="grid gap-2"><Label>Criterios de Evaluación (Rúbrica)</Label><Input value={activityForm.criterios_evaluacion} onChange={e => setActivityForm({...activityForm, criterios_evaluacion: e.target.value})} className="rounded-xl h-11" /></div>
-            <div className="grid gap-2"><Label>URL de Apoyo (Opcional)</Label><Input placeholder="Enlace a plantilla o lectura previa..." value={activityForm.archivoUrl} onChange={e => setActivityForm({...activityForm, archivoUrl: e.target.value})} className="rounded-xl h-11" /></div>
+        <DialogContent className="rounded-2xl">
+          <DialogHeader><DialogTitle className="text-xl font-bold">Nueva Actividad Práctica</DialogTitle></DialogHeader>
+          <div className="grid gap-5 py-4">
+            <div className="grid gap-1.5"><Label className="text-xs uppercase font-bold text-muted-foreground">Título</Label><Input value={activityForm.titulo} onChange={e => setActivityForm({...activityForm, titulo: e.target.value})} className="rounded-xl" /></div>
+            <div className="grid gap-1.5"><Label className="text-xs uppercase font-bold text-muted-foreground">Instrucciones</Label><Textarea value={activityForm.descripcion} onChange={e => setActivityForm({...activityForm, descripcion: e.target.value})} rows={4} className="rounded-xl" /></div>
+            <div className="grid gap-1.5"><Label className="text-xs uppercase font-bold text-muted-foreground">Criterios de Evaluación</Label><Input value={activityForm.criterios_evaluacion} onChange={e => setActivityForm({...activityForm, criterios_evaluacion: e.target.value})} className="rounded-xl" /></div>
+            <div className="grid gap-1.5"><Label className="text-xs uppercase font-bold text-muted-foreground">URL Material Apoyo (Opcional)</Label><Input placeholder="https://..." value={activityForm.archivoUrl} onChange={e => setActivityForm({...activityForm, archivoUrl: e.target.value})} className="rounded-xl" /></div>
           </div>
-          <DialogFooter><Button onClick={handleSaveActivity} disabled={isProcessing} className="w-full h-12 rounded-xl font-bold">Publicar Actividad</Button></DialogFooter>
+          <DialogFooter><Button onClick={handleSaveActivity} disabled={isProcessing} className="w-full h-11 rounded-xl font-bold">Publicar en MongoDB</Button></DialogFooter>
         </DialogContent>
       </Dialog>
 
       <Dialog open={isAssessmentDialogOpen} onOpenChange={setIsAssessmentDialogOpen}>
-        <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto rounded-[2rem]">
+        <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto rounded-3xl">
           <DialogHeader>
-            <div className="flex items-center justify-between pr-8 mb-4">
-              <DialogTitle className="text-2xl font-headline">{viewMode === 'edit' ? 'Diseñador de Exámenes' : 'Realizar Evaluación'}</DialogTitle>
+            <div className="flex items-center justify-between pr-8">
+              <DialogTitle className="text-2xl font-headline font-bold">{viewMode === 'edit' ? 'Diseñador de Evaluación' : 'Realizar Test'}</DialogTitle>
               {isAdmin && (
-                <div className="flex gap-2 bg-slate-100 p-1 rounded-2xl">
-                  <Button variant={viewMode === 'edit' ? 'default' : 'ghost'} size="sm" onClick={() => setViewMode('edit')} className="rounded-xl"><Settings2 className="mr-2 h-4 w-4" /> Editor</Button>
-                  <Button variant={viewMode === 'preview' ? 'default' : 'ghost'} size="sm" onClick={() => { setViewMode('preview'); handleResetPreview(); }} className="rounded-xl"><Eye className="mr-2 h-4 w-4" /> Vista Previa</Button>
+                <div className="flex gap-1 bg-muted p-1 rounded-2xl">
+                  <Button variant={viewMode === 'edit' ? 'default' : 'ghost'} size="sm" onClick={() => setViewMode('edit')} className="rounded-xl h-8"><Settings2 className="mr-2 h-4 w-4" /> Editar</Button>
+                  <Button variant={viewMode === 'preview' ? 'default' : 'ghost'} size="sm" onClick={() => { setViewMode('preview'); handleResetPreview(); }} className="rounded-xl h-8"><Eye className="mr-2 h-4 w-4" /> Vista Previa</Button>
                 </div>
               )}
             </div>
           </DialogHeader>
-
           {viewMode === 'edit' ? (
             <div className="grid gap-8 py-4">
-              <div className="grid grid-cols-2 gap-6">
-                 <div className="grid gap-2"><Label>Título del Test</Label><Input value={assessmentForm.titulo} onChange={e => setAssessmentForm({...assessmentForm, titulo: e.target.value})} className="rounded-xl" /></div>
-                 <div className="grid gap-2"><Label>Objetivo del Examen</Label><Input value={assessmentForm.descripcion} onChange={e => setAssessmentForm({...assessmentForm, descripcion: e.target.value})} className="rounded-xl" /></div>
+              <div className="grid grid-cols-2 gap-4">
+                 <div className="grid gap-1.5"><Label className="font-bold">Título</Label><Input value={assessmentForm.titulo} onChange={e => setAssessmentForm({...assessmentForm, titulo: e.target.value})} className="rounded-xl" /></div>
+                 <div className="grid gap-1.5"><Label className="font-bold">Descripción</Label><Input value={assessmentForm.descripcion} onChange={e => setAssessmentForm({...assessmentForm, descripcion: e.target.value})} className="rounded-xl" /></div>
               </div>
               <Separator />
-              <div className="p-6 border rounded-[2rem] bg-slate-50 space-y-6">
-                <h3 className="font-bold flex items-center gap-2 text-primary text-lg"><PlusCircle className="h-6 w-6" /> Construir Pregunta</h3>
-                <div className="grid gap-2"><Label>Enunciado de la Pregunta</Label><Input value={currentQuestion.texto} onChange={e => setCurrentQuestion({...currentQuestion, texto: e.target.value})} className="rounded-xl h-11" /></div>
-                <div className="grid gap-2">
-                  <Label>Tipo de Respuesta</Label>
+              <div className="p-6 border rounded-3xl bg-slate-50 space-y-5">
+                <h3 className="font-bold flex items-center gap-2 text-primary"><PlusCircle className="h-5 w-5" /> Nueva Pregunta</h3>
+                <div className="grid gap-1.5"><Label>Enunciado</Label><Input value={currentQuestion.texto} onChange={e => setCurrentQuestion({...currentQuestion, texto: e.target.value})} className="rounded-xl" /></div>
+                <div className="grid gap-1.5">
+                  <Label>Tipo de Item</Label>
                   <Select value={currentQuestion.tipo} onValueChange={(v: any) => setCurrentQuestion({...currentQuestion, tipo: v, opciones: v === 'opcion-multiple' ? ["Opción A", "Opción B"] : [], respuestaCorrecta: ""})}>
-                    <SelectTrigger className="rounded-xl h-11"><SelectValue /></SelectTrigger>
-                    <SelectContent><SelectItem value="opcion-multiple">🔘 Selección Múltiple</SelectItem><SelectItem value="verdadero-falso">⚖️ Verdadero o Falso</SelectItem><SelectItem value="escrita">✍️ Respuesta Abierta</SelectItem></SelectContent>
+                    <SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger>
+                    <SelectContent><SelectItem value="opcion-multiple">Opción Múltiple</SelectItem><SelectItem value="verdadero-falso">Verdadero o Falso</SelectItem><SelectItem value="escrita">Respuesta Abierta</SelectItem></SelectContent>
                   </Select>
                 </div>
                 {currentQuestion.tipo === 'opcion-multiple' && (
-                  <div className="space-y-4 pt-2">
-                    <Label className="text-xs uppercase tracking-widest text-muted-foreground">Opciones y Respuesta Correcta:</Label>
-                    <RadioGroup value={currentQuestion.respuestaCorrecta} onValueChange={v => setCurrentQuestion({...currentQuestion, respuestaCorrecta: v})} className="space-y-3">
+                  <div className="space-y-3">
+                    <RadioGroup value={currentQuestion.respuestaCorrecta} onValueChange={v => setCurrentQuestion({...currentQuestion, respuestaCorrecta: v})} className="space-y-2">
                       {currentQuestion.opciones.map((opt, idx) => (
                         <div key={idx} className="flex items-center gap-3 bg-white p-2 border rounded-xl shadow-sm">
                           <RadioGroupItem value={opt} />
-                          <Input value={opt} onChange={e => { const newOpts = [...currentQuestion.opciones]; newOpts[idx] = e.target.value; setCurrentQuestion({...currentQuestion, opciones: newOpts}); }} className="border-none focus-visible:ring-0 shadow-none h-8" />
-                          <Button variant="ghost" size="icon" onClick={() => handleRemoveOption(idx)} disabled={currentQuestion.opciones.length <= 2} className="h-8 w-8 text-destructive"><X className="h-4 w-4" /></Button>
+                          <Input value={opt} onChange={e => { const newOpts = [...currentQuestion.opciones]; newOpts[idx] = e.target.value; setCurrentQuestion({...currentQuestion, opciones: newOpts}); }} className="border-none focus-visible:ring-0 shadow-none" />
+                          <Button variant="ghost" size="icon" onClick={() => handleRemoveOption(idx)} disabled={currentQuestion.opciones.length <= 2} className="text-destructive"><X className="h-4 w-4" /></Button>
                         </div>
                       ))}
                     </RadioGroup>
-                    <Button variant="outline" size="sm" onClick={handleAddOption} className="w-full rounded-xl border-dashed">+ Añadir otra opción</Button>
+                    <Button variant="outline" size="sm" onClick={handleAddOption} className="w-full rounded-xl border-dashed">+ Agregar otra opción</Button>
                   </div>
                 )}
                 {currentQuestion.tipo === 'verdadero-falso' && (
-                  <div className="space-y-4 pt-2">
-                    <Label className="text-xs uppercase tracking-widest text-muted-foreground">Selecciona la Verdad:</Label>
-                    <RadioGroup value={currentQuestion.respuestaCorrecta} onValueChange={v => setCurrentQuestion({...currentQuestion, respuestaCorrecta: v})} className="flex gap-6">
-                      <div className="flex items-center gap-2 bg-white px-4 py-2 border rounded-xl"><RadioGroupItem value="Verdadero" id="v" /><Label htmlFor="v" className="cursor-pointer">Verdadero</Label></div>
-                      <div className="flex items-center gap-2 bg-white px-4 py-2 border rounded-xl"><RadioGroupItem value="Falso" id="f" /><Label htmlFor="f" className="cursor-pointer">Falso</Label></div>
+                  <div className="flex gap-4 pt-2">
+                    <RadioGroup value={currentQuestion.respuestaCorrecta} onValueChange={v => setCurrentQuestion({...currentQuestion, respuestaCorrecta: v})} className="flex gap-4">
+                      <div className="flex items-center gap-2 bg-white px-4 py-2 border rounded-xl shadow-sm"><RadioGroupItem value="Verdadero" id="v" /><Label htmlFor="v" className="cursor-pointer">Verdadero</Label></div>
+                      <div className="flex items-center gap-2 bg-white px-4 py-2 border rounded-xl shadow-sm"><RadioGroupItem value="Falso" id="f" /><Label htmlFor="f" className="cursor-pointer">Falso</Label></div>
                     </RadioGroup>
                   </div>
                 )}
-                <Button variant="default" onClick={handleAddQuestion} className="w-full h-11 rounded-xl shadow-md">Insertar Pregunta al Test</Button>
+                <Button variant="default" onClick={handleAddQuestion} className="w-full h-11 rounded-xl shadow-md">Añadir Pregunta al Test</Button>
               </div>
-
-              {assessmentForm.preguntas.length > 0 && (
+              {assessmentForm.preguntas?.length > 0 && (
                 <div className="space-y-3">
-                  <Label className="font-bold">Estructura del Test ({assessmentForm.preguntas.length} items)</Label>
+                  <Label className="font-bold">Estructura del Test ({assessmentForm.preguntas.length} preguntas)</Label>
                   <div className="space-y-2">
                     {assessmentForm.preguntas.map((q, i) => (
-                      <div key={q.id} className="flex items-center justify-between p-3 border rounded-xl bg-white shadow-sm hover:shadow-md transition-shadow">
-                        <span className="text-sm font-medium"><span className="text-primary font-bold mr-2">{i+1}.</span> {q.texto}</span>
-                        <div className="flex items-center gap-2">
-                            <Badge variant="outline" className="text-[9px] uppercase">{q.tipo.replace('-', ' ')}</Badge>
-                            <Button variant="ghost" size="icon" onClick={() => setAssessmentForm({...assessmentForm, preguntas: assessmentForm.preguntas.filter(item => item.id !== q.id)})} className="h-8 w-8 text-destructive hover:bg-red-50"><Trash2 className="h-4 w-4" /></Button>
-                        </div>
+                      <div key={q.id} className="flex items-center justify-between p-3 border rounded-2xl bg-white shadow-sm">
+                        <span className="text-sm font-medium"><span className="text-primary font-bold mr-2">{i+1}.</span> {q.texto} ({q.tipo})</span>
+                        <Button variant="ghost" size="icon" onClick={() => setAssessmentForm({...assessmentForm, preguntas: assessmentForm.preguntas.filter(item => item.id !== q.id)})} className="text-destructive"><Trash2 className="h-4 w-4" /></Button>
                       </div>
                     ))}
                   </div>
                 </div>
               )}
-
-              <DialogFooter className="mt-6"><Button onClick={handleSaveAssessment} disabled={isProcessing} className="w-full h-14 rounded-2xl text-lg font-bold shadow-xl shadow-primary/20">Finalizar y Guardar Examen en MongoDB</Button></DialogFooter>
+              <DialogFooter><Button onClick={handleSaveAssessment} disabled={isProcessing} className="w-full h-14 rounded-2xl text-lg font-bold shadow-xl shadow-primary/20">Finalizar y Guardar Evaluación</Button></DialogFooter>
             </div>
           ) : (
             <div className="py-6 space-y-8">
@@ -1323,19 +1303,16 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                  <h2 className="text-2xl font-bold text-primary">{assessmentForm.titulo}</h2>
                  <p className="text-muted-foreground leading-relaxed">{assessmentForm.descripcion}</p>
                  {score && (
-                    <div className="mt-6 p-6 bg-gradient-to-r from-primary/10 to-accent/10 rounded-2xl border flex items-center justify-between">
-                        <div>
-                            <p className="text-xs uppercase font-bold text-primary tracking-widest mb-1">Tu Resultado:</p>
-                            <p className="text-sm font-medium text-slate-600">Has acertado {score.correct} de {score.total} preguntas automáticas.</p>
-                        </div>
-                        <Badge className="text-2xl px-6 py-2 rounded-2xl bg-white text-primary border-primary/20 shadow-lg">{Number((score.correct / score.total) * 5 || 0).toFixed(1)} / 5.0</Badge>
+                    <div className="mt-4 p-5 bg-primary/10 rounded-2xl border flex items-center justify-between">
+                        <span className="font-bold text-primary uppercase tracking-widest text-xs">Resultado Obtenido:</span>
+                        <Badge className="text-xl px-6 py-2 rounded-2xl bg-white text-primary border-primary/20 shadow-lg">{Number((score.correct / score.total) * 5 || 0).toFixed(1)} / 5.0</Badge>
                     </div>
                  )}
               </div>
-              {assessmentForm.preguntas.map((q, idx) => (
-                <div key={q.id} className="space-y-4 p-6 border rounded-2xl bg-slate-50/50">
-                  <p className="text-lg font-bold text-slate-800"><span className="text-primary mr-2">{idx + 1}.</span> {q.texto}</p>
-                  <div className="pl-8">
+              {assessmentForm.preguntas?.map((q, idx) => (
+                <div key={q.id} className="space-y-4 p-5 border rounded-2xl bg-slate-50/50">
+                  <p className="text-lg font-bold text-slate-800"><span className="text-primary mr-1">{idx + 1}.</span> {q.texto}</p>
+                  <div className="pl-6">
                     {q.tipo === 'opcion-multiple' && (
                       <RadioGroup value={userAnswers[q.id]} onValueChange={v => !showFeedback && setUserAnswers({...userAnswers, [q.id]: v})} className="space-y-3">
                         {q.opciones.map((opt, i) => (
@@ -1351,31 +1328,17 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                     {q.tipo === 'verdadero-falso' && (
                       <div className="flex gap-4">
                          {['Verdadero', 'Falso'].map(val => (
-                           <Button key={val} variant={userAnswers[q.id] === val ? 'default' : 'outline'} className={cn("flex-1 h-14 text-lg font-bold rounded-2xl", showFeedback && q.respuestaCorrecta === val ? "bg-green-600 hover:bg-green-700 text-white shadow-lg" : showFeedback && userAnswers[q.id] === val ? "bg-red-600 hover:bg-red-700 text-white shadow-lg" : "")} onClick={() => !showFeedback && setUserAnswers({...userAnswers, [q.id]: val})} disabled={showFeedback}>{val}</Button>
+                           <Button key={val} variant={userAnswers[q.id] === val ? 'default' : 'outline'} className={cn("flex-1 h-14 rounded-2xl font-bold text-lg", showFeedback && q.respuestaCorrecta === val ? "bg-green-600 hover:bg-green-700 text-white shadow-lg" : showFeedback && userAnswers[q.id] === val ? "bg-red-600 hover:bg-red-700 text-white shadow-lg" : "")} onClick={() => !showFeedback && setUserAnswers({...userAnswers, [q.id]: val})} disabled={showFeedback}>{val}</Button>
                          ))}
                       </div>
                     )}
                     {q.tipo === 'escrita' && (
-                      <div className="space-y-2">
-                        <Textarea 
-                            placeholder="Escribe aquí tu análisis..." 
-                            value={userAnswers[q.id] || ""} 
-                            onChange={e => !showFeedback && setUserAnswers({...userAnswers, [q.id]: e.target.value})}
-                            disabled={showFeedback}
-                            rows={5}
-                            className="rounded-2xl p-4 bg-white"
-                        />
-                        {showFeedback && <p className="text-[10px] text-muted-foreground italic">* Esta respuesta requiere calificación manual del docente.</p>}
-                      </div>
+                      <Textarea placeholder="Escribe tu análisis aquí..." value={userAnswers[q.id] || ""} onChange={e => !showFeedback && setUserAnswers({...userAnswers, [q.id]: e.target.value})} disabled={showFeedback} rows={5} className="rounded-2xl p-4 bg-white shadow-sm" />
                     )}
                   </div>
                 </div>
               ))}
-              {!showFeedback ? (
-                <Button className="w-full h-16 font-bold text-xl rounded-3xl shadow-xl shadow-primary/30 transition-all hover:scale-[1.01]" onClick={handleGradeAssessment}>Finalizar Evaluación y Enviar Resultados</Button>
-              ) : (
-                <Button variant="outline" className="w-full h-12 rounded-2xl" onClick={() => setIsAssessmentDialogOpen(false)}>Cerrar Revisión</Button>
-              )}
+              {!showFeedback ? <Button className="w-full h-16 font-bold text-xl rounded-3xl shadow-xl shadow-primary/20 transition-all hover:scale-[1.01]" onClick={handleGradeAssessment}>Finalizar Evaluación y Enviar</Button> : <Button variant="outline" className="w-full h-12 rounded-2xl font-bold" onClick={() => setIsAssessmentDialogOpen(false)}>Cerrar Revisión</Button>}
             </div>
           )}
         </DialogContent>
@@ -1384,13 +1347,13 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent className="rounded-[2.5rem]">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-2xl font-headline">¿Confirmar eliminación?</AlertDialogTitle>
-            <AlertDialogDescription className="text-base">Esta acción borrará permanentemente el elemento de la base de datos de MongoDB. No se puede deshacer esta operación.</AlertDialogDescription>
+            <AlertDialogTitle className="text-2xl font-headline font-bold">¿Confirmar eliminación?</AlertDialogTitle>
+            <AlertDialogDescription className="text-base leading-relaxed">Se borrará permanentemente este elemento de la base de datos de MongoDB. Esta acción no se puede deshacer.</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="gap-2">
-            <AlertDialogCancel disabled={isProcessing} className="rounded-2xl h-12">Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={(e) => { e.preventDefault(); handleDeleteConfirm(); }} className="bg-red-600 hover:bg-red-700 text-white rounded-2xl h-12 px-8" disabled={isProcessing}>
-                {isProcessing ? <Loader2 className="animate-spin h-4 w-4 mr-2" /> : <Trash2 className="w-4 h-4 mr-2" />} Borrar Definitivamente
+            <AlertDialogCancel disabled={isProcessing} className="rounded-2xl h-12 px-6">Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={(e) => { e.preventDefault(); handleDeleteConfirm(); }} className="bg-red-600 hover:bg-red-700 text-white rounded-2xl h-12 px-8 font-bold" disabled={isProcessing}>
+              {isProcessing ? <Loader2 className="animate-spin h-4 w-4 mr-2" /> : <Trash2 className="w-4 h-4 mr-2" />} Borrar Definitivamente
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
