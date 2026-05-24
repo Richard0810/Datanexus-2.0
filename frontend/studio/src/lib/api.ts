@@ -1,10 +1,12 @@
 import axios from 'axios';
 
 const getBackendUrl = () => {
+  // 1. En producción (Vercel), usamos la variable de entorno obligatoriamente
   if (process.env.NEXT_PUBLIC_BACKEND_URL) {
     return process.env.NEXT_PUBLIC_BACKEND_URL;
   }
 
+  // 2. En desarrollo (Cloud Workstations), detectamos la URL dinámicamente para el proxy
   if (typeof window !== 'undefined') {
     const hostname = window.location.hostname;
     const protocol = window.location.protocol;
@@ -20,6 +22,7 @@ const getBackendUrl = () => {
     }
   }
 
+  // 3. Fallback para desarrollo local estándar
   return 'http://localhost:3001';
 };
 
@@ -36,7 +39,6 @@ api.interceptors.response.use(
   (error) => {
     if (!error.response) {
       console.error('Error de red: El backend no responde en ' + getBackendUrl());
-      return Promise.reject(error);
     }
     return Promise.reject(error);
   }

@@ -25,6 +25,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
     }),
     EducationalResourcesModule, 
     RolesModule, 
+    // Usamos forRootAsync para esperar a que las variables de entorno carguen en Render
     MongooseModule.forRootAsync({
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => ({

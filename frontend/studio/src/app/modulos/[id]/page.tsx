@@ -21,21 +21,12 @@ import {
   History,
   GraduationCap as GradeIcon,
   Save,
-  Link2,
-  Bold,
-  Italic,
-  Underline,
-  AlignLeft,
-  AlignCenter,
-  AlignRight,
   Download,
-  FileUp,
   Plus,
   PlayCircle,
   BookOpen,
   Monitor,
   Database,
-  MoreHorizontal,
   Link as LinkIcon,
   CheckSquare,
   ExternalLink
@@ -63,8 +54,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Separator } from "@/components/ui/separator";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
   Table,
   TableBody,
@@ -152,6 +141,7 @@ function ResourcePreview({ url, title }: { url: string; title: string }) {
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
 
   useEffect(() => {
+    // Si es un archivo local (Base64), lo convertimos a Blob URL para que el iframe no lo bloquee
     if (url && url.startsWith('data:')) {
       try {
         const parts = url.split(',');
@@ -176,6 +166,7 @@ function ResourcePreview({ url, title }: { url: string; title: string }) {
   const getEmbedUrl = (url: string) => {
     if (!url || !url.startsWith("http")) return null;
     
+    // Soporte para YouTube
     if (url.includes("youtube.com") || url.includes("youtu.be")) {
       let videoId = "";
       if (url.includes("youtu.be/")) videoId = url.split("youtu.be/")[1].split("?")[0];
@@ -183,21 +174,18 @@ function ResourcePreview({ url, title }: { url: string; title: string }) {
       return videoId ? `https://www.youtube.com/embed/${videoId}` : url;
     }
     
+    // Soporte para Gamma
     if (url.includes("gamma.app/docs/")) return url.replace("gamma.app/docs/", "gamma.app/embed/");
     
-    if (url.includes("docs.google.com/presentation/d/")) {
-      const match = url.match(/\/d\/(.+?)(\/|$)/);
-      return match ? `https://docs.google.com/presentation/d/${match[1]}/embed` : url;
-    }
-    
-    if (url.includes("drive.google.com/file/d/")) {
-      const match = url.match(/\/d\/(.+?)(\/|$)/);
-      return match ? `https://drive.google.com/file/d/${match[1]}/preview` : url;
-    }
-    
-    if (url.includes("docs.google.com/document/d/")) {
-      const match = url.match(/\/d\/(.+?)(\/|$)/);
-      return match ? `https://docs.google.com/document/d/${match[1]}/preview` : url;
+    // Parche crítico para Google Drive / Docs / Slides
+    if (url.includes("docs.google.com") || url.includes("drive.google.com")) {
+      if (url.includes("/edit") || url.includes("/view")) {
+        return url.replace(/\/edit.*$/, "/preview").replace(/\/view.*$/, "/preview");
+      }
+      if (url.includes("/d/")) {
+        const match = url.match(/\/d\/(.+?)(\/|$)/);
+        if (match) return `https://docs.google.com/presentation/d/${match[1]}/embed`;
+      }
     }
 
     return url;
@@ -216,7 +204,7 @@ function ResourcePreview({ url, title }: { url: string; title: string }) {
               <ExternalLink className="mr-2 h-4 w-4" /> Ver Externo
             </a>
           </Button>
-          {url.startsWith('data:') && (
+          {url && url.startsWith('data:') && (
             <Button asChild variant="default" size="sm" className="rounded-xl font-bold">
               <a href={url} download={title}>
                 <Download className="mr-2 h-4 w-4" /> Descargar
@@ -450,28 +438,6 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
     }
   };
 
-  const handleGradeAssessment = async () => {
-    let correctCount = 0;
-    const autoGradable = assessmentForm.preguntas.filter(q => q.tipo !== 'escrita');
-    autoGradable.forEach(q => { if (userAnswers[q.id] === q.respuestaCorrecta) correctCount++; });
-    const finalScore = autoGradable.length > 0 ? (correctCount / autoGradable.length) * 5 : 5;
-    setScore({ correct: correctCount, total: autoGradable.length });
-    setShowFeedback(true);
-    try {
-      await api.post("/performance-reports", {
-        usuarioNombre: user?.name || "Estudiante",
-        usuarioEmail: user?.email,
-        tipoEnvio: "evaluacion",
-        moduloId: String(id),
-        tituloContenido: assessmentForm.titulo,
-        detalleEnvio: JSON.stringify(assessmentForm.preguntas.map(q => ({ pregunta: q.texto, respuesta: userAnswers[q.id] || "S/R" }))),
-        puntaje: finalScore,
-        estado: "enviado"
-      });
-      fetchData();
-    } catch (e) { console.error(e); }
-  };
-
   const handleOpenGrading = (sub: Submission) => {
     setSelectedSubmission(sub);
     setGradingForm({ puntaje: sub.puntaje || 0, recomendaciones: sub.recomendaciones || "" });
@@ -491,11 +457,6 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
       toast({ title: "Calificación guardada" });
     } catch (error) { toast({ title: "Error", variant: "destructive" }); }
     finally { setIsProcessing(false); }
-  };
-
-  const handleAddQuestion = () => {
-    setAssessmentForm({ ...assessmentForm, preguntas: [...assessmentForm.preguntas, currentQuestion] });
-    setCurrentQuestion({ id: Math.random().toString(36).substr(2, 9), texto: "", tipo: "opcion-multiple", opciones: ["Opción A", "Opción B"], respuestaCorrecta: "" });
   };
 
   const handleSaveAssessment = async () => {
@@ -717,6 +678,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
             <DialogTitle>{editingResource ? "Editar Recurso" : "Añadir Recurso"}</DialogTitle>
             <Button variant="ghost" size="icon" onClick={() => setIsResourceDialogOpen(false)}><X className="h-4 w-4"/></Button>
           </div>
+          {/* Scroll inteligente para el cuerpo del formulario */}
           <div className="p-6 max-h-[60vh] overflow-y-auto space-y-6">
             <div className="space-y-2">
               <Label>Título del Recurso</Label>
@@ -758,9 +720,8 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
           <div className="flex-1 overflow-y-auto p-4 space-y-6">
             <div className="border rounded-2xl overflow-hidden">
                <div className="bg-muted p-2 border-b flex gap-1">
-                  <Button variant="ghost" size="icon" onClick={() => execCommand('bold')}><Bold className="h-4 w-4"/></Button>
-                  <Button variant="ghost" size="icon" onClick={() => execCommand('italic')}><Italic className="h-4 w-4"/></Button>
-                  <Button variant="ghost" size="icon" onClick={() => execCommand('underline')}><Underline className="h-4 w-4"/></Button>
+                  <Button variant="ghost" size="icon" onClick={() => execCommand('bold')}><Layers className="h-4 w-4"/></Button>
+                  <Button variant="ghost" size="icon" onClick={() => execCommand('italic')}><Layers className="h-4 w-4"/></Button>
                </div>
                <div ref={editorRef} contentEditable className="p-5 min-h-[200px] outline-none prose prose-sm max-w-none"/>
             </div>
