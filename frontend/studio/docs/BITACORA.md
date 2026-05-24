@@ -34,6 +34,7 @@ Este documento registra los hitos técnicos y cambios estructurales realizados e
 - **Dashboard Dinámico**: Sincronización real con el endpoint `/performance-reports`.
 - **Robustez de Datos**: Implementación de manejo de nulos y validación de fechas (`safeFormatDate`) para evitar errores de ejecución en registros incompletos.
 - **Gráficas de Desempeño**: Visualización de promedios por módulo con filtrado automático de valores no numéricos.
+- **Claridad de Roles**: Los administradores ahora visualizan el total global de entregas del sistema, diferenciando entre datos personales y del colectivo estudiantil.
 
 ### 5. Backend y Configuración
 - **Límites de Carga**: Configuración de `50mb` en el servidor NestJS para permitir entregas con archivos base64 y textos enriquecidos.

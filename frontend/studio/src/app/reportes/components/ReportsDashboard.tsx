@@ -4,7 +4,7 @@ import { useEffect, useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { FileDown, ListChecks, Loader2, Trophy, AlertCircle } from "lucide-react";
+import { FileDown, ListChecks, Loader2, Trophy, AlertCircle, Users } from "lucide-react";
 import { Bar, BarChart as RechartsBarChart, CartesianGrid, XAxis, YAxis, Tooltip, Legend } from "recharts";
 import { ChartConfig, ChartContainer, ChartTooltipContent } from "@/components/ui/chart";
 import api from "@/lib/api";
@@ -31,7 +31,8 @@ export function ReportsDashboard() {
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const isAdmin = user?.role === 'admin' || user?.role === 'administrador';
+  const userRole = user?.role?.trim().toLowerCase();
+  const isAdmin = userRole === 'admin' || userRole === 'administrador';
 
   useEffect(() => {
     const fetchData = async () => {
@@ -39,6 +40,7 @@ export function ReportsDashboard() {
         setLoading(true);
         const response = await api.get("/performance-reports");
         // Si no es admin, filtramos solo sus propios reportes
+        // Si es admin, mostramos TODO lo que hay en MongoDB
         const data = response.data.filter((sub: any) => 
           isAdmin ? true : sub.usuarioEmail === user?.email
         );
@@ -63,17 +65,20 @@ export function ReportsDashboard() {
       const modId = sub.moduloId || "N/A";
       if (!modules[modId]) modules[modId] = { total: 0, count: 0 };
       
-      if (sub.puntaje !== undefined && sub.puntaje !== null) {
+      if (sub.puntaje !== undefined && sub.puntaje !== null && !isNaN(Number(sub.puntaje))) {
         modules[modId].total += Number(sub.puntaje);
         modules[modId].count += 1;
       }
     });
 
-    return Object.entries(modules).map(([id, stats]) => ({
-      modulo: `Mód. ${id}`,
-      promedio: stats.count > 0 ? Number((stats.total / stats.count).toFixed(2)) : 0,
-      fullMark: 5
-    })).sort((a, b) => a.modulo.localeCompare(b.modulo));
+    return Object.entries(modules)
+      .filter(([_, stats]) => stats.count > 0)
+      .map(([id, stats]) => ({
+        modulo: `Mód. ${id}`,
+        promedio: Number((stats.total / stats.count).toFixed(2)),
+        fullMark: 5
+      }))
+      .sort((a, b) => a.modulo.localeCompare(b.modulo));
   }, [submissions]);
 
   const chartConfig = {
@@ -94,7 +99,7 @@ export function ReportsDashboard() {
     return (
       <div className="flex flex-col items-center justify-center py-20 gap-4">
         <Loader2 className="h-10 w-10 animate-spin text-primary" />
-        <p className="text-muted-foreground animate-pulse">Generando reporte dinámico...</p>
+        <p className="text-muted-foreground animate-pulse">Consultando base de datos...</p>
       </div>
     );
   }
@@ -108,7 +113,11 @@ export function ReportsDashboard() {
               <Trophy className="h-5 w-5 text-amber-500" />
               Promedio de Calificaciones por Módulo
             </CardTitle>
-            <CardDescription>Visualización del desempeño académico basado en actividades calificadas.</CardDescription>
+            <CardDescription>
+              {isAdmin 
+                ? "Rendimiento general de todos los estudiantes registrados." 
+                : "Tu desempeño académico basado en actividades calificadas."}
+            </CardDescription>
           </CardHeader>
           <CardContent>
             {chartData.length > 0 ? (
@@ -130,7 +139,7 @@ export function ReportsDashboard() {
             ) : (
               <div className="h-[300px] flex flex-col items-center justify-center border-2 border-dashed rounded-xl bg-muted/20">
                 <AlertCircle className="h-10 w-10 text-muted-foreground mb-2" />
-                <p className="text-muted-foreground text-sm">No hay suficientes datos calificados para mostrar la gráfica.</p>
+                <p className="text-muted-foreground text-sm">No hay suficientes entregas calificadas en MongoDB para mostrar datos.</p>
               </div>
             )}
           </CardContent>
@@ -138,18 +147,32 @@ export function ReportsDashboard() {
 
         <Card className="lg:col-span-1">
           <CardHeader>
-            <CardTitle>Resumen de Estado</CardTitle>
-            <CardDescription>Resumen rápido de tu actividad.</CardDescription>
+            <CardTitle>Resumen de Datos</CardTitle>
+            <CardDescription>Información extraída de MongoDB.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
              <div className="flex items-center justify-between p-4 bg-primary/5 rounded-2xl border border-primary/10">
                 <div>
-                   <p className="text-[10px] font-bold uppercase text-primary tracking-widest">Total Entregas</p>
+                   <p className="text-[10px] font-bold uppercase text-primary tracking-widest">
+                     {isAdmin ? "Total Entregas Sistema" : "Mis Entregas"}
+                   </p>
                    <p className="text-3xl font-headline font-bold">{submissions.length}</p>
                 </div>
                 <ListChecks className="h-8 w-8 text-primary/40" />
              </div>
              
+             {isAdmin && (
+               <div className="flex items-center justify-between p-4 bg-amber-50 rounded-2xl border border-amber-100">
+                  <div>
+                     <p className="text-[10px] font-bold uppercase text-amber-600 tracking-widest">Estudiantes Activos</p>
+                     <p className="text-3xl font-headline font-bold text-amber-700">
+                      {new Set(submissions.map(s => s.usuarioEmail)).size}
+                     </p>
+                  </div>
+                  <Users className="h-8 w-8 text-amber-600/40" />
+               </div>
+             )}
+
              <div className="flex items-center justify-between p-4 bg-green-50 rounded-2xl border border-green-100">
                 <div>
                    <p className="text-[10px] font-bold uppercase text-green-600 tracking-widest">Calificadas</p>
@@ -159,16 +182,6 @@ export function ReportsDashboard() {
                 </div>
                 <Trophy className="h-8 w-8 text-green-600/40" />
              </div>
-
-             <div className="space-y-2 pt-2">
-                <p className="text-xs font-bold text-muted-foreground uppercase">Descargas disponibles</p>
-                <Button variant="outline" className="w-full justify-start rounded-xl" size="sm">
-                  <FileDown className="mr-2 h-4 w-4" /> Certificado de Progreso
-                </Button>
-                <Button variant="outline" className="w-full justify-start rounded-xl" size="sm">
-                  <FileDown className="mr-2 h-4 w-4" /> Historial de Calificaciones
-                </Button>
-             </div>
           </CardContent>
         </Card>
       </div>
@@ -177,9 +190,9 @@ export function ReportsDashboard() {
         <CardHeader className="bg-slate-50 border-b px-8 py-6">
           <CardTitle className="flex items-center gap-3">
             <ListChecks className="h-6 w-6 text-primary" />
-            Historial Detallado de Actividades
+            {isAdmin ? "Registro Global de Actividades" : "Mi Historial de Actividades"}
           </CardTitle>
-          <CardDescription>Registro cronológico de todas tus interacciones y resultados.</CardDescription>
+          <CardDescription>Visualizando todos los registros encontrados en el servidor.</CardDescription>
         </CardHeader>
         <CardContent className="p-0">
           <Table>
@@ -189,7 +202,6 @@ export function ReportsDashboard() {
                 {isAdmin && <TableHead>Estudiante</TableHead>}
                 <TableHead>Módulo</TableHead>
                 <TableHead>Contenido / Tarea</TableHead>
-                <TableHead>Tipo</TableHead>
                 <TableHead>Calificación</TableHead>
                 <TableHead className="px-8">Estado</TableHead>
               </TableRow>
@@ -204,19 +216,25 @@ export function ReportsDashboard() {
                   <TableCell className="px-8 font-medium">
                     {safeFormatDate(sub.createdAt)}
                   </TableCell>
-                  {isAdmin && <TableCell className="text-xs">{sub.usuarioNombre || 'Estudiante'}</TableCell>}
+                  {isAdmin && (
+                    <TableCell>
+                      <div className="flex flex-col">
+                        <span className="text-xs font-bold">{sub.usuarioNombre || 'Sin nombre'}</span>
+                        <span className="text-[10px] text-muted-foreground">{sub.usuarioEmail}</span>
+                      </div>
+                    </TableCell>
+                  )}
                   <TableCell>
                     <Badge variant="outline">Módulo {sub.moduloId || '?'}</Badge>
                   </TableCell>
-                  <TableCell className="max-w-[200px] truncate font-semibold">{sub.tituloContenido || 'Sin título'}</TableCell>
-                  <TableCell>
-                    <span className="text-[10px] font-bold uppercase text-muted-foreground">{sub.tipoEnvio || 'Envío'}</span>
+                  <TableCell className="max-w-[200px] truncate font-semibold">
+                    {sub.tituloContenido || 'Sin título'}
                   </TableCell>
                   <TableCell>
                      {sub.puntaje !== undefined && sub.puntaje !== null ? (
                        <span className={cn(
                          "font-bold",
-                         sub.puntaje >= 3.5 ? "text-green-600" : "text-amber-600"
+                         Number(sub.puntaje) >= 3.5 ? "text-green-600" : "text-amber-600"
                        )}>
                          {Number(sub.puntaje).toFixed(1)}/5.0
                        </span>
@@ -228,7 +246,7 @@ export function ReportsDashboard() {
                      <Badge 
                        className={cn(
                          "rounded-full px-3 text-[10px] font-bold border-none",
-                         sub.estado === 'calificado' ? "bg-green-100 text-green-700" : "bg-blue-100 text-blue-700"
+                         (sub.estado || 'enviado').toLowerCase() === 'calificado' ? "bg-green-100 text-green-700" : "bg-blue-100 text-blue-700"
                        )}
                      >
                       {(sub.estado || 'enviado').toUpperCase()}
@@ -238,8 +256,8 @@ export function ReportsDashboard() {
               ))}
               {submissions.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={isAdmin ? 7 : 6} className="text-center py-20 text-muted-foreground italic">
-                    No se han registrado actividades recientes en este periodo.
+                  <TableCell colSpan={isAdmin ? 6 : 5} className="text-center py-20 text-muted-foreground italic">
+                    No hay registros en la base de datos para mostrar.
                   </TableCell>
                 </TableRow>
               )}
