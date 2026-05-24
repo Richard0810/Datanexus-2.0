@@ -204,7 +204,7 @@ export function ReportsDashboard() {
                   <TableCell className="px-8 font-medium">
                     {safeFormatDate(sub.createdAt)}
                   </TableCell>
-                  {isAdmin && <TableCell className="text-xs">{sub.usuarioNombre}</TableCell>}
+                  {isAdmin && <TableCell className="text-xs">{sub.usuarioNombre || 'Estudiante'}</TableCell>}
                   <TableCell>
                     <Badge variant="outline">Módulo {sub.moduloId || '?'}</Badge>
                   </TableCell>

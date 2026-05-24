@@ -30,17 +30,22 @@ Este documento registra los hitos técnicos y cambios estructurales realizados e
 - **Panel de Seguimiento**: Pestaña exclusiva para administradores que permite visualizar envíos de estudiantes, calificar (0-5) y dejar retroalimentación.
 - **Editor de Texto**: Reparación del icono de cursiva (`Italic`) en el editor de entregas.
 
-### 4. Backend y Configuración
+### 4. Reportes y Analítica
+- **Dashboard Dinámico**: Sincronización real con el endpoint `/performance-reports`.
+- **Robustez de Datos**: Implementación de manejo de nulos y validación de fechas (`safeFormatDate`) para evitar errores de ejecución en registros incompletos.
+- **Gráficas de Desempeño**: Visualización de promedios por módulo con filtrado automático de valores no numéricos.
+
+### 5. Backend y Configuración
 - **Límites de Carga**: Configuración de `50mb` en el servidor NestJS para permitir entregas con archivos base64 y textos enriquecidos.
 - **Conteo Dinámico**: Cálculo en tiempo real de lecciones por módulo sumando recursos, actividades y evaluaciones.
 - **Seguridad CORS**: Configuración robusta para permitir peticiones desde el entorno de Cloud Workstations.
 
-### 5. Correcciones de Estabilidad
+### 6. Correcciones de Estabilidad
 - **Iframe Empty Src**: Se corrigió el error que pasaba una cadena vacía al atributo `src` de los iframes, lo cual provocaba recargas de página innecesarias.
 - **Script de Inicio**: Corrección en el `package.json` raíz para usar `npm run dev` en el frontend.
 - **Solución Network Error**: Se eliminó la configuración manual de encabezados `multipart/form-data` en las peticiones de Axios, permitiendo que el navegador asigne el boundary correcto y evitando errores de red.
 
-### 6. Responsividad y Archivos
+### 7. Responsividad y Archivos
 - **Diálogo Auto-ajustable**: Se ha optimizado el diálogo de recursos para pantallas pequeñas usando scroll interno y grids adaptables.
 - **Subida de Archivos**: Integración de soporte para subir archivos físicos (PDF, Word, MP4) mediante conversión a Base64 en el cliente para máxima compatibilidad.
 
