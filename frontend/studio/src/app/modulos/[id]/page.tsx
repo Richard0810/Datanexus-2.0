@@ -10,7 +10,6 @@ import {
   CheckCircle2, 
   Pencil, 
   Trash2,
-  MoreVertical,
   Upload,
   ClipboardList,
   FileQuestion,
@@ -27,7 +26,6 @@ import {
   GraduationCap as GradeIcon,
   Save,
   FileCode,
-  CheckSquare,
   Send,
   FileCheck
 } from "lucide-react";
@@ -248,7 +246,6 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
     if (!url || typeof url !== 'string' || !url.startsWith("http")) return null;
     if (url.includes("drive.google.com")) {
       if (url.includes("/view")) return url.split("/view")[0] + "/preview";
-      if (url.includes("/edit")) return url.split("/edit")[0] + "/preview";
       return url;
     }
     if (url.includes("youtube.com") || url.includes("youtu.be")) {
@@ -428,12 +425,14 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
 
   const handleSaveGrade = async () => {
     if (!selectedSubmission) return;
+    
+    // Validación rigurosa 0-5
     if (gradingForm.puntaje > 5) {
-      toast({ title: "Puntaje inválido", description: "La calificación máxima permitida es 5.0", variant: "destructive" });
+      toast({ title: "Puntaje inválido", description: "La calificación máxima es 5.0", variant: "destructive" });
       return;
     }
     if (gradingForm.puntaje < 0) {
-      toast({ title: "Puntaje inválido", description: "La calificación mínima permitida es 0.0", variant: "destructive" });
+      toast({ title: "Puntaje inválido", description: "La calificación mínima es 0.0", variant: "destructive" });
       return;
     }
 
@@ -512,7 +511,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
           <div className="space-y-4">
             {parsed.map((item: any, idx) => (
               <div key={idx} className="p-3 bg-muted rounded-lg border-l-4 border-primary">
-                <p className="text-xs font-bold text-primary mb-1 uppercase">{item.pregunta || 'Pregunta'}</p>
+                <p className="text-sm font-bold text-primary mb-1 uppercase">{item.pregunta || 'Pregunta'}</p>
                 <p className="text-sm">{String(item.respuesta)}</p>
               </div>
             ))}
@@ -539,7 +538,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
       </div>
 
       <Tabs defaultValue="recursos" className="w-full">
-        <TabsList className={cn("grid w-full mb-8", isAdmin ? "md:w-[800px] grid-cols-4" : "md:w-[480px] grid-cols-3")}>
+        <TabsList className={cn("grid w-full mb-8", isAdmin ? "grid-cols-4" : "grid-cols-3")}>
           <TabsTrigger value="recursos" className="flex items-center gap-2"><Layers className="h-4 w-4" /> Recursos</TabsTrigger>
           <TabsTrigger value="actividades" className="flex items-center gap-2"><ClipboardList className="h-4 w-4" /> Actividades</TabsTrigger>
           <TabsTrigger value="evaluaciones" className="flex items-center gap-2"><FileQuestion className="h-4 w-4" /> Evaluaciones</TabsTrigger>
@@ -564,8 +563,8 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                   <Card key={resId} className="overflow-hidden shadow-md relative group">
                     {isAdmin && (
                       <div className="absolute top-4 right-4 flex gap-2 z-20">
-                        <Button variant="default" size="icon" className="h-8 w-8 bg-blue-600 hover:bg-blue-700 text-white shadow-lg" onClick={() => { setEditingResource(res); setResourceForm(res); setSourceTab(res.url?.startsWith('data:') ? "file" : "url"); setIsResourceDialogOpen(true); }}><Pencil className="h-4 w-4" /></Button>
-                        <Button variant="destructive" size="icon" className="h-8 w-8 bg-red-600 text-white shadow-lg" onClick={() => { setItemToDelete({ id: resId, type: 'recurso' }); setIsDeleteDialogOpen(true); }}><Trash2 className="h-4 w-4" /></Button>
+                        <Button variant="default" size="icon" className="h-8 w-8 rounded-full bg-blue-600 hover:bg-blue-700 text-white shadow-lg" onClick={() => { setEditingResource(res); setResourceForm(res); setSourceTab(res.url?.startsWith('data:') ? "file" : "url"); setIsResourceDialogOpen(true); }}><Pencil className="h-4 w-4" /></Button>
+                        <Button variant="destructive" size="icon" className="h-8 w-8 rounded-full bg-red-600 text-white shadow-lg" onClick={() => { setItemToDelete({ id: resId, type: 'recurso' }); setIsDeleteDialogOpen(true); }}><Trash2 className="h-4 w-4" /></Button>
                       </div>
                     )}
                     <CardHeader>
@@ -583,9 +582,9 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                       {embedUrl ? (
                         <div className="aspect-video rounded-xl overflow-hidden bg-black border shadow-inner"><iframe src={embedUrl} className="w-full h-full border-0" allowFullScreen /></div>
                       ) : isPdf ? (
-                        <div className="aspect-video rounded-xl overflow-hidden border bg-background"><iframe src={pdfUrls[resId]} className="w-full h-full border-0" /></div>
+                        <div className="aspect-video rounded-xl overflow-hidden border bg-background shadow-inner"><iframe src={pdfUrls[resId]} className="w-full h-full border-0" /></div>
                       ) : isVideo ? (
-                        <div className="aspect-video rounded-xl overflow-hidden bg-black"><video controls className="w-full h-full"><source src={res.url} /></video></div>
+                        <div className="aspect-video rounded-xl overflow-hidden bg-black shadow-inner"><video controls className="w-full h-full"><source src={res.url} /></video></div>
                       ) : (
                         <div className="p-12 text-center border rounded-xl bg-muted/20"><FileCode className="h-12 w-12 mx-auto mb-2 opacity-20" /><Button variant="link" onClick={() => handleViewFull(res)}>Abrir Recurso</Button></div>
                       )}
@@ -600,17 +599,17 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
         <TabsContent value="actividades" className="space-y-6">
           <div className="flex justify-between items-center">
             <h2 className="text-xl font-headline">Actividades Prácticas</h2>
-            {isAdmin && <Button onClick={() => { setEditingActivity(null); setActivityForm({ titulo: "", descripcion: "", tipo: "individual", criterios_evaluacion: "", moduloId: id, archivoUrl: "" }); setIsActivityDialogOpen(true); }} size="sm" className="bg-primary"><PlusCircle className="mr-2 h-4 w-4" /> Añadir Actividad</Button>}
+            {isAdmin && <Button onClick={() => { setEditingActivity(null); setActivityForm({ titulo: "", descripcion: "", tipo: "individual", criterios_evaluacion: "", moduloId: id, archivoUrl: "" }); setIsActivityDialogOpen(true); }} size="sm" className="bg-primary"><PlusCircle className="mr-2 h-4 w-4" /> Nueva Actividad</Button>}
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {activities.map((act) => {
               const actId = getObjectId(act);
               return (
-                <Card key={actId} className="flex flex-col shadow-md border-l-4 border-l-primary relative group">
+                <Card key={actId} className="flex flex-col shadow-md border-t-4 border-t-accent/50 group relative">
                   {isAdmin && (
-                    <div className="absolute top-4 right-4 flex gap-2 z-20">
-                       <Button variant="default" size="icon" className="h-8 w-8 bg-blue-600 hover:bg-blue-700 text-white shadow-lg" onClick={() => { setEditingActivity(act); setActivityForm(act); setIsActivityDialogOpen(true); }}><Pencil className="h-4 w-4" /></Button>
-                       <Button variant="destructive" size="icon" className="h-8 w-8 bg-red-600 text-white shadow-lg" onClick={() => { setItemToDelete({ id: actId, type: 'actividad' }); setIsDeleteDialogOpen(true); }}><Trash2 className="h-4 w-4" /></Button>
+                    <div className="absolute top-4 right-4 flex gap-2 z-10">
+                       <Button variant="default" size="icon" className="h-8 w-8 rounded-full bg-blue-600 hover:bg-blue-700 text-white shadow-sm" onClick={() => { setEditingActivity(act); setActivityForm(act); setIsActivityDialogOpen(true); }}><Pencil className="h-4 w-4" /></Button>
+                       <Button variant="destructive" size="icon" className="h-8 w-8 rounded-full bg-red-600 text-white shadow-sm" onClick={() => { setItemToDelete({ id: actId, type: 'actividad' }); setIsDeleteDialogOpen(true); }}><Trash2 className="h-4 w-4" /></Button>
                     </div>
                   )}
                   <CardHeader>
@@ -623,7 +622,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                     <p className="text-sm"><strong>Criterios:</strong> {act.criterios_evaluacion}</p>
                   </CardContent>
                   <CardFooter>
-                    {!isAdmin && <Button variant="default" className="w-full bg-accent" onClick={() => { setSelectedActivity(act); setIsSubmitActivityOpen(true); }}><Send className="mr-2 h-4 w-4" /> Enviar Tarea</Button>}
+                    {!isAdmin && <Button variant="default" className="w-full bg-accent hover:bg-accent/90" onClick={() => { setSelectedActivity(act); setIsSubmitActivityOpen(true); }}><Upload className="mr-2 h-4 w-4" /> Entregar Tarea</Button>}
                   </CardFooter>
                 </Card>
               );
@@ -643,8 +642,8 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                 <Card key={assId} className="hover:border-primary transition-all cursor-pointer group shadow-md relative" onClick={() => { setEditingAssessment(ass); setAssessmentForm(ass); setViewMode(isAdmin ? 'edit' : 'preview'); handleResetPreview(); setIsAssessmentDialogOpen(true); }}>
                   {isAdmin && (
                     <div className="absolute top-2 right-2 flex gap-1 z-10">
-                      <Button variant="secondary" size="icon" className="h-7 w-7 bg-blue-600 text-white shadow-lg" onClick={(e) => { e.stopPropagation(); setEditingAssessment(ass); setAssessmentForm(ass); setViewMode('edit'); setIsAssessmentDialogOpen(true); }}><Pencil className="h-3 w-3" /></Button>
-                      <Button variant="secondary" size="icon" className="h-7 w-7 bg-red-600 text-white shadow-lg" onClick={(e) => { e.stopPropagation(); setItemToDelete({ id: assId, type: 'evaluacion' }); setIsDeleteDialogOpen(true); }}><Trash2 className="h-3 w-3" /></Button>
+                      <Button variant="default" size="icon" className="h-7 w-7 rounded-full bg-blue-600 hover:bg-blue-700 text-white shadow-md" onClick={(e) => { e.stopPropagation(); setEditingAssessment(ass); setAssessmentForm(ass); setViewMode('edit'); setIsAssessmentDialogOpen(true); }}><Pencil className="h-3 w-3" /></Button>
+                      <Button variant="destructive" size="icon" className="h-7 w-7 rounded-full bg-red-600 text-white shadow-md" onClick={(e) => { e.stopPropagation(); setItemToDelete({ id: assId, type: 'evaluacion' }); setIsDeleteDialogOpen(true); }}><Trash2 className="h-3 w-3" /></Button>
                     </div>
                   )}
                   <CardHeader>
@@ -661,10 +660,10 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
 
         {isAdmin && (
           <TabsContent value="seguimiento" className="space-y-6">
-            <Card className="shadow-sm overflow-hidden border-none rounded-2xl">
+            <Card className="shadow-sm border-none rounded-2xl overflow-hidden">
               <CardHeader className="bg-slate-50 border-b">
                 <CardTitle className="flex items-center gap-2"><History className="h-5 w-5 text-primary" /> Panel de Seguimiento</CardTitle>
-                <CardDescription>Revisa las entregas y califica el desempeño de tus estudiantes.</CardDescription>
+                <CardDescription>Revisa y califica el desempeño de tus estudiantes.</CardDescription>
               </CardHeader>
               <CardContent className="p-0">
                 <Table>
@@ -714,7 +713,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
         <DialogContent className="sm:max-w-[700px] max-h-[85vh] overflow-hidden flex flex-col">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2"><GradeIcon className="h-5 w-5 text-primary" /> Revisión de Entrega</DialogTitle>
-            <DialogDescription>Calificando el trabajo de: <strong>{selectedSubmission?.usuarioNombre}</strong></DialogDescription>
+            <DialogDescription>Calificando a: <strong>{selectedSubmission?.usuarioNombre}</strong></DialogDescription>
           </DialogHeader>
           <div className="flex-1 overflow-y-auto pr-2 py-4 space-y-6">
             <div className="space-y-2">
@@ -726,7 +725,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
               <div className="space-y-2">
                 <Label>Puntaje (0 - 5.0)</Label>
                 <Input type="number" step="0.1" min="0" max="5" value={gradingForm.puntaje} onChange={e => setGradingForm({...gradingForm, puntaje: Math.min(5, Math.max(0, parseFloat(e.target.value) || 0))})} />
-                <p className="text-[10px] text-muted-foreground italic">Límite máximo: 5.0</p>
+                <p className="text-[10px] text-muted-foreground italic">Calificación máxima permitida: 5.0</p>
               </div>
               <div className="md:col-span-2 space-y-2">
                 <Label>Retroalimentación</Label>
@@ -742,13 +741,10 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
       </Dialog>
 
       <Dialog open={isSubmitActivityOpen} onOpenChange={setIsSubmitActivityOpen}>
-        <DialogContent className="sm:max-w-[600px]">
-          <DialogHeader><DialogTitle>Subir Entrega</DialogTitle><DialogDescription>Actividad: {selectedActivity?.titulo}</DialogDescription></DialogHeader>
-          <div className="py-4 space-y-4">
-            <Label>Desarrollo o enlace del trabajo</Label>
-            <Textarea placeholder="Pega aquí el enlace de tu documento o redacta tu respuesta directamente..." value={activitySubmissionText} onChange={e => setActivitySubmissionText(e.target.value)} rows={10} />
-          </div>
-          <DialogFooter><Button onClick={handleSubmitActivity} disabled={isProcessing} className="bg-primary w-full">{isProcessing ? <Loader2 className="animate-spin" /> : "Confirmar Envío"}</Button></DialogFooter>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Entregar: {selectedActivity?.titulo}</DialogTitle><DialogDescription>Pega el enlace de tu trabajo o escribe tu respuesta.</DialogDescription></DialogHeader>
+          <div className="py-4 space-y-4"><Textarea placeholder="Escribe aquí tu respuesta o enlace..." value={activitySubmissionText} onChange={e => setActivitySubmissionText(e.target.value)} rows={6} /></div>
+          <DialogFooter><Button onClick={handleSubmitActivity} disabled={isProcessing} className="w-full">{isProcessing ? <Loader2 className="animate-spin" /> : "Enviar Entrega"}</Button></DialogFooter>
         </DialogContent>
       </Dialog>
 
@@ -801,7 +797,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
         <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <div className="flex items-center justify-between pr-8">
-              <DialogTitle className="text-2xl font-headline">{viewMode === 'edit' ? 'Gestor de Examen' : assessmentForm.titulo}</DialogTitle>
+              <DialogTitle className="text-2xl font-headline">{viewMode === 'edit' ? 'Gestor de Examen' : 'Evaluación'}</DialogTitle>
               {isAdmin && (
                 <div className="flex gap-2">
                   <Button variant={viewMode === 'edit' ? 'default' : 'outline'} size="sm" onClick={() => setViewMode('edit')}><Settings2 className="mr-2 h-4 w-4" /> Editar</Button>
@@ -810,7 +806,6 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
               )}
             </div>
           </DialogHeader>
-
           {viewMode === 'edit' ? (
             <div className="grid gap-6 py-4">
               <div className="grid grid-cols-2 gap-4">
@@ -834,11 +829,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                       {currentQuestion.opciones.map((opt, idx) => (
                         <div key={idx} className="flex items-center gap-3">
                           <RadioGroupItem value={opt} />
-                          <Input value={opt} onChange={e => {
-                              const newOpts = [...currentQuestion.opciones];
-                              newOpts[idx] = e.target.value;
-                              setCurrentQuestion({...currentQuestion, opciones: newOpts});
-                          }} className="flex-1" />
+                          <Input value={opt} onChange={e => { const newOpts = [...currentQuestion.opciones]; newOpts[idx] = e.target.value; setCurrentQuestion({...currentQuestion, opciones: newOpts}); }} className="flex-1" />
                           <Button variant="ghost" size="icon" onClick={() => handleRemoveOption(idx)} disabled={currentQuestion.opciones.length <= 2}><X className="h-4 w-4" /></Button>
                         </div>
                       ))}
@@ -855,16 +846,15 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                     </RadioGroup>
                   </div>
                 )}
-                <Button variant="default" onClick={handleAddQuestion} className="w-full bg-slate-900">Agregar Pregunta</Button>
+                <Button variant="default" onClick={handleAddQuestion} className="w-full bg-slate-900">Añadir Pregunta</Button>
               </div>
-
-              {assessmentForm.preguntas.length > 0 && (
-                <div className="space-y-2">
-                  <Label>Preguntas actualizadas ({assessmentForm.preguntas.length})</Label>
+              {assessmentForm.preguntas?.length > 0 && (
+                <div className="space-y-2 border-t pt-4">
+                  <Label className="font-bold">Preguntas actualizadas ({assessmentForm.preguntas.length})</Label>
                   <div className="space-y-2">
                     {assessmentForm.preguntas.map((q, i) => (
-                      <div key={q.id} className="flex items-center justify-between p-2 border rounded text-sm bg-white">
-                        <span>{i+1}. {q.texto} ({q.tipo})</span>
+                      <div key={q.id} className="flex items-center justify-between p-3 border rounded-xl bg-white shadow-sm">
+                        <span className="text-sm font-medium">{i+1}. {q.texto} <Badge variant="secondary" className="ml-2 text-[10px]">{q.tipo}</Badge></span>
                         <Button variant="ghost" size="icon" onClick={() => setAssessmentForm({...assessmentForm, preguntas: assessmentForm.preguntas.filter(item => item.id !== q.id)})}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                       </div>
                     ))}
@@ -880,18 +870,18 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                  <p className="text-muted-foreground">{assessmentForm.descripcion}</p>
                  {score && <div className="mt-4 p-4 bg-primary/10 rounded-xl flex items-center justify-between"><span className="font-bold">Resultado:</span><Badge className="text-lg px-4">{score.correct} / {score.total}</Badge></div>}
               </div>
-              {assessmentForm.preguntas.map((q, idx) => (
+              {assessmentForm.preguntas?.map((q, idx) => (
                 <div key={q.id} className="space-y-4 bg-muted/10 p-6 rounded-2xl border">
                   <p className="text-lg font-bold">{idx + 1}. {q.texto}</p>
                   <div className="pl-4">
                     {q.tipo === 'opcion-multiple' && (
                       <RadioGroup value={userAnswers[q.id]} onValueChange={v => !showFeedback && setUserAnswers({...userAnswers, [q.id]: v})} className="space-y-2">
                         {q.opciones.map((opt, i) => (
-                          <div key={i} className={cn("flex items-center space-x-3 p-4 border rounded-xl transition-all", 
-                            showFeedback && q.respuestaCorrecta === opt ? "bg-green-100 border-green-500" : 
+                          <div key={i} className={cn("flex items-center space-x-3 p-3 border rounded-xl transition-all", 
+                            showFeedback && q.respuestaCorrecta === opt ? "bg-green-100 border-green-500 shadow-sm" : 
                             showFeedback && userAnswers[q.id] === opt && q.respuestaCorrecta !== opt ? "bg-red-100 border-red-500" : "hover:bg-muted/50")}>
                             <RadioGroupItem value={opt} id={`q${idx}o${i}`} disabled={showFeedback} />
-                            <Label htmlFor={`q${idx}o${i}`} className="flex-1 cursor-pointer">{opt}</Label>
+                            <Label htmlFor={`q${idx}o${i}`} className="flex-1 cursor-pointer font-medium">{opt}</Label>
                           </div>
                         ))}
                       </RadioGroup>
@@ -904,12 +894,12 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                       </div>
                     )}
                     {q.tipo === 'escrita' && (
-                      <Textarea placeholder="Escribe tu respuesta aquí..." value={userAnswers[q.id] || ""} onChange={e => !showFeedback && setUserAnswers({...userAnswers, [q.id]: e.target.value})} disabled={showFeedback} rows={6} className="bg-white" />
+                      <Textarea placeholder="Escribe tu respuesta aquí..." value={userAnswers[q.id] || ""} onChange={e => !showFeedback && setUserAnswers({...userAnswers, [q.id]: e.target.value})} disabled={showFeedback} rows={4} className="bg-white" />
                     )}
                   </div>
                 </div>
               ))}
-              {!showFeedback ? <Button className="w-full h-14 bg-primary text-lg font-bold shadow-lg" onClick={handleGradeAssessment}>Finalizar y Enviar Evaluación</Button> : <div className="p-6 bg-primary/10 rounded-2xl text-center border-2 border-primary/20"><Trophy className="h-10 w-10 text-primary mx-auto mb-2" /><h3 className="text-2xl font-bold">¡Evaluación Enviada!</h3><p className="text-muted-foreground mt-1">Tus respuestas han sido enviadas al docente para su revisión.</p></div>}
+              {!showFeedback ? <Button className="w-full h-14 bg-primary text-lg font-bold shadow-lg" onClick={handleGradeAssessment}>Finalizar y Enviar Evaluación</Button> : <div className="p-6 bg-primary/10 rounded-2xl text-center border-2 border-primary/20"><Trophy className="h-10 w-10 text-primary mx-auto mb-2" /><h3 className="text-2xl font-bold">¡Evaluación Enviada!</h3><p className="text-muted-foreground mt-1">Tus respuestas han sido enviadas para revisión.</p></div>}
             </div>
           )}
         </DialogContent>
@@ -923,7 +913,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel className="rounded-2xl h-12" disabled={isProcessing}>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={(e) => { e.preventDefault(); handleDeleteConfirm(); }} className="bg-red-600 hover:bg-red-700 text-white rounded-2xl h-12 px-8 shadow-lg shadow-red-200" disabled={isProcessing}>
+            <AlertDialogAction onClick={(e) => { e.preventDefault(); handleDeleteConfirm(); }} className="bg-red-600 hover:bg-red-700 text-white rounded-2xl h-12 px-8 shadow-lg" disabled={isProcessing}>
               {isProcessing ? <Loader2 className="animate-spin h-4 w-4 mr-2" /> : <Trash2 className="w-4 h-4 mr-2" />} Confirmar Eliminación
             </AlertDialogAction>
           </AlertDialogFooter>
