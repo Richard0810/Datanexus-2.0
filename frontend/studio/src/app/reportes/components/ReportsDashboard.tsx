@@ -14,9 +14,19 @@ import { format, isValid } from "date-fns";
 import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface Submission {
-  _id: string;
+  _id: any;
   usuarioNombre: string;
   usuarioEmail: string;
   tipoEnvio: string;
@@ -33,9 +43,27 @@ export function ReportsDashboard() {
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [loading, setLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
+  
+  // Estados para eliminación robusta
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [reportToDelete, setReportToDelete] = useState<Submission | null>(null);
+  const [isClearDialogOpen, setIsClearDialogOpen] = useState(false);
 
   const userRole = user?.role?.trim().toLowerCase();
   const isAdmin = userRole === 'admin' || userRole === 'administrador';
+
+  // Función normalizadora de IDs (según Bitácora)
+  const getReportId = (sub: any): string => {
+    if (!sub) return '';
+    if (sub._id) {
+      if (typeof sub._id === 'string') return sub._id;
+      if (typeof sub._id === 'object') {
+        if (sub._id.$oid) return sub._id.$oid;
+        if (typeof sub._id.toString === 'function') return sub._id.toString();
+      }
+    }
+    return '';
+  };
 
   const fetchData = async () => {
     try {
@@ -58,34 +86,37 @@ export function ReportsDashboard() {
     }
   }, [user, isAdmin]);
 
-  const handleDelete = async (id: string) => {
-    if (!window.confirm("¿Seguro que quieres eliminar este registro permanentemente?")) return;
+  const handleDeleteConfirm = async () => {
+    if (!reportToDelete) return;
+    const id = getReportId(reportToDelete);
     
     setIsProcessing(true);
     try {
       await api.delete(`/performance-reports/${id}`);
-      setSubmissions(prev => prev.filter(s => s._id !== id));
+      setSubmissions(prev => prev.filter(s => getReportId(s) !== id));
       toast({ title: "Registro eliminado con éxito" });
     } catch (e) {
       toast({ title: "Error al eliminar", variant: "destructive" });
     } finally {
       setIsProcessing(false);
+      setIsDeleteDialogOpen(false);
+      setReportToDelete(null);
     }
   };
 
-  const handleClearNonGraded = async () => {
-    const nonGraded = submissions.filter(s => s.estado !== 'calificado');
+  const handleClearConfirm = async () => {
+    const nonGraded = submissions.filter(s => (s.estado || '').toLowerCase() !== 'calificado');
     if (nonGraded.length === 0) {
       toast({ title: "No hay registros pendientes de limpieza" });
+      setIsClearDialogOpen(false);
       return;
     }
-    
-    if (!window.confirm(`¿Estás seguro de eliminar los ${nonGraded.length} registros que NO están calificados? Esta acción limpiará tu base de datos.`)) return;
     
     setIsProcessing(true);
     try {
       for (const sub of nonGraded) {
-        await api.delete(`/performance-reports/${sub._id}`);
+        const id = getReportId(sub);
+        if (id) await api.delete(`/performance-reports/${id}`);
       }
       toast({ title: "Limpieza completada", description: "Se han mantenido solo los registros calificados." });
       fetchData();
@@ -93,6 +124,7 @@ export function ReportsDashboard() {
       toast({ title: "Error durante la limpieza", variant: "destructive" });
     } finally {
       setIsProcessing(false);
+      setIsClearDialogOpen(false);
     }
   };
 
@@ -214,7 +246,7 @@ export function ReportsDashboard() {
                 <div>
                    <p className="text-[10px] font-bold uppercase text-green-600 tracking-widest">Calificadas</p>
                    <p className="text-3xl font-headline font-bold text-green-700">
-                    {submissions.filter(s => s.estado === 'calificado').length}
+                    {submissions.filter(s => (s.estado || '').toLowerCase() === 'calificado').length}
                    </p>
                 </div>
                 <Trophy className="h-8 w-8 text-green-600/40" />
@@ -237,7 +269,7 @@ export function ReportsDashboard() {
               variant="outline" 
               size="sm" 
               className="text-destructive hover:bg-destructive/10 border-destructive/20"
-              onClick={handleClearNonGraded}
+              onClick={() => setIsClearDialogOpen(true)}
               disabled={isProcessing}
             >
               {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Eraser className="mr-2 h-4 w-4" />}
@@ -263,62 +295,68 @@ export function ReportsDashboard() {
                 const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
                 const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
                 return dateB - dateA;
-              }).map((sub) => (
-                <TableRow key={sub._id} className="hover:bg-slate-50/80 transition-colors">
-                  <TableCell className="px-8 font-medium">
-                    {safeFormatDate(sub.createdAt)}
-                  </TableCell>
-                  {isAdmin && (
+              }).map((sub) => {
+                const subId = getReportId(sub);
+                return (
+                  <TableRow key={subId} className="hover:bg-slate-50/80 transition-colors">
+                    <TableCell className="px-8 font-medium">
+                      {safeFormatDate(sub.createdAt)}
+                    </TableCell>
+                    {isAdmin && (
+                      <TableCell>
+                        <div className="flex flex-col">
+                          <span className="text-xs font-bold">{sub.usuarioNombre || 'Sin nombre'}</span>
+                          <span className="text-[10px] text-muted-foreground">{sub.usuarioEmail}</span>
+                        </div>
+                      </TableCell>
+                    )}
                     <TableCell>
-                      <div className="flex flex-col">
-                        <span className="text-xs font-bold">{sub.usuarioNombre || 'Sin nombre'}</span>
-                        <span className="text-[10px] text-muted-foreground">{sub.usuarioEmail}</span>
-                      </div>
+                      <Badge variant="outline">Módulo {sub.moduloId || '?'}</Badge>
                     </TableCell>
-                  )}
-                  <TableCell>
-                    <Badge variant="outline">Módulo {sub.moduloId || '?'}</Badge>
-                  </TableCell>
-                  <TableCell className="max-w-[200px] truncate font-semibold">
-                    {sub.tituloContenido || 'Sin título'}
-                  </TableCell>
-                  <TableCell>
-                     {sub.puntaje !== undefined && sub.puntaje !== null ? (
-                       <span className={cn(
-                         "font-bold",
-                         Number(sub.puntaje) >= 3.5 ? "text-green-600" : "text-amber-600"
-                       )}>
-                         {Number(sub.puntaje).toFixed(1)}/5.0
-                       </span>
-                     ) : (
-                       <span className="text-slate-300 italic text-xs">Pendiente</span>
-                     )}
-                  </TableCell>
-                  <TableCell>
-                     <Badge 
-                       className={cn(
-                         "rounded-full px-3 text-[10px] font-bold border-none",
-                         (sub.estado || 'enviado').toLowerCase() === 'calificado' ? "bg-green-100 text-green-700" : "bg-blue-100 text-blue-700"
+                    <TableCell className="max-w-[200px] truncate font-semibold">
+                      {sub.tituloContenido || 'Sin título'}
+                    </TableCell>
+                    <TableCell>
+                       {sub.puntaje !== undefined && sub.puntaje !== null ? (
+                         <span className={cn(
+                           "font-bold",
+                           Number(sub.puntaje) >= 3.5 ? "text-green-600" : "text-amber-600"
+                         )}>
+                           {Number(sub.puntaje).toFixed(1)}/5.0
+                         </span>
+                       ) : (
+                         <span className="text-slate-300 italic text-xs">Pendiente</span>
                        )}
-                     >
-                      {(sub.estado || 'enviado').toUpperCase()}
-                    </Badge>
-                  </TableCell>
-                  {isAdmin && (
-                    <TableCell className="px-8 text-right">
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        className="h-8 w-8 text-destructive hover:bg-destructive/10"
-                        onClick={() => handleDelete(sub._id)}
-                        disabled={isProcessing}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
                     </TableCell>
-                  )}
-                </TableRow>
-              ))}
+                    <TableCell>
+                       <Badge 
+                         className={cn(
+                           "rounded-full px-3 text-[10px] font-bold border-none",
+                           (sub.estado || 'enviado').toLowerCase() === 'calificado' ? "bg-green-100 text-green-700" : "bg-blue-100 text-blue-700"
+                         )}
+                       >
+                        {(sub.estado || 'enviado').toUpperCase()}
+                      </Badge>
+                    </TableCell>
+                    {isAdmin && (
+                      <TableCell className="px-8 text-right">
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-8 w-8 text-destructive hover:bg-destructive/10"
+                          onClick={() => {
+                            setReportToDelete(sub);
+                            setIsDeleteDialogOpen(true);
+                          }}
+                          disabled={isProcessing}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    )}
+                  </TableRow>
+                );
+              })}
               {submissions.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={isAdmin ? 7 : 5} className="text-center py-20 text-muted-foreground italic">
@@ -330,6 +368,56 @@ export function ReportsDashboard() {
           </Table>
         </CardContent>
       </Card>
+
+      {/* DIÁLOGOS DE CONFIRMACIÓN ROBUSTA */}
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Estás completamente seguro?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción eliminará permanentemente la entrega de <strong>{reportToDelete?.usuarioNombre}</strong>. No podrás deshacer este cambio.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isProcessing}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={(e) => {
+                e.preventDefault();
+                handleDeleteConfirm();
+              }} 
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={isProcessing}
+            >
+              {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
+              Eliminar Registro
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={isClearDialogOpen} onOpenChange={setIsClearDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Limpieza de Base de Datos</AlertDialogTitle>
+            <AlertDialogDescription>
+              Se eliminarán todos los registros que <strong>no hayan sido calificados</strong>. Esta acción es irreversible y mantendrá solo las tareas revisadas.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isProcessing}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={(e) => {
+                e.preventDefault();
+                handleClearConfirm();
+              }} 
+              disabled={isProcessing}
+            >
+              {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Eraser className="mr-2 h-4 w-4" />}
+              Ejecutar Limpieza
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
