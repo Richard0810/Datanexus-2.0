@@ -41,7 +41,8 @@ import {
   Monitor,
   Database,
   MoreHorizontal,
-  Link as LinkIcon
+  Link as LinkIcon,
+  CheckSquare
 } from "lucide-react";
 import Link from "next/link";
 import api from "@/lib/api";
@@ -193,11 +194,10 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
   const editorRef = useRef<HTMLDivElement>(null);
   const [attachedFile, setAttachedFile] = useState<{ name: string, data: string } | null>(null);
   
-  // Nuevos estados para la gestión de recursos avanzada
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [sourceTab, setSourceTab] = useState<"url" | "file">("url");
   const [isDragging, setIsDragging] = useState(false);
-  
+
   const [editingResource, setEditingResource] = useState<Resource | null>(null);
   const [editingActivity, setEditingActivity] = useState<Activity | null>(null);
   const [editingAssessment, setEditingAssessment] = useState<Assessment | null>(null);
@@ -566,7 +566,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
   };
 
   const getEmbedUrl = (url: string) => {
-    if (!url || !url.startsWith("http")) return "";
+    if (!url || !url.startsWith("http")) return null;
     if (url.includes("youtube.com") || url.includes("youtu.be")) {
       let videoId = "";
       if (url.includes("youtu.be/")) videoId = url.split("youtu.be/")[1].split("?")[0];
@@ -636,6 +636,67 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
     return <div className="p-4 bg-muted rounded-lg text-sm whitespace-pre-wrap">{detail}</div>;
   };
 
+  // Helper para previsualizar recursos multimedia Base64
+  function ResourcePreview({ url, title, type }: { url: string; title: string, type: string }) {
+    const [blobUrl, setBlobUrl] = useState<string | null>(null);
+
+    useEffect(() => {
+      if (url.startsWith('data:application/pdf')) {
+        try {
+          const byteString = atob(url.split(',')[1]);
+          const mimeString = url.split(',')[0].split(':')[1].split(';')[0];
+          const ab = new ArrayBuffer(byteString.length);
+          const ia = new Uint8Array(ab);
+          for (let i = 0; i < byteString.length; i++) {
+            ia[i] = byteString.charCodeAt(i);
+          }
+          const blob = new Blob([ab], { type: mimeString });
+          const newUrl = URL.createObjectURL(blob);
+          setBlobUrl(newUrl);
+          return () => URL.revokeObjectURL(newUrl);
+        } catch (e) {
+          console.error("Error creating blob URL", e);
+        }
+      }
+      return undefined;
+    }, [url]);
+
+    if (url.startsWith('data:image/')) {
+      return <div className="w-full h-full flex items-center justify-center p-4 bg-slate-50"><img src={url} alt={title} className="max-w-full max-h-full object-contain rounded-lg shadow-sm" /></div>;
+    }
+
+    if (url.startsWith('data:video/')) {
+      return <video src={url} controls className="w-full h-full rounded-lg" />;
+    }
+
+    const embedUrl = getEmbedUrl(url);
+    const finalSrc = blobUrl || embedUrl;
+
+    if (!finalSrc) {
+      return (
+        <div className="w-full h-full flex flex-col items-center justify-center bg-slate-100 text-muted-foreground p-8 text-center rounded-xl">
+          <FileText className="h-12 w-12 mb-3 opacity-20" />
+          <p className="text-sm font-bold uppercase tracking-widest">Archivo local</p>
+          <p className="text-xs mt-1">Este recurso se guardó como archivo interno.</p>
+          <Button asChild variant="outline" size="sm" className="mt-6 rounded-xl font-bold bg-white">
+            <a href={url} download={title}>
+               <Download className="mr-2 h-4 w-4" /> Descargar y Ver
+            </a>
+          </Button>
+        </div>
+      );
+    }
+
+    return (
+      <iframe 
+        src={finalSrc} 
+        className="w-full h-full border-0 rounded-xl" 
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+        allowFullScreen 
+      />
+    );
+  }
+
   return (
     <div className="space-y-8">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -704,12 +765,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                     </CardHeader>
                     <CardContent>
                       <div className="aspect-video rounded-xl overflow-hidden bg-black border shadow-inner">
-                        <iframe 
-                          src={getEmbedUrl(res.url)} 
-                          className="w-full h-full border-0" 
-                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
-                          allowFullScreen 
-                        />
+                        <ResourcePreview url={res.url} title={res.titulo} type={res.tipo} />
                       </div>
                     </CardContent>
                   </Card>
@@ -758,7 +814,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                     <p className="text-sm"><strong>Criterios:</strong> {act.criterios_evaluacion}</p>
                     {act.archivoUrl && (
                       <Button asChild variant="outline" size="sm" className="w-full rounded-xl">
-                        <a href={getEmbedUrl(act.archivoUrl)} target="_blank" rel="noopener noreferrer">
+                        <a href={getEmbedUrl(act.archivoUrl) || '#'} target="_blank" rel="noopener noreferrer">
                           <Link2 className="mr-2 h-4 w-4" /> Ver Material de Referencia
                         </a>
                       </Button>
@@ -884,7 +940,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
         )}
       </Tabs>
 
-      {/* DIÁLOGO DE RECURSOS (NUEVO DISEÑO RESTAURADO) */}
+      {/* DIÁLOGO DE RECURSOS (AUTO-AJUSTABLE Y MODERNO) */}
       <Dialog 
         open={isResourceDialogOpen} 
         onOpenChange={(open) => { 
@@ -910,9 +966,8 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
             </div> 
           </div>
 
-          {/* Body - Auto-ajustable para móviles */}
+          {/* Body con Scroll Inteligente */}
           <div className="p-6 flex flex-col gap-5 max-h-[60vh] overflow-y-auto">
-            {/* Título */}
             <div className="flex flex-col gap-1.5">
               <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                 Título <span className="text-red-500">*</span>
@@ -931,7 +986,6 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
               </span>
             </div>
 
-            {/* Descripción */}
             <div className="flex flex-col gap-1.5">
               <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                 Descripción
@@ -946,7 +1000,6 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
               />
             </div>
 
-            {/* Tipo de recurso */}
             <div className="flex flex-col gap-1.5">
               <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                 Tipo de recurso
@@ -980,7 +1033,6 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
               </div>
             </div>
 
-            {/* Fuente: tabs URL / Archivo */}
             <div className="flex flex-col gap-2">
               <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                 Fuente del recurso
@@ -1084,7 +1136,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
             </div>
           </div>
 
-          {/* Footer */}
+          {/* Footer siempre visible */}
           <div className="px-6 py-4 border-t flex gap-2">
             <Button
               variant="outline"
@@ -1106,7 +1158,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
               ) : (
                 <>
                   <Save className="w-4 h-4 mr-2" />
-                  Guardar recurso en MongoDB
+                  Guardar recurso
                 </>
               )}
             </Button>
@@ -1218,7 +1270,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
       <Dialog open={isActivityDialogOpen} onOpenChange={setIsActivityDialogOpen}>
         <DialogContent className="rounded-2xl">
           <DialogHeader><DialogTitle className="text-xl font-bold">Nueva Actividad Práctica</DialogTitle></DialogHeader>
-          <div className="grid gap-5 py-4">
+          <div className="grid gap-5 py-4 max-h-[60vh] overflow-y-auto">
             <div className="grid gap-1.5"><Label className="text-xs uppercase font-bold text-muted-foreground">Título</Label><Input value={activityForm.titulo} onChange={e => setActivityForm({...activityForm, titulo: e.target.value})} className="rounded-xl" /></div>
             <div className="grid gap-1.5"><Label className="text-xs uppercase font-bold text-muted-foreground">Instrucciones</Label><Textarea value={activityForm.descripcion} onChange={e => setActivityForm({...activityForm, descripcion: e.target.value})} rows={4} className="rounded-xl" /></div>
             <div className="grid gap-1.5"><Label className="text-xs uppercase font-bold text-muted-foreground">Criterios de Evaluación</Label><Input value={activityForm.criterios_evaluacion} onChange={e => setActivityForm({...activityForm, criterios_evaluacion: e.target.value})} className="rounded-xl" /></div>
