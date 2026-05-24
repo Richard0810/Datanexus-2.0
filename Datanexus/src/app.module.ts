@@ -15,9 +15,28 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { AcademicReferencesModule } from './academic_references/academic_references.module';
 import { PerformanceReportsModule } from './performance_reports/performance_reports.module';
 import { AuthModule } from './auth/auth.module';
+import { ConfigModule } from '@nestjs/config';
 
 @Module({
-  imports: [EducationalResourcesModule, RolesModule, MongooseModule.forRoot('mongodb+srv://richardai200308_db_user:XyGuRLO6gqqRIVRQ@cluster0.rsrgufe.mongodb.net/Datanexus?appName=Cluster0'), ModulesModule, QuestionsModule, ActivitiesModule, AssessmentsModule, PrismaModelsModule, SearchesModule, UsersModule, UserConfigurationsModule, AcademicReferencesModule, PerformanceReportsModule, AuthModule],
+  imports: [
+    ConfigModule.forRoot({
+      isGlobal: true,
+    }),
+    EducationalResourcesModule, 
+    RolesModule, 
+    MongooseModule.forRoot(process.env.MONGO_URI!), 
+    ModulesModule, 
+    QuestionsModule, 
+    ActivitiesModule, 
+    AssessmentsModule, 
+    PrismaModelsModule, 
+    SearchesModule, 
+    UsersModule, 
+    UserConfigurationsModule, 
+    AcademicReferencesModule, 
+    PerformanceReportsModule, 
+    AuthModule
+  ],
   controllers: [AppController],
   providers: [AppService],
 })

@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useState, use, useRef } from "react";
@@ -11,7 +10,6 @@ import {
   CheckCircle2, 
   Pencil, 
   Trash2,
-  MoreVertical,
   Upload,
   ClipboardList,
   FileQuestion,
@@ -24,7 +22,6 @@ import {
   FileText,
   Video,
   History,
-  MessageSquare,
   GraduationCap as GradeIcon,
   Save,
   Link2,
@@ -57,12 +54,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -159,32 +150,7 @@ interface Submission {
   moduloId: string;
 }
 
-// Función helper para determinar URLs de incrustación (Embed)
-const getEmbedUrl = (url: string) => {
-  if (!url || !url.startsWith("http")) return null;
-  if (url.includes("youtube.com") || url.includes("youtu.be")) {
-    let videoId = "";
-    if (url.includes("youtu.be/")) videoId = url.split("youtu.be/")[1].split("?")[0];
-    else if (url.includes("v=")) videoId = url.split("v=")[1].split("&")[0];
-    return videoId ? `https://www.youtube.com/embed/${videoId}` : url;
-  }
-  if (url.includes("gamma.app/docs/")) return url.replace("gamma.app/docs/", "gamma.app/embed/");
-  if (url.includes("docs.google.com/presentation/d/")) {
-    const match = url.match(/\/d\/(.+?)(\/|$)/);
-    return match ? `https://docs.google.com/presentation/d/${match[1]}/embed` : url;
-  }
-  if (url.includes("drive.google.com/file/d/")) {
-    const match = url.match(/\/d\/(.+?)(\/|$)/);
-    return match ? `https://drive.google.com/file/d/${match[1]}/preview` : url;
-  }
-  if (url.includes("docs.google.com/document/d/")) {
-    const match = url.match(/\/d\/(.+?)(\/|$)/);
-    return match ? `https://docs.google.com/document/d/${match[1]}/preview` : url;
-  }
-  return url;
-};
-
-// Componente para previsualizar recursos de forma segura (PDFs locales con Blob URLs)
+// Componente para previsualizar recursos de forma segura (PDFs, Videos, Imagenes)
 function ResourcePreview({ url, title }: { url: string; title: string }) {
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
 
@@ -193,13 +159,14 @@ function ResourcePreview({ url, title }: { url: string; title: string }) {
     if (url && url.startsWith('data:application/pdf')) {
       try {
         const parts = url.split(',');
+        const mime = parts[0].match(/:(.*?);/)?.[1] || 'application/pdf';
         const byteString = atob(parts[1]);
         const ab = new ArrayBuffer(byteString.length);
         const ia = new Uint8Array(ab);
         for (let i = 0; i < byteString.length; i++) {
           ia[i] = byteString.charCodeAt(i);
         }
-        const blob = new Blob([ab], { type: 'application/pdf' });
+        const blob = new Blob([ab], { type: mime });
         const objUrl = URL.createObjectURL(blob);
         setBlobUrl(objUrl);
         return () => URL.revokeObjectURL(objUrl);
@@ -210,10 +177,34 @@ function ResourcePreview({ url, title }: { url: string; title: string }) {
     return undefined;
   }, [url]);
 
+  const getEmbedUrl = (url: string) => {
+    if (!url || !url.startsWith("http")) return null;
+    if (url.includes("youtube.com") || url.includes("youtu.be")) {
+      let videoId = "";
+      if (url.includes("youtu.be/")) videoId = url.split("youtu.be/")[1].split("?")[0];
+      else if (url.includes("v=")) videoId = url.split("v=")[1].split("&")[0];
+      return videoId ? `https://www.youtube.com/embed/${videoId}` : url;
+    }
+    if (url.includes("gamma.app/docs/")) return url.replace("gamma.app/docs/", "gamma.app/embed/");
+    if (url.includes("docs.google.com/presentation/d/")) {
+      const match = url.match(/\/d\/(.+?)(\/|$)/);
+      return match ? `https://docs.google.com/presentation/d/${match[1]}/embed` : url;
+    }
+    if (url.includes("drive.google.com/file/d/")) {
+      const match = url.match(/\/d\/(.+?)(\/|$)/);
+      return match ? `https://drive.google.com/file/d/${match[1]}/preview` : url;
+    }
+    if (url.includes("docs.google.com/document/d/")) {
+      const match = url.match(/\/d\/(.+?)(\/|$)/);
+      return match ? `https://docs.google.com/document/d/${match[1]}/preview` : url;
+    }
+    return url;
+  };
+
   if (!url) return null;
 
   if (url.startsWith('data:image/')) {
-    return <img src={url} alt={title} className="w-full h-full object-contain bg-slate-50" />;
+    return <div className="w-full h-full flex items-center justify-center bg-slate-50"><img src={url} alt={title} className="max-w-full max-h-full object-contain" /></div>;
   }
 
   if (url.startsWith('data:video/')) {
@@ -223,28 +214,28 @@ function ResourcePreview({ url, title }: { url: string; title: string }) {
   const embedUrl = getEmbedUrl(url);
   const finalUrl = blobUrl || embedUrl;
 
-  if (finalUrl) {
+  if (!finalUrl) {
     return (
-      <iframe 
-        src={finalUrl} 
-        className="w-full h-full border-0" 
-        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
-        allowFullScreen 
-      />
+      <div className="w-full h-full flex flex-col items-center justify-center bg-slate-100 text-muted-foreground p-8 text-center rounded-xl">
+        <FileText className="h-12 w-12 mb-3 opacity-20" />
+        <p className="text-sm font-bold uppercase tracking-widest">Documento Adjunto</p>
+        <p className="text-xs mt-1 mb-4">{title}</p>
+        <Button asChild variant="outline" size="sm" className="rounded-xl bg-white font-bold">
+          <a href={url} download={title}>
+            <Download className="mr-2 h-4 w-4" /> Descargar para Visualizar
+          </a>
+        </Button>
+      </div>
     );
   }
 
   return (
-    <div className="w-full h-full flex flex-col items-center justify-center bg-slate-100 text-muted-foreground p-8 text-center rounded-xl">
-      <FileText className="h-12 w-12 mb-3 opacity-20" />
-      <p className="text-sm font-bold uppercase tracking-widest">Documento Adjunto</p>
-      <p className="text-xs mt-1 mb-4">{title}</p>
-      <Button asChild variant="outline" size="sm" className="rounded-xl bg-white font-bold">
-        <a href={url} download={title}>
-          <Download className="mr-2 h-4 w-4" /> Descargar para Visualizar
-        </a>
-      </Button>
-    </div>
+    <iframe 
+      src={finalUrl} 
+      className="w-full h-full border-0" 
+      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+      allowFullScreen 
+    />
   );
 }
 
@@ -399,13 +390,9 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
         formData.append("formato", uploadedFile.name.split(".").pop() || "file");
 
         if (resourceId) {
-          await api.patch(`/educational-resources/${resourceId}`, formData, {
-            headers: { 'Content-Type': 'multipart/form-data' }
-          });
+          await api.patch(`/educational-resources/${resourceId}`, formData);
         } else {
-          await api.post("/educational-resources", formData, {
-            headers: { 'Content-Type': 'multipart/form-data' }
-          });
+          await api.post("/educational-resources", formData);
         }
       } else {
         if (resourceId) {
@@ -442,6 +429,23 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
     } finally {
       setIsProcessing(false);
     }
+  };
+
+  const handleOpenEditSubmission = (sub: Submission, act: Activity) => {
+    setSelectedActivity(act);
+    setEditingSubmissionId(sub._id);
+    setIsSubmitActivityOpen(true);
+    
+    setTimeout(() => {
+        try {
+            const parsed = JSON.parse(sub.detalleEnvio);
+            if (editorRef.current) editorRef.current.innerHTML = parsed.text || "";
+            if (parsed.file) setAttachedFile(parsed.file);
+            else setAttachedFile(null);
+        } catch (e) {
+            console.error("Error al cargar entrega para editar", e);
+        }
+    }, 100);
   };
 
   const handleSubmitActivity = async () => {

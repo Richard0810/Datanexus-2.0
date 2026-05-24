@@ -1,17 +1,19 @@
 import axios from 'axios';
 
-// Función robusta para determinar la URL del backend en Cloud Workstations
+// Función robusta para determinar la URL del backend
 const getBackendUrl = () => {
+  // En producción, usamos la variable de entorno NEXT_PUBLIC_BACKEND_URL
+  if (process.env.NEXT_PUBLIC_BACKEND_URL) {
+    return process.env.NEXT_PUBLIC_BACKEND_URL;
+  }
+
+  // Fallback para entornos de desarrollo en Cloud Workstations
   if (typeof window !== 'undefined') {
     const hostname = window.location.hostname;
     const protocol = window.location.protocol;
     
-    // Si estamos en una Cloud Workstation (IDX / Firebase Studio)
     if (hostname.includes('cloudworkstations.dev')) {
-      // Buscamos cualquier prefijo de puerto (ej. 9002-) y lo reemplazamos por 3001-
       const urlWithNewPort = hostname.replace(/^(\d+)-/, '3001-');
-      
-      // Si no tiene prefijo pero tiene el puerto al final o en medio
       const finalHostname = urlWithNewPort
         .replace('9002', '3001')
         .replace('9000', '3001')
@@ -20,6 +22,7 @@ const getBackendUrl = () => {
       return `${protocol}//${finalHostname}`;
     }
   }
+
   return 'http://localhost:3001';
 };
 
@@ -35,7 +38,6 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (!error.response) {
-      // Error de red puro (CORS o Servidor caído)
       console.error('CRITICAL: Error de red o servidor no disponible:', error.message);
       return Promise.reject(error);
     }

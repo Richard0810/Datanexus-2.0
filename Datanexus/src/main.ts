@@ -10,12 +10,12 @@ async function bootstrap() {
   app.use(json({ limit: '50mb' }));
   app.use(urlencoded({ extended: true, limit: '50mb' }));
 
-  // CORS configurado de forma permisiva para el entorno de desarrollo en Cloud Workstations
+  // CORS configurado para producción y desarrollo
   app.enableCors({
     origin: true, 
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     credentials: true,
-    allowedHeaders: '*', // Permitir todos los encabezados críticos del proxy
+    allowedHeaders: '*',
   });
 
   const config = new DocumentBuilder()
@@ -27,11 +27,19 @@ async function bootstrap() {
   const documentFactory = () => SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api', app, documentFactory);
 
-  // Forzamos el puerto 3001 para el backend independientemente de los argumentos externos
-  const port = 3001;
+  // Puerto asignado dinámicamente por la plataforma (Render/Vercel) o 3001 por defecto
+  const port = process.env.PORT || 3001;
 
-  // Escuchamos en todas las interfaces (0.0.0.0) para que sea accesible externamente
-  await app.listen(port, '0.0.0.0');
-  console.log(`Backend de DataNexus corriendo en el puerto: ${port}`);
+  try {
+    await app.listen(port, '0.0.0.0');
+    console.log(`Backend de DataNexus corriendo en el puerto: ${port}`);
+  } catch (error) {
+    if (error.code === 'EADDRINUSE') {
+      console.error(`Error: El puerto ${port} ya está en uso. Intentando cerrar procesos previos o usa otro puerto.`);
+      process.exit(1);
+    } else {
+      console.error('Error al iniciar el servidor:', error);
+    }
+  }
 }
 bootstrap();
