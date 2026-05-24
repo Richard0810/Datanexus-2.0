@@ -1,3 +1,4 @@
+
 /* eslint-disable react-hooks/exhaustive-deps */
 'use client';
 
@@ -54,26 +55,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         try {
           const token = await firebaseUser.getIdToken();
           
+          // Sincronizar con el backend
           const response = await api.post('/auth/sync', { 
             token,
             name: firebaseUser.displayName 
           });
           
-          const rawRole = response.data.rol || 'estudiante';
+          // Extraer datos del usuario de la respuesta del backend (MongoDB)
+          const userData = response.data;
+          const rawRole = userData.rol || 'estudiante';
           const normalizedRole = rawRole.trim().toLowerCase();
 
           setUser({
             uid: firebaseUser.uid,
             email: firebaseUser.email,
-            name: response.data.nombre || firebaseUser.displayName || 'Usuario',
+            name: userData.nombre || firebaseUser.displayName || 'Usuario',
             role: normalizedRole,
           });
 
+          // Redirigir si estamos en páginas de login/registro
           if (['/', '/login', '/register'].includes(pathname)) {
             router.push('/inicio');
           }
         } catch (error) {
           console.error('Error sincronizando con el backend:', error);
+          // Fallback a los datos de Firebase si el backend falla, 
+          // pero manteniendo el estado de carga para intentar de nuevo si es necesario.
           setUser({ 
             uid: firebaseUser.uid, 
             email: firebaseUser.email, 
@@ -100,13 +107,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await signInWithPopup(auth, provider);
     } catch (error: any) {
       if (error.code === 'auth/popup-blocked') {
-        throw new Error('La ventana emergente de inicio de sesión fue bloqueada por el navegador. Por favor, permite las ventanas emergentes para este sitio o intenta usar el inicio de sesión por correo electrónico.');
+        throw new Error('La ventana emergente de inicio de sesión fue bloqueada por el navegador.');
       }
-      if (error.code === 'auth/unauthorized-domain') {
-        const domain = typeof window !== 'undefined' ? window.location.hostname : 'tu dominio';
-        throw new Error(`Dominio no autorizado. Por favor, añade "${domain}" a la lista de dominios autorizados en la Consola de Firebase.`);
-      }
-      console.error("Error al iniciar sesión con Google:", error);
       throw error;
     }
   };

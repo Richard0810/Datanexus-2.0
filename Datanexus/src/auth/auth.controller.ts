@@ -23,18 +23,19 @@ export class AuthController {
     const isMainAdmin = email === adminEmail;
 
     try {
-      // Intentamos encontrar al usuario
+      // Buscamos al usuario existente
       let user = await this.usersService.findOneByFirebaseUid(uid);
 
-      // SOLUCIÓN DIRECTA: Si es el admin, forzamos el rol en el objeto de respuesta.
-      if (isMainAdmin) {
-        user.rol = 'admin';
+      // Si es el administrador principal pero su rol en DB no es admin, lo corregimos inmediatamente
+      if (isMainAdmin && user.rol !== 'admin') {
+        user = await this.usersService.updateByFirebaseUid(uid, { rol: 'admin' });
       }
       
+      // Devolvemos el usuario (NestJS serializará el objeto Mongoose correctamente)
       return user;
 
     } catch (error) {
-      // Si no existe, lo creamos con el rol correcto desde el principio
+      // Si el usuario no existe (error 404), lo creamos
       if (error.status === 404) {
         const newUser = await this.usersService.create({
           firebaseUid: uid,
@@ -46,7 +47,6 @@ export class AuthController {
         });
         return newUser;
       }
-      // relanzamos cualquier otro error
       throw error;
     }
   }

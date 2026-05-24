@@ -35,6 +35,10 @@ export class UsersService {
     return this.usersModel.findByIdAndUpdate(id, updateUserDto, { new: true }).exec();
   }
 
+  async updateByFirebaseUid(firebaseUid: string, data: Partial<users>): Promise<users | null> {
+    return this.usersModel.findOneAndUpdate({ firebaseUid }, data, { new: true }).exec();
+  }
+
   async remove(id: string): Promise<any | null> {
     return this.usersModel.findByIdAndDelete(id).exec();
   }
