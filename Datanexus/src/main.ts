@@ -9,9 +9,9 @@ async function bootstrap() {
   app.use(json({ limit: '50mb' }));
   app.use(urlencoded({ extended: true, limit: '50mb' }));
 
-  // Configuración de CORS ultra-permisiva para evitar bloqueos en Render/Vercel
+  // Configuración de CORS con origen explícito para Vercel
   app.enableCors({
-    origin: true, 
+    origin: ['https://datanexus-2-0.vercel.app', 'https://datanexus-2-0-vugv.vercel.app'], // Añadir el dominio del frontend y el del backend si interactúa consigo mismo
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     credentials: true,
     allowedHeaders: '*',
