@@ -9,12 +9,12 @@ async function bootstrap() {
   app.use(json({ limit: '50mb' }));
   app.use(urlencoded({ extended: true, limit: '50mb' }));
 
-  // Configuración de CORS con origen explícito para Vercel
+  // Configuración de CORS con origen y encabezados explícitos para Vercel
   app.enableCors({
-    origin: ['https://datanexus-2-0.vercel.app', 'https://datanexus-2-0-vugv.vercel.app'], // Añadir el dominio del frontend y el del backend si interactúa consigo mismo
+    origin: ['https://datanexus-2-0.vercel.app', 'https://datanexus-2-0-vugv.vercel.app'],
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     credentials: true,
-    allowedHeaders: '*',
+    allowedHeaders: 'Content-Type, Accept, Authorization',
   });
 
   const config = new DocumentBuilder()
