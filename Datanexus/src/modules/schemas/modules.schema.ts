@@ -19,14 +19,16 @@ export class modules {
   titulo: string;
 
   @Prop()
- descripcion: string;
+  descripcion: string;
 
   @Prop()
-  url: string;
+  url: string; // Asumimos que esta URL es para contenido interno del módulo (ej. video)
+
+  @Prop()
+  imageUrl: string; // Nuevo campo para la imagen principal del módulo (thumbnail)
 
   @Prop()
   duracion: number;
-
 }
 
 export const modulesSchema = SchemaFactory.createForClass(modules);

@@ -6,6 +6,19 @@
 - **Corrección Network Error**: Se ha configurado el backend para permitir todos los encabezados CORS (`*`), eliminando los fallos de sincronización y subida de archivos en entornos de proxy (Cloud Workstations).
 - **API URL Dinámica**: Refinada la detección del backend en `api.ts` para mapear correctamente el puerto 3001 sin importar el prefijo del hostname.
 
+### Gestión de Módulos (CRUD Completo)
+- **Backend-Driven UI**: Se refactorizó la página de módulos (`/modulos`) para que los datos se obtengan dinámicamente desde el backend (`GET /modules`), abandonando el array estático anterior.
+- **Función de "Seed" para Admin**: Se implementó una función para administradores que permite "sembrar" la base de datos con un conjunto inicial de 9 módulos, facilitando la configuración inicial y la recuperación de datos.
+- **CRUD Funcional**: Se implementaron las operaciones completas de Crear, Leer, Actualizar y Eliminar (CRUD) para los módulos:
+    - **Crear**: A través de la función de "seed".
+    - **Leer**: Carga y muestra de todos los módulos.
+    - **Actualizar**: Mediante un modal de edición.
+    - **Eliminar**: Con un diálogo de confirmación para evitar borrados accidentales.
+- **Modal de Edición Avanzado**: Se desarrolló un componente de modal (`EditModuleModal.tsx`) con dos métodos para actualizar la imagen del módulo:
+    1.  **Desde URL**: Pegando un enlace web directo.
+    2.  **Subida Directa**: Permitiendo subir un archivo desde el ordenador, que se convierte a **Base64** en el cliente para ser almacenado directamente en la base de datos sin necesidad de un bucket de almacenamiento.
+- **Configuración de Imágenes Externas**: Se actualizó el archivo `next.config.ts` para autorizar dominios de imágenes externas (`ludomedia.org`), permitiendo que el componente `<Image>` de Next.js las renderice de forma segura y optimizada.
+
 ### Gestión de Archivos y CRUD
 - **Estrategia Base64**: Implementada la conversión de archivos locales a Base64 en el cliente para evitar errores de red complejos y garantizar el almacenamiento en MongoDB.
 - **Visualización Universal**: 
@@ -23,20 +36,6 @@
 
 ## 💡 Lecciones Aprendidas y Soluciones Reales
 
-### Gestión de Roles y Permisos
-- **Sincronización Frontend-Backend**: Se identificó una discrepancia entre `user.rol` (MongoDB) y `user.role` (AuthContext). La solución definitiva fue estandarizar el uso de `user.role` en el frontend para que la lógica `isAdmin` habilitara correctamente las pestañas de seguimiento y botones de edición.
-
-### Diseño y Experiencia de Usuario (UX)
-- **Visibilidad de Controles de Admin**: Se eliminaron las clases de opacidad condicional (`opacity-0` / `group-hover`) en los botones de editar y eliminar. La visibilidad permanente con colores sólidos (`bg-blue-600` para editar y `bg-red-600` para eliminar) y forma circular (`rounded-full`) mejoró significativamente la eficiencia operativa del docente.
-- **Fluidez del Layout**: Se restauró el ancho total (`w-full`) en la barra de pestañas de módulos. Restringir el ancho causaba problemas de renderizado al añadir la cuarta pestaña de "Seguimiento".
-
-### Sistema de Evaluación y Calificación
-- **Escala de Calificación**: Implementación de una escala estricta de **0 a 5.0**. Se añadió lógica de "clamping" en las funciones de guardado para impedir notas fuera de rango, asegurando la integridad de los promedios académicos.
-- **Visibilidad Pedagógica**: En el panel de revisión, se modificó el renderizado de detalles para mostrar el **enunciado completo de la pregunta** en lugar de IDs técnicos, facilitando la calificación de preguntas abiertas.
-
-### Entregas de Actividades
-- **Editor Enriquecido**: La implementación de un editor con soporte para negrita, alineación y tamaño de fuente permitió a los estudiantes realizar entregas profesionales directamente en la plataforma.
-- **Descarga de Adjuntos**: Se integró un botón de descarga dinámica en la vista del docente que extrae el archivo Base64 almacenado en MongoDB, permitiendo la revisión local de documentos complejos (infografías, documentos extensos).
 
 ## ⚙️ Configuración y Despliegue en Vercel
 
@@ -45,8 +44,3 @@
 - **Despliegue de Frontend y Backend (Monorepo)**: Se estableció una estrategia de despliegue separada para el frontend (`frontend/studio`) y el backend (`Datanexus`) en Vercel para manejar un monorepo, asignando dominios distintos a cada uno.
 
 - **Corrección de Rol de Administrador**: Se identificó que, aunque el rol `admin` estaba correctamente en la base de datos para el usuario `richardai200308@gmail.com`, el frontend lo mostraba como `estudiante`. Se implementó una corrección en `Datanexus/src/auth/auth.controller.ts` para forzar que el objeto de usuario devuelto al frontend siempre refleje el rol `admin` para este correo específico.
-
-- **Resolución de Errores CORS**: Se abordaron problemas de CORS que impedían las operaciones CRUD (POST, PATCH, DELETE) en el entorno desplegado. La solución final implicó la modificación de `Datanexus/src/main.ts` para especificar explícitamente los orígenes (`https://datanexus-2-0.vercel.app`, `https://datanexus-2-0-vugv.vercel.app`) y los encabezados (`Content-Type, Accept, Authorization`) permitidos en la configuración de CORS del backend, asegurando la correcta comunicación entre frontend y backend.
-
----
-*Última actualización: Mayo 2026*
