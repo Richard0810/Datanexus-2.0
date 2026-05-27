@@ -38,5 +38,15 @@
 - **Editor Enriquecido**: La implementación de un editor con soporte para negrita, alineación y tamaño de fuente permitió a los estudiantes realizar entregas profesionales directamente en la plataforma.
 - **Descarga de Adjuntos**: Se integró un botón de descarga dinámica en la vista del docente que extrae el archivo Base64 almacenado en MongoDB, permitiendo la revisión local de documentos complejos (infografías, documentos extensos).
 
+## ⚙️ Configuración y Despliegue en Vercel
+
+- **Configuración de Repositorio Git**: Se inicializó el repositorio Git local y se conectó al repositorio remoto `https://github.com/Richard0810/Datanexus-2.0.git`. Se gestionaron `add`, `commit` y `push` para sincronizar los cambios.
+
+- **Despliegue de Frontend y Backend (Monorepo)**: Se estableció una estrategia de despliegue separada para el frontend (`frontend/studio`) y el backend (`Datanexus`) en Vercel para manejar un monorepo, asignando dominios distintos a cada uno.
+
+- **Corrección de Rol de Administrador**: Se identificó que, aunque el rol `admin` estaba correctamente en la base de datos para el usuario `richardai200308@gmail.com`, el frontend lo mostraba como `estudiante`. Se implementó una corrección en `Datanexus/src/auth/auth.controller.ts` para forzar que el objeto de usuario devuelto al frontend siempre refleje el rol `admin` para este correo específico.
+
+- **Resolución de Errores CORS**: Se abordaron problemas de CORS que impedían las operaciones CRUD (POST, PATCH, DELETE) en el entorno desplegado. La solución final implicó la modificación de `Datanexus/src/main.ts` para especificar explícitamente los orígenes (`https://datanexus-2-0.vercel.app`, `https://datanexus-2-0-vugv.vercel.app`) y los encabezados (`Content-Type, Accept, Authorization`) permitidos en la configuración de CORS del backend, asegurando la correcta comunicación entre frontend y backend.
+
 ---
 *Última actualización: Mayo 2026*
