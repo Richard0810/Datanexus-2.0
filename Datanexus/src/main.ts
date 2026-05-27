@@ -9,6 +9,7 @@ async function bootstrap() {
   app.use(json({ limit: '50mb' }));
   app.use(urlencoded({ extended: true, limit: '50mb' }));
 
+  // Configuración de CORS ultra-permisiva para evitar bloqueos en Render/Vercel
   app.enableCors({
     origin: true, 
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
@@ -32,7 +33,7 @@ async function bootstrap() {
     console.log(`Backend de DataNexus corriendo exitosamente en el puerto: ${port}`);
   } catch (error: any) {
     if (error.code === 'EADDRINUSE') {
-      console.error(`ERROR: El puerto ${port} está ocupado. Intentando liberar puerto.`);
+      console.error(`ERROR: El puerto ${port} está ocupado.`);
       process.exit(1);
     } else {
       console.error('Error al iniciar el servidor:', error);

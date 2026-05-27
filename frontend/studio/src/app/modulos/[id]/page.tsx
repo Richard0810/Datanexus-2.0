@@ -137,11 +137,19 @@ interface Submission {
   moduloId: string;
 }
 
+const getObjectId = (item: any): string => {
+  if (!item) return '';
+  if (item._id) {
+    if (typeof item._id === 'string') return item._id;
+    if (typeof item._id === 'object') return item._id.$oid || item._id.toString();
+  }
+  return '';
+};
+
 function ResourcePreview({ url, title }: { url: string; title: string }) {
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
 
   useEffect(() => {
-    // Si es un archivo local (Base64), lo convertimos a Blob URL para que el iframe no lo bloquee
     if (url && url.startsWith('data:')) {
       try {
         const parts = url.split(',');
@@ -166,7 +174,6 @@ function ResourcePreview({ url, title }: { url: string; title: string }) {
   const getEmbedUrl = (url: string) => {
     if (!url || !url.startsWith("http")) return null;
     
-    // Soporte para YouTube
     if (url.includes("youtube.com") || url.includes("youtu.be")) {
       let videoId = "";
       if (url.includes("youtu.be/")) videoId = url.split("youtu.be/")[1].split("?")[0];
@@ -174,10 +181,8 @@ function ResourcePreview({ url, title }: { url: string; title: string }) {
       return videoId ? `https://www.youtube.com/embed/${videoId}` : url;
     }
     
-    // Soporte para Gamma
     if (url.includes("gamma.app/docs/")) return url.replace("gamma.app/docs/", "gamma.app/embed/");
     
-    // Soporte para Google Drive / Docs / Slides (Forzamos /preview)
     if (url.includes("docs.google.com") || url.includes("drive.google.com")) {
       if (url.includes("/edit") || url.includes("/view")) {
         return url.replace(/\/edit.*$/, "/preview").replace(/\/view.*$/, "/preview");
@@ -250,10 +255,6 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
   const [isProcessing, setIsProcessing] = useState(false);
   const [viewMode, setViewMode] = useState<'edit' | 'preview'>('preview');
   
-  const [userAnswers, setUserAnswers] = useState<Record<string, string>>({});
-  const [showFeedback, setShowFeedback] = useState(false);
-  const [score, setScore] = useState<{ correct: number; total: number } | null>(null);
-
   const [isResourceDialogOpen, setIsResourceDialogOpen] = useState(false);
   const [isActivityDialogOpen, setIsActivityDialogOpen] = useState(false);
   const [isAssessmentDialogOpen, setIsAssessmentDialogOpen] = useState(false);
@@ -291,23 +292,6 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
   const [assessmentForm, setAssessmentForm] = useState<Assessment>({
     titulo: "", descripcion: "", moduloId: id, preguntas: []
   });
-
-  const [currentQuestion, setCurrentQuestion] = useState<Question>({
-    id: Math.random().toString(36).substr(2, 9),
-    texto: "",
-    tipo: "opcion-multiple",
-    opciones: ["Opción A", "Opción B"],
-    respuestaCorrecta: ""
-  });
-
-  const getObjectId = (item: any): string => {
-    if (!item) return '';
-    if (item._id) {
-      if (typeof item._id === 'string') return item._id;
-      if (typeof item._id === 'object') return item._id.$oid || item._id.toString();
-    }
-    return '';
-  };
 
   const fetchData = async () => {
     try {
@@ -447,8 +431,9 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
   const handleSaveGrade = async () => {
     if (!selectedSubmission) return;
     setIsProcessing(true);
+    const subId = getObjectId(selectedSubmission);
     try {
-      await api.patch(`/performance-reports/${selectedSubmission._id}`, {
+      await api.patch(`/performance-reports/${subId}`, {
         ...gradingForm,
         estado: "calificado"
       });
@@ -687,6 +672,21 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
               <Label>Descripción</Label>
               <Textarea value={resourceForm.descripcion} onChange={e => setResourceForm({...resourceForm, descripcion: e.target.value})} className="rounded-xl"/>
             </div>
+            
+            <div className="space-y-2">
+              <Label>Tipo de Recurso</Label>
+              <Select value={resourceForm.tipo} onValueChange={v => setResourceForm({...resourceForm, tipo: v})}>
+                <SelectTrigger className="rounded-xl">
+                  <SelectValue placeholder="Selecciona el tipo" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="guia">Guía / Documento</SelectItem>
+                  <SelectItem value="video">Video Tutorial</SelectItem>
+                  <SelectItem value="enlace">Enlace Externo</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
             <Tabs value={sourceTab} onValueChange={(v: any) => setSourceTab(v)} className="w-full">
               <TabsList className="grid w-full grid-cols-2 mb-4">
                 <TabsTrigger value="url">URL Externa</TabsTrigger>

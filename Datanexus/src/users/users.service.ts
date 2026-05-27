@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, isValidObjectId } from 'mongoose';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { users, usersDocument } from './schemas/users.schema';
@@ -19,6 +19,9 @@ export class UsersService {
   }
 
   async findOne(id: string): Promise<users | null> {
+    if (!isValidObjectId(id)) {
+        return this.usersModel.findOne({ id }).exec();
+    }
     return this.usersModel.findById(id).exec();
   }
   
@@ -31,7 +34,8 @@ export class UsersService {
   }
 
   async update(id: string, updateUserDto: UpdateUserDto): Promise<users | null> {
-    return this.usersModel.findByIdAndUpdate(id, updateUserDto, { new: true }).exec();
+    const filter = isValidObjectId(id) ? { _id: id } : { id };
+    return this.usersModel.findOneAndUpdate(filter, updateUserDto, { new: true }).exec();
   }
 
   async updateByFirebaseUid(firebaseUid: string, data: Partial<users>): Promise<users | null> {
@@ -43,6 +47,7 @@ export class UsersService {
   }
 
   async remove(id: string): Promise<any | null> {
-    return this.usersModel.findByIdAndDelete(id).exec();
+    const filter = isValidObjectId(id) ? { _id: id } : { id };
+    return this.usersModel.findOneAndDelete(filter).exec();
   }
 }

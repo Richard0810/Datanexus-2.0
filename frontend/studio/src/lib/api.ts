@@ -3,7 +3,8 @@ import axios from 'axios';
 const getBackendUrl = () => {
   // 1. En producción (Vercel), usamos la variable de entorno obligatoriamente
   if (process.env.NEXT_PUBLIC_BACKEND_URL) {
-    return process.env.NEXT_PUBLIC_BACKEND_URL;
+    // Limpiamos barras diagonales al final para evitar errores de ruta
+    return process.env.NEXT_PUBLIC_BACKEND_URL.replace(/\/$/, '');
   }
 
   // 2. En desarrollo (Cloud Workstations), detectamos la URL dinámicamente para el proxy
@@ -38,7 +39,7 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (!error.response) {
-      console.error('Error de red: El backend no responde en ' + getBackendUrl());
+      console.error('CRITICAL: Error de red o servidor no disponible en ' + getBackendUrl());
     }
     return Promise.reject(error);
   }
