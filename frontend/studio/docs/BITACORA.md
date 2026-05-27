@@ -42,5 +42,9 @@
 - **Configuración de Repositorio Git**: Se inicializó el repositorio Git local y se conectó al repositorio remoto `https://github.com/Richard0810/Datanexus-2.0.git`. Se gestionaron `add`, `commit` y `push` para sincronizar los cambios.
 
 - **Despliegue de Frontend y Backend (Monorepo)**: Se estableció una estrategia de despliegue separada para el frontend (`frontend/studio`) y el backend (`Datanexus`) en Vercel para manejar un monorepo, asignando dominios distintos a cada uno.
+    - **Frontend (Next.js)**: Desplegado en `datanexus-2-0-frontend.vercel.app`
+    - **Backend (NestJS)**: Desplegado en `datanexus-2-0-backend.vercel.app`
 
 - **Corrección de Rol de Administrador**: Se identificó que, aunque el rol `admin` estaba correctamente en la base de datos para el usuario `richardai200308@gmail.com`, el frontend lo mostraba como `estudiante`. Se implementó una corrección en `Datanexus/src/auth/auth.controller.ts` para forzar que el objeto de usuario devuelto al frontend siempre refleje el rol `admin` para este correo específico.
+
+- **Corrección de Error de Despliegue (Backend)**: Se solucionó un error de compilación en Vercel (`Cannot find module 'class-validator'`). El problema se debió a que las dependencias `class-validator` y `class-transformer` no estaban en la lista de `dependencies` del `package.json` del backend. La solución fue añadirlas explícitamente, asegurando que Vercel las instale correctamente durante el proceso de `build`.
