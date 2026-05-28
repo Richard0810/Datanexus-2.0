@@ -5,7 +5,7 @@ import { useEffect, useState, use, useRef } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
-  ArrowLeft, Loader2, PlusCircle, Pencil, Trash2, Upload, ClipboardList, FileQuestion, Layers, X, Trophy, FileText, Video, History, Save, Download, PlayCircle, BookOpen, Link as LinkIcon, ExternalLink, Presentation, FileUp, Bold, Italic, Underline, AlignLeft, AlignCenter, AlignRight, Eye
+  ArrowLeft, Loader2, PlusCircle, Pencil, Trash2, Upload, ClipboardList, FileQuestion, Layers, X, Trophy, FileText, Video, History, Save, Download, PlayCircle, BookOpen, Link as LinkIcon, ExternalLink, Presentation, FileUp, Bold, Italic, Underline, AlignLeft, AlignCenter, AlignRight, Eye, MessageSquare, GraduationCap as GradeIcon
 } from "lucide-react";
 import Link from "next/link";
 import api from "@/lib/api";
@@ -20,6 +20,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Separator } from "@/components/ui/separator";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/context/AuthContext";
 
@@ -51,9 +52,7 @@ const getObjectId = (item: any): string => {
   return '';
 };
 
-// Componente de previsualización de recursos (Restaurado y Mejorado)
 function ResourcePreview({ url, title, tipo }: { url: string; title: string, tipo: string }) {
-  const [blobUrl, setBlobUrl] = useState<string | null>(null);
   const isPrezi = tipo?.toLowerCase() === 'prezi' || (url && url.includes('prezi.com'));
   const isEmbeddable = tipo?.toLowerCase() === 'video' || (url && (url.includes('youtube.com') || url.includes('youtu.be') || url.includes('gamma.app') || url.includes('docs.google.com/presentation')));
 
@@ -82,7 +81,6 @@ function ResourcePreview({ url, title, tipo }: { url: string; title: string, tip
       </div>
     );
   }
-
   if (isPrezi) {
      return (
       <div className="w-full h-full flex flex-col items-center justify-center bg-slate-100 text-muted-foreground p-8 text-center">
@@ -94,14 +92,8 @@ function ResourcePreview({ url, title, tipo }: { url: string; title: string, tip
       </div>
     );
   }
-
-  return (
-    <div className="relative w-full h-full">
-      <iframe src={finalUrl ?? undefined} className="w-full h-full border-0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />
-    </div>
-  );
+  return <div className="relative w-full h-full"><iframe src={finalUrl ?? undefined} className="w-full h-full border-0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen /></div>;
 }
-
 
 export default function ModuloDetallePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -109,16 +101,13 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
   const userRole = (user?.role || '').trim().toLowerCase();
   const isAdmin = userRole === 'admin' || userRole === 'administrador';
   
-  // Estados principales
   const [resources, setResources] = useState<Resource[]>([]);
   const [activities, setActivities] = useState<Activity[]>([]);
   const [assessments, setAssessments] = useState<Assessment[]>([]);
   const [submissions, setSubmissions] = useState<Submission[]>([]);
-  
   const [loading, setLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
   
-  // Estados de diálogos
   const [isResourceDialogOpen, setIsResourceDialogOpen] = useState(false);
   const [isActivityDialogOpen, setIsActivityDialogOpen] = useState(false);
   const [isAssessmentDialogOpen, setIsAssessmentDialogOpen] = useState(false);
@@ -127,7 +116,6 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
   const [isViewOwnSubmissionOpen, setIsViewOwnSubmissionOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   
-  // Estados de edición y selección
   const [itemToDelete, setItemToDelete] = useState<{ id: string, type: string, name: string } | null>(null);
   const [editingResource, setEditingResource] = useState<Resource | null>(null);
   const [editingActivity, setEditingActivity] = useState<Activity | null>(null);
@@ -135,14 +123,11 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
   const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
   const [selectedSubmission, setSelectedSubmission] = useState<Submission | null>(null);
   
-  // Formularios
   const [resourceForm, setResourceForm] = useState<Resource>({ titulo: "", descripcion: "", url: "", unidad: `Módulo ${id}`, tipo: "video", formato: "URL" });
   const [activityForm, setActivityForm] = useState<Activity>({ titulo: "", descripcion: "", tipo: "individual", criterios_evaluacion: "", moduloId: id, archivoUrl: "" });
   const [assessmentForm, setAssessmentForm] = useState<Assessment>({ titulo: "", descripcion: "", moduloId: id, preguntas: [] });
-  const [submissionForm, setSubmissionForm] = useState({ detalleEnvio: "", archivoUrl: "" });
   const [gradingForm, setGradingForm] = useState({ puntaje: 0, recomendaciones: "" });
 
-  // Estados para subidas y UI
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [sourceTab, setSourceTab] = useState<"url" | "file">("url");
   const editorRef = useRef<HTMLDivElement>(null);
@@ -152,7 +137,6 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
   const { toast } = useToast();
   const moduleInfo = modulesData[id as keyof typeof modulesData] || { title: `Módulo ${id}`, objective: "" };
 
-  // --- LÓGICA DE DATOS ---
   const fetchData = async () => {
     try {
       setLoading(true);
@@ -171,14 +155,11 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
     } catch (error) {
       console.error("Error fetching data:", error);
       toast({ title: "Error al cargar los datos", variant: "destructive" });
-    } finally {
-      setLoading(false);
-    }
+    } finally { setLoading(false); }
   };
 
   useEffect(() => { if (user) fetchData(); }, [id, user, isAdmin]);
 
-  // --- MANEJADORES DE GUARDADO ---
   const handleSaveResource = async () => {
     if (!resourceForm.titulo) return toast({ title: "El título es obligatorio", variant: "destructive" });
     setIsProcessing(true);
@@ -279,7 +260,6 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
     } finally { setIsProcessing(false); }
   };
 
-  // --- MANEJADOR DE ELIMINACIÓN (Restaurado) ---
   const handleDelete = async () => {
     if (!itemToDelete) return;
     setIsProcessing(true);
@@ -308,13 +288,10 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
     setItemToDelete(item);
     setIsDeleteDialogOpen(true);
   };
-
-  // --- RENDERIZADO ---
   
   const formatSubmissionDetail = (detail: string) => {
     try {
       const parsed = JSON.parse(detail);
-      // Formato de entrega de Actividad
       if (parsed.text !== undefined || parsed.file) {
         return (
           <div className="space-y-4">
@@ -328,7 +305,6 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
           </div>
         );
       }
-      // Formato de entrega de Evaluación
       if (Array.isArray(parsed)) {
         return (
           <div className="space-y-3">
@@ -341,7 +317,6 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
           </div>
         );
       }
-      // Formato antiguo de evaluación (objeto de IDs)
       if(typeof parsed === 'object' && !Array.isArray(parsed)) {
         const parentAssessment = assessments.find(a => a.titulo === selectedSubmission?.tituloContenido);
         return (
@@ -358,7 +333,6 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
             </div>
         )
       }
-
     } catch (e) { /* No es JSON, mostrar como texto plano */ }
     return <div className="p-4 bg-muted rounded-lg text-sm whitespace-pre-wrap">{detail}</div>;
   };
@@ -372,10 +346,8 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
       { id: 'otro', label: 'Otro', icon: LinkIcon },
   ];
 
-  // ... Aquí iría el JSX del return principal
   return (
     <div className="space-y-8">
-      {/* Header */}
       <div className="flex items-center gap-4">
         <Button asChild variant="ghost" size="icon"><Link href="/modulos"><ArrowLeft className="h-5 w-5" /></Link></Button>
         <div>
@@ -392,7 +364,6 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
           {isAdmin && <TabsTrigger value="seguimiento">Seguimiento</TabsTrigger>}
         </TabsList>
 
-        {/* Pestaña de Recursos */}
         <TabsContent value="recursos" className="space-y-6">
            <div className="flex justify-between items-center">
             <h2 className="text-xl font-headline">Materiales de Estudio</h2>
@@ -442,7 +413,6 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
           ) : <p className="text-center text-muted-foreground py-10 italic">No hay recursos disponibles.</p>}
         </TabsContent>
         
-        {/* Pestaña de Actividades */}
         <TabsContent value="actividades" className="space-y-6">
             <div className="flex justify-between items-center">
                 <h2 className="text-xl font-headline">Actividades Prácticas</h2>
@@ -492,7 +462,6 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
             ) : <p className="text-center text-muted-foreground py-10 italic">No hay actividades disponibles.</p>}
         </TabsContent>
 
-        {/* Pestaña Evaluaciones */}
         <TabsContent value="evaluaciones" className="space-y-6">
           <div className="flex justify-between items-center">
             <h2 className="text-xl font-headline">Evaluaciones</h2>
@@ -528,13 +497,69 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
             ) : <p className="text-center text-muted-foreground py-10 italic">No hay evaluaciones disponibles.</p>}
         </TabsContent>
         
-        {/* Pestaña Seguimiento */}
         {isAdmin && (
         <TabsContent value="seguimiento">
              <Card>
-              <CardHeader><CardTitle>Panel de Seguimiento</CardTitle><CardDescription>Revisa las entregas de los estudiantes para este módulo.</CardDescription></CardHeader>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2"><MessageSquare className="h-5 w-5 text-primary" /> Panel de Revisión</CardTitle>
+                <CardDescription>Revisa los envíos y resultados de tus estudiantes para este módulo.</CardDescription>
+              </CardHeader>
               <CardContent>
-                 {/* ... Tabla de seguimiento ... */}
+                 <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Estudiante</TableHead>
+                      <TableHead>Tipo</TableHead>
+                      <TableHead>Contenido</TableHead>
+                      <TableHead>Puntaje</TableHead>
+                      <TableHead>Estado</TableHead>
+                      <TableHead className="text-right">Acción</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {submissions.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).map((sub) => (
+                      <TableRow key={sub._id}>
+                        <TableCell className="font-medium">
+                          <div className="flex flex-col">
+                            <span>{sub.usuarioNombre}</span>
+                            <span className="text-xs text-muted-foreground">{sub.usuarioEmail}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell><Badge variant="outline">{sub.tipoEnvio.toUpperCase()}</Badge></TableCell>
+                        <TableCell className="max-w-[200px] truncate">{sub.tituloContenido}</TableCell>
+                        <TableCell>
+                          {sub.puntaje !== undefined ? (
+                             <Badge className={cn("px-2", sub.puntaje >= 3.5 ? "bg-green-100 text-green-700" : "bg-yellow-100 text-yellow-700")}>
+                               {Number(sub.puntaje).toFixed(1)}/5
+                             </Badge>
+                          ) : <span className="text-muted-foreground italic text-xs">Pendiente</span>}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={sub.estado === "calificado" ? "default" : "secondary"} className="text-xs">
+                            {sub.estado.toUpperCase()}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => {
+                                setSelectedSubmission(sub);
+                                setGradingForm({ puntaje: sub.puntaje || 0, recomendaciones: sub.recomendaciones || "" });
+                                setIsGradingDialogOpen(true);
+                            }}
+                          >
+                            <GradeIcon className="mr-1 h-3 w-3" />
+                            {sub.estado === "calificado" ? "Revisar" : "Calificar"}
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    {submissions.length === 0 && (
+                      <TableRow><TableCell colSpan={6} className="text-center py-10 text-muted-foreground italic">Aún no hay envíos registrados.</TableCell></TableRow>
+                    )}
+                  </TableBody>
+                </Table>
               </CardContent>
              </Card>
         </TabsContent>
@@ -616,7 +641,6 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
       <Dialog open={isAssessmentDialogOpen} onOpenChange={setIsAssessmentDialogOpen}>
         <DialogContent className="sm:max-w-3xl">
             <DialogHeader><DialogTitle>{editingAssessment ? 'Editar' : 'Realizar'} Evaluación</DialogTitle></DialogHeader>
-            {/* Contenido del diálogo de evaluaciones (Simplificado para brevedad) */}
              <div className="py-4">Contenido de la evaluación...</div>
         </DialogContent>
       </Dialog>
