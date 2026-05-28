@@ -300,7 +300,28 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
     }
   };
   
-  // ... (otras funciones de guardado y borrado sin cambios) 
+  const handleDelete = async () => {
+    if (!itemToDelete) return;
+    setIsProcessing(true);
+    try {
+      const { id, type } = itemToDelete;
+      if (type === 'recurso') {
+        await api.delete(`/educational-resources/${id}`);
+      } else if (type === 'actividad') {
+        await api.delete(`/activities/${id}`);
+      } else if (type === 'evaluacion') {
+        await api.delete(`/assessments/${id}`);
+      }
+      setIsDeleteDialogOpen(false);
+      setItemToDelete(null);
+      fetchData();
+      toast({ title: `${type.charAt(0).toUpperCase() + type.slice(1)} eliminado con éxito` });
+    } catch (error) {
+      toast({ title: `Error al eliminar el ${type}`, variant: "destructive" });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
 
   const resourceTypes = [
       { id: 'video', label: 'Video', icon: Video },
@@ -381,7 +402,84 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
             <div className="py-20 text-center border-2 border-dashed rounded-3xl bg-muted/20"><Layers className="h-12 w-12 text-muted-foreground/30 mx-auto mb-4" /><p className="text-muted-foreground italic">No hay recursos disponibles para este módulo.</p></div>
           )}
         </TabsContent>
-         {/* ... (otras pestañas) */}
+
+        <TabsContent value="actividades" className="space-y-6">
+          <div className="flex justify-between items-center">
+            <h2 className="text-xl font-headline">Actividades Formativas</h2>
+            {isAdmin && (
+              <Button onClick={() => { setIsActivityDialogOpen(true); setEditingActivity(null); setActivityForm({ titulo: "", descripcion: "", tipo: "individual", criterios_evaluacion: "", moduloId: id, archivoUrl: "" }); }} size="sm">
+                <PlusCircle className="mr-2 h-4 w-4" /> Añadir Actividad
+              </Button>
+            )}
+          </div>
+          {loading ? (
+            <div className="flex flex-col items-center justify-center py-20 gap-4"><Loader2 className="h-10 w-10 animate-spin text-primary" /><p className="text-muted-foreground animate-pulse">Cargando actividades...</p></div>
+          ) : activities.length > 0 ? (
+            <div className="space-y-4">
+              {activities.map((act) => {
+                const actId = getObjectId(act);
+                return (
+                  <Card key={actId}>
+                    <CardHeader>
+                      <CardTitle>{act.titulo}</CardTitle>
+                      <CardDescription>{act.descripcion}</CardDescription>
+                    </CardHeader>
+                    <CardFooter className="flex justify-between">
+                       <Button size="sm" onClick={() => { setSelectedActivity(act); setIsSubmitActivityOpen(true); }}><PlayCircle className="mr-2 h-4 w-4" /> Realizar Entrega</Button>
+                       {isAdmin && (
+                        <div className="flex gap-2">
+                          <Button variant="outline" size="sm" onClick={() => { setEditingActivity(act); setActivityForm(act); setIsActivityDialogOpen(true); }}><Pencil className="mr-2 h-4 w-4" /> Editar</Button>
+                          <Button variant="destructive" size="sm" onClick={() => { setItemToDelete({ id: actId, type: 'actividad' }); setIsDeleteDialogOpen(true); }}><Trash2 className="mr-2 h-4 w-4" /> Eliminar</Button>
+                        </div>
+                      )}
+                    </CardFooter>
+                  </Card>
+                )
+              })}
+            </div>
+          ) : (
+            <div className="py-20 text-center border-2 border-dashed rounded-3xl bg-muted/20"><ClipboardList className="h-12 w-12 text-muted-foreground/30 mx-auto mb-4" /><p className="text-muted-foreground italic">No hay actividades disponibles.</p></div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="evaluaciones" className="space-y-6">
+            <div className="flex justify-between items-center">
+                <h2 className="text-xl font-headline">Evaluaciones Calificadas</h2>
+                 {isAdmin && (
+                    <Button onClick={() => { setIsAssessmentDialogOpen(true); setEditingAssessment(null); setAssessmentForm({ titulo: "", descripcion: "", moduloId: id, preguntas: [] }); }} size="sm">
+                        <PlusCircle className="mr-2 h-4 w-4" /> Añadir Evaluación
+                    </Button>
+                )}
+            </div>
+            {loading ? (
+                <div className="flex flex-col items-center justify-center py-20 gap-4"><Loader2 className="h-10 w-10 animate-spin text-primary" /><p className="text-muted-foreground animate-pulse">Cargando evaluaciones...</p></div>
+            ) : assessments.length > 0 ? (
+                <div className="space-y-4">
+                    {assessments.map((ass) => {
+                       const assId = getObjectId(ass);
+                        return (
+                        <Card key={assId}>
+                            <CardHeader>
+                                <CardTitle>{ass.titulo}</CardTitle>
+                                <CardDescription>{ass.descripcion}</CardDescription>
+                            </CardHeader>
+                            <CardFooter className="flex justify-between">
+                                <Button size="sm"><Trophy className="mr-2 h-4 w-4" /> Realizar Evaluación</Button>
+                                {isAdmin && (
+                                    <div className="flex gap-2">
+                                        <Button variant="outline" size="sm" onClick={() => { setEditingAssessment(ass); setAssessmentForm(ass); setIsAssessmentDialogOpen(true); }}><Pencil className="mr-2 h-4 w-4" /> Editar</Button>
+                                        <Button variant="destructive" size="sm" onClick={() => { setItemToDelete({ id: assId, type: 'evaluacion' }); setIsDeleteDialogOpen(true); }}><Trash2 className="mr-2 h-4 w-4" /> Eliminar</Button>
+                                    </div>
+                                )}
+                            </CardFooter>
+                        </Card>
+                    )}
+                    )}
+                </div>
+            ) : (
+                <div className="py-20 text-center border-2 border-dashed rounded-3xl bg-muted/20"><FileQuestion className="h-12 w-12 text-muted-foreground/30 mx-auto mb-4" /><p className="text-muted-foreground italic">No hay evaluaciones disponibles.</p></div>
+            )}
+        </TabsContent>
       </Tabs>
 
       <Dialog open={isResourceDialogOpen} onOpenChange={setIsResourceDialogOpen}>
@@ -397,6 +495,11 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
             <div className="space-y-2">
               <Label className="font-bold text-xs uppercase text-gray-400">Título *</Label>
               <Input value={resourceForm.titulo} onChange={e => setResourceForm({...resourceForm, titulo: e.target.value})} className="bg-gray-800 border-gray-700 rounded-lg h-12"/>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="font-bold text-xs uppercase text-gray-400">Descripción</Label>
+              <Textarea value={resourceForm.descripcion} onChange={e => setResourceForm({...resourceForm, descripcion: e.target.value})} className="bg-gray-800 border-gray-700 rounded-lg" rows={3}/>
             </div>
 
             <div className="space-y-3">
@@ -451,7 +554,24 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
           </div>
         </DialogContent>
       </Dialog>
-      {/* ... (otros dialogos) */}
+      
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Estás absolutamente seguro?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción no se puede deshacer. Esto eliminará permanentemente el {itemToDelete?.type} y sus datos asociados.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} disabled={isProcessing}>
+              {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              Continuar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
