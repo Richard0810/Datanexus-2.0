@@ -2,6 +2,10 @@
 
 ## 🚀 Hitos Técnicos
 
+### Multimedia y Previsualización
+- **Google Drive Patch**: Implementada la transformación automática de enlaces `view` a `/preview` para archivos de Google Drive/Docs. Esto soluciona el error "Necesitas acceso" y permite visualizar PDFs y documentos públicos directamente en la plataforma.
+- **Soporte para Prezi**: Restaurada la funcionalidad de apertura en ventana externa para presentaciones de Prezi, optimizando la experiencia de usuario al evitar restricciones de marcos (iframe) de terceros.
+
 ### Inteligencia Artificial (Potenciación PICO/PECO)
 - **Actualización de Modelo**: Migración exitosa al modelo **`gemini-3.5-flash`**, asegurando respuestas ultra-rápidas y precisas siguiendo la última documentación de Google AI.
 - **Refactorización Genkit v1**: Se eliminó el uso del método obsoleto `run()` en la API Route. Ahora los flujos se invocan directamente como funciones asíncronas, eliminando errores de ejecución y mejorando la estabilidad en producción.
@@ -22,5 +26,6 @@
 - **Blindaje de Admin**: Implementada la sincronización forzada en el backend para el usuario `richardai200308@gmail.com`, garantizando que mantenga el rol de `admin` en MongoDB y en el estado de la aplicación de forma automática.
 
 ## 💡 Lecciones Aprendidas y Soluciones Reales
-- **Genkit v1**: Se aprendió que en la versión 1.x, los flujos deben tratarse como funciones estándar importadas, no invocarse por strings de ID.
+- **Embebido de Documentos**: Para archivos de Google Drive, el parámetro `/preview` es obligatorio para evitar que el navegador bloquee la visualización por conflictos de cookies de Google.
+- **Genkit v1**: En la versión 1.x, los flujos deben tratarse como funciones estándar importadas, no invocarse por strings de ID.
 - **Protección de Inicialización**: La validación de `window` y `apiKey` en la configuración de Firebase es vital para que el proceso de "build" de Vercel no falle por falta de variables de entorno.

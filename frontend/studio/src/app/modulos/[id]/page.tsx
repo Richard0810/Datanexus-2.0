@@ -4,7 +4,7 @@ import React, { useEffect, useState, use, useRef } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
-  ArrowLeft, Loader2, PlusCircle, Pencil, Trash2, Upload, ClipboardList, FileQuestion, Layers, X, Trophy, FileText, Video, History, Save, Download, FileUp, Bold, Italic, Underline, CheckCircle2, GraduationCap as GradeIcon, BookOpen, Link as LinkIcon
+  ArrowLeft, Loader2, PlusCircle, Pencil, Trash2, Upload, ClipboardList, FileQuestion, Layers, X, Trophy, FileText, Video, History, Save, Download, FileUp, Bold, Italic, Underline, CheckCircle2, GraduationCap as GradeIcon, BookOpen, Link as LinkIcon, ExternalLink, Monitor
 } from "lucide-react";
 import Link from "next/link";
 import api from "@/lib/api";
@@ -80,24 +80,66 @@ function ResourcePreview({ url, title }: { url: string; title: string }) {
 
   const getEmbedUrl = (url: string) => {
     if (!url || !url.startsWith("http")) return null;
+
+    // YouTube
     if (url.includes("youtube.com") || url.includes("youtu.be")) {
       const videoId = url.includes("youtu.be/") ? url.split("youtu.be/")[1].split("?")[0] : url.split("v=")[1]?.split("&")[0];
       return videoId ? `https://www.youtube.com/embed/${videoId}` : url;
     }
+
+    // Gamma
     if (url.includes("gamma.app/docs/")) return url.replace("gamma.app/docs/", "gamma.app/embed/");
+
+    // Google Drive / Docs / Presentation (SOLUCIÓN "Necesitas acceso")
+    if (url.includes("docs.google.com") || url.includes("drive.google.com")) {
+        if (url.includes("/preview") || url.includes("/embed")) return url;
+        const match = url.match(/\/d\/(.+?)(\/|$|#|\?)/);
+        if (match) {
+            const id = match[1];
+            if (url.includes("/presentation")) return `https://docs.google.com/presentation/d/${id}/embed`;
+            if (url.includes("/document")) return `https://docs.google.com/document/d/${id}/preview`;
+            return `https://drive.google.com/file/d/${id}/preview`;
+        }
+    }
+
+    // Prezi (Ventana nueva requerida)
+    if (url.includes("prezi.com")) return null;
+
     return url;
   };
 
+  // UI Especial para Prezi
+  if (url && url.includes("prezi.com")) {
+      return (
+          <div className="w-full h-full flex flex-col items-center justify-center bg-[#050b1f] text-white p-8 text-center rounded-xl">
+              <Monitor className="h-16 w-16 mb-4 text-primary animate-pulse" />
+              <h3 className="text-xl font-headline font-bold mb-2">Presentación Interactiva</h3>
+              <p className="text-sm text-slate-400 mb-6 max-w-xs">Este contenido requiere abrirse en una ventana externa para una experiencia completa.</p>
+              <Button asChild size="lg" className="rounded-2xl font-bold bg-primary hover:bg-primary/90 px-8 shadow-xl shadow-primary/20">
+                  <a href={url} target="_blank" rel="noopener noreferrer">
+                      Abrir en Nueva Ventana <ExternalLink className="ml-2 h-5 w-5" />
+                  </a>
+              </Button>
+          </div>
+      );
+  }
+
   const finalUrl = blobUrl || getEmbedUrl(url);
+
   if (!finalUrl) {
     return (
       <div className="w-full h-full flex flex-col items-center justify-center bg-slate-100 p-8 text-center">
         <FileText className="h-12 w-12 mb-3 opacity-20" />
-        <p className="text-sm font-bold uppercase mb-4">Material Local</p>
-        <Button asChild variant="outline" size="sm" className="rounded-xl bg-white"><a href={url} download={title}><Download className="mr-2 h-4 w-4" /> Descargar Material</a></Button>
+        <p className="text-sm font-bold uppercase mb-4">Material de Estudio</p>
+        <Button asChild variant="outline" size="sm" className="rounded-xl bg-white shadow-sm border-slate-200">
+            <a href={url} target="_blank" rel="noopener noreferrer">
+                <ExternalLink className="mr-2 h-4 w-4" /> Ver Contenido Externo
+            </a>
+        </Button>
       </div>
     );
   }
+
   return <iframe src={finalUrl} className="w-full h-full border-0" allowFullScreen />;
 }
 
