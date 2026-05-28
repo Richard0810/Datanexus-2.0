@@ -3,6 +3,11 @@
 
 ## 🚀 Hitos Técnicos
 
+### Restauración de Vista de Calificación (Fix v7)
+- **Corrección de Visualización**: Se implementó la función `formatSubmissionDetail` para permitir que el docente vea tanto el texto enriquecido como los archivos adjuntos (PDF/Imágenes) en el diálogo de calificación.
+- **UX de Retroalimentación**: Se rediseñó el modal de calificación con una estructura más clara, separando la respuesta del estudiante de los campos de nota y comentarios.
+- **Sincronización de Archivos**: Se aseguró que los archivos guardados como Data URIs en MongoDB sean descargables directamente desde el panel de Seguimiento.
+
 ### Estabilización de Módulos (Fix v6)
 - **Corrección de ReferenceError**: Se restauraron las funciones `handleFileChange` y `handleOpenGrading` que estaban faltando en el componente de detalle del módulo, eliminando la pantalla blanca al entrar a un módulo.
 - **Sincronización Docente**: Se habilitó correctamente la función `handleSaveGrade` para permitir la calificación de tareas sin errores de ejecución.

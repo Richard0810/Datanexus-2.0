@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useState, use, useRef } from "react";
@@ -44,6 +45,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Separator } from "@/components/ui/separator";
 import {
   Select,
   SelectContent,
@@ -379,6 +381,44 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
     setCurrentQuestion({ id: "", texto: "", tipo: "opcion-multiple", opciones: ["", ""], respuestaCorrecta: "" });
   };
 
+  const formatSubmissionDetail = (detail: string) => {
+    if (!detail) return null;
+    try {
+      if (detail.startsWith('{')) {
+        const parsed = JSON.parse(detail);
+        return (
+          <div className="space-y-4">
+            {parsed.text && (
+              <div className="p-4 border rounded-2xl bg-white shadow-sm">
+                <p className="text-[10px] font-bold text-slate-400 uppercase mb-2 tracking-widest">Respuesta:</p>
+                <div className="prose prose-sm max-w-none text-slate-700" dangerouslySetInnerHTML={{ __html: parsed.text }} />
+              </div>
+            )}
+            {parsed.file && (
+              <div className="flex items-center justify-between p-4 bg-blue-50 border border-blue-100 rounded-2xl">
+                <div className="flex items-center gap-3">
+                  <div className="bg-white p-2 rounded-xl shadow-sm">
+                    <FileText className="h-6 w-6 text-blue-600" />
+                  </div>
+                  <div>
+                    <p className="font-bold text-xs text-blue-900 truncate max-w-[200px]">{parsed.file.name}</p>
+                    <p className="text-[9px] text-blue-400 uppercase font-black tracking-tighter">Archivo adjunto</p>
+                  </div>
+                </div>
+                <Button asChild variant="outline" size="sm" className="h-9 rounded-xl bg-white border-blue-200 text-blue-700 hover:bg-blue-100">
+                  <a href={parsed.file.data} download={parsed.file.name}>
+                    <Download className="mr-2 h-3.5 w-3.5" /> Descargar
+                  </a>
+                </Button>
+              </div>
+            )}
+          </div>
+        );
+      }
+    } catch (e) {}
+    return <div className="p-4 bg-muted/50 rounded-2xl text-sm italic">{detail}</div>;
+  };
+
   return (
     <div className="space-y-8">
       <div className="flex items-center gap-4">
@@ -566,13 +606,49 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
       </Dialog>
 
       <Dialog open={isGradingDialogOpen} onOpenChange={setIsGradingDialogOpen}>
-        <DialogContent className="sm:max-w-[600px] rounded-3xl">
-          <DialogHeader><DialogTitle>Calificar Entrega</DialogTitle></DialogHeader>
-          <div className="space-y-6 py-4">
-             <div className="p-4 bg-muted/50 rounded-2xl text-sm italic max-h-[200px] overflow-y-auto">{selectedSubmission?.detalleEnvio.startsWith('{') ? <div dangerouslySetInnerHTML={{ __html: JSON.parse(selectedSubmission.detalleEnvio).text }} /> : selectedSubmission?.detalleEnvio}</div>
-             <div className="space-y-4"><div className="space-y-2"><Label>Nota (0.0 - 5.0)</Label><Input type="number" step="0.1" min="0" max="5" value={gradingForm.puntaje} onChange={e => setGradingForm({...gradingForm, puntaje: parseFloat(e.target.value)})} /></div><div className="space-y-2"><Label>Recomendaciones</Label><Textarea value={gradingForm.recomendaciones} onChange={e => setGradingForm({...gradingForm, recomendaciones: e.target.value})} /></div></div>
+        <DialogContent className="sm:max-w-[600px] rounded-3xl border-none shadow-2xl">
+          <DialogHeader className="p-6 pb-0">
+            <DialogTitle className="text-2xl font-headline flex items-center gap-2">
+              <GradeIcon className="h-6 w-6 text-primary" />
+              Calificar Entrega
+            </DialogTitle>
+          </DialogHeader>
+          <div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto">
+             {selectedSubmission && formatSubmissionDetail(selectedSubmission.detalleEnvio)}
+             
+             <Separator className="bg-slate-100" />
+             
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Label className="font-bold text-slate-700">Nota Final (0.0 - 5.0)</Label>
+                  <Input 
+                    type="number" 
+                    step="0.1" 
+                    min="0" 
+                    max="5" 
+                    className="h-12 rounded-xl text-lg font-bold text-center focus:ring-primary/20"
+                    value={gradingForm.puntaje} 
+                    onChange={e => setGradingForm({...gradingForm, puntaje: parseFloat(e.target.value) || 0})} 
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="font-bold text-slate-700">Recomendaciones / Feedback</Label>
+                  <Textarea 
+                    className="rounded-xl min-h-[100px] resize-none"
+                    placeholder="Escribe aquí tus comentarios para el estudiante..."
+                    value={gradingForm.recomendaciones} 
+                    onChange={e => setGradingForm({...gradingForm, recomendaciones: e.target.value})} 
+                  />
+                </div>
+             </div>
           </div>
-          <DialogFooter><Button onClick={handleSaveGrade} disabled={isProcessing} className="w-full h-12 rounded-xl bg-blue-600 hover:bg-blue-700">Guardar Calificación</Button></DialogFooter>
+          <DialogFooter className="p-6 pt-0 border-t mt-4 gap-2">
+            <Button variant="ghost" onClick={() => setIsGradingDialogOpen(false)} className="rounded-xl flex-1 h-12">Cancelar</Button>
+            <Button onClick={handleSaveGrade} disabled={isProcessing} className="flex-[2] h-12 rounded-xl font-bold bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20">
+              {isProcessing ? <Loader2 className="animate-spin mr-2 h-4 w-4" /> : <Save className="mr-2 h-4 w-4" />}
+              Guardar Calificación
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
