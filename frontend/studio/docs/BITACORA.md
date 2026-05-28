@@ -3,17 +3,18 @@
 
 ## 🚀 Hitos Técnicos
 
-### Gestor de Referencias (IA Power)
-- **Conversión de Estilos**: Implementado flujo de IA que convierte referencias a **APA 7, Vancouver, IEEE, Harvard y Chicago** de forma instantánea utilizando Gemini 3.5 Flash.
-- **Detección de Datos**: La IA ahora es capaz de extraer metadatos bibliográficos de texto sucio o mal formateado para reconstruir la cita correctamente.
-- **UX de Copiado**: Añadido sistema de copiado al portapapeles con retroalimentación visual para cada referencia generada.
+### Gestor de Referencias (IA Power - v2)
+- **Motor de Citación Estabilizado**: Migración al modelo **`gemini-1.5-flash`** para asegurar disponibilidad y precisión en el formateo bibliográfico.
+- **Soporte BibTeX Avanzado**: Optimizada la detección de metadatos para entradas de LaTeX/BibTeX, convirtiéndolas instantáneamente a APA, IEEE, etc.
+- **UX de Copiado Masivo**: Implementado el botón "Copiar Todas" con feedback visual de éxito para mejorar la productividad del investigador.
+- **Control de Errores**: Se añadió validación para casos donde la IA no devuelve resultados, informando al usuario en lugar de mostrar un contador en cero.
 
 ### Multimedia y Previsualización
 - **Google Drive Patch**: Implementada la transformación automática de enlaces `view` y `open?id` a `/preview` para archivos de Google Drive/Docs. Esto soluciona el error "Necesitas acceso" y permite visualizar PDFs y documentos públicos directamente en la plataforma.
 - **Soporte para Prezi**: Restaurada la funcionalidad de apertura en ventana externa para presentaciones de Prezi con interfaz personalizada, optimizando la experiencia de usuario al evitar restricciones de marcos (iframe) de terceros.
 
 ### Inteligencia Artificial (Potenciación PICO/PECO)
-- **Actualización de Modelo**: Migración exitosa al modelo **`gemini-3.5-flash`**, asegurando respuestas ultra-rápidas y precisas siguiendo la última documentación de Google AI.
+- **Actualización de Modelo**: Migración exitosa al modelo **`gemini-1.5-flash`**, asegurando respuestas ultra-rápidas y precisas siguiendo la última documentación de Google AI.
 - **Refactorización Genkit v1**: Se eliminó el uso del método obsoleto `run()` en la API Route. Ahora los flujos se invocan directamente como funciones asíncronas, eliminando errores de ejecución y mejorando la estabilidad en producción.
 - **Enriquecimiento de Salida**: La IA ahora entrega un paquete completo de investigación: Pregunta PICO/PECO, Sugerencia del experto, y Palabras Clave (Keywords).
 
@@ -27,9 +28,6 @@
 - **Corrección ERESOLVE**: Se alinearon todas las dependencias de Genkit a la versión **`1.36.0`** en el `package.json`, resolviendo los conflictos de dependencias que bloqueaban el despliegue en Vercel.
 - **CORS Universal**: Se configuró el backend en NestJS para permitir peticiones desde cualquier origen (`origin: true`), eliminando el "Network Error" que impedía guardar datos desde el frontend desplegado.
 - **API URL Dinámica**: Refinada la detección del backend en `api.ts` para limpiar barras diagonales finales y manejar puertos dinámicos.
-
-### Seguridad y Roles
-- **Blindaje de Admin**: Implementada la sincronización forzada en el backend para el usuario `richardai200308@gmail.com`, garantizando que mantenga el rol de `admin` en MongoDB y en el estado de la aplicación de forma automática.
 
 ## 💡 Lecciones Aprendidas y Soluciones Reales
 - **Embebido de Documentos**: Para archivos de Google Drive, el parámetro `/preview` es obligatorio para evitar que el navegador bloquee la visualización por conflictos de cookies de Google.

@@ -2,13 +2,13 @@ import { ai } from './genkit';
 import { z } from 'zod';
 
 const ReferenceInputSchema = z.object({
-  references: z.string().describe("El texto de las referencias a formatear."),
+  references: z.string().describe("El texto de las referencias a formatear (puede ser BibTeX, RIS o texto plano)."),
   targetFormat: z.enum(['APA 7', 'Vancouver', 'IEEE', 'Harvard', 'Chicago']).describe("El formato de citación destino."),
 });
 
 const ReferenceOutputSchema = z.object({
-  formattedReferences: z.array(z.string()).describe("Lista de referencias formateadas."),
-  count: z.number().describe("Cantidad de referencias procesadas."),
+  formattedReferences: z.array(z.string()).describe("Lista de referencias formateadas individualmente."),
+  count: z.number().describe("Cantidad total de referencias procesadas."),
 });
 
 export const referenceFormatterFlow = ai.defineFlow(
@@ -19,7 +19,7 @@ export const referenceFormatterFlow = ai.defineFlow(
   },
   async (input) => {
     const { output } = await ai.generate({
-      model: 'googleai/gemini-3.5-flash',
+      model: 'googleai/gemini-1.5-flash',
       input: {
         schema: ReferenceInputSchema,
         data: input,
@@ -28,23 +28,29 @@ export const referenceFormatterFlow = ai.defineFlow(
         schema: ReferenceOutputSchema,
         format: 'json',
       },
-      prompt: `Eres un experto en bibliografía y gestión de referencias académicas.
-      Tu tarea es tomar el texto proporcionado y convertir cada referencia al formato solicitado: ${input.targetFormat}.
+      prompt: `Eres un experto bibliotecario y gestor de metadatos académicos.
       
-      INSTRUCCIONES:
-      1. Identifica cada referencia individual en el texto.
-      2. Aplica estrictamente las reglas de ${input.targetFormat} (autores, año, títulos en cursiva si aplica, editorial, URL/DOI, etc.).
-      3. Devuelve una lista de strings con las referencias formateadas.
+      TAREA:
+      Convierte el siguiente contenido bibliográfico al formato: ${input.targetFormat}.
+      
+      INSTRUCCIONES CRÍTICAS:
+      1. Si el texto es BibTeX (@article, @book, etc.), extrae todos los campos y genera la cita completa.
+      2. Si el texto es desordenado, reconstruye la cita con los datos disponibles (Autor, Año, Título, Fuente).
+      3. Mantén el orden alfabético si hay múltiples referencias.
+      4. Devuelve UN ARREGLO de strings, donde cada string es una referencia formateada lista para publicar.
       
       REFERENCIAS A PROCESAR:
-      {{{references}}}
+      ${input.references}
       `,
     });
 
     if (!output) {
-      throw new Error("La IA no pudo procesar las referencias.");
+      throw new Error("La IA no pudo procesar las referencias. Intenta con un formato más claro.");
     }
 
-    return output;
+    return {
+      formattedReferences: output.formattedReferences || [],
+      count: output.formattedReferences?.length || 0
+    };
   }
 );

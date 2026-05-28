@@ -9,9 +9,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Loader2, Wand2, CheckCircle, Copy, Check, ServerCrash, Quote } from "lucide-react";
+import { Loader2, Wand2, CheckCircle, Copy, Check, ServerCrash, Quote, ClipboardCopy, Trash2 } from "lucide-react";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
 
 const formSchema = z.object({
   references: z.string().min(5, "Debes ingresar al menos una referencia o datos bibliográficos."),
@@ -31,6 +32,7 @@ export function ReferenceManager() {
   const [result, setResult] = useState<FormattedResult | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
+  const [isCopyingAll, setIsCopyingAll] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 
@@ -63,16 +65,21 @@ export function ReferenceManager() {
       }
 
       const formattedResult: FormattedResult = await response.json();
+      
+      if (formattedResult.count === 0) {
+        throw new Error("La IA no pudo identificar referencias válidas en el texto proporcionado.");
+      }
+
       setResult(formattedResult);
       
       toast({
-        title: "Referencias Formateadas",
-        description: `Se han procesado ${formattedResult.count} referencias con éxito.`,
+        title: "¡Éxito!",
+        description: `Se han formateado ${formattedResult.count} referencias correctamente.`,
       });
 
     } catch (e: any) {
       console.error(e);
-      setError(`Error: ${e.message}`);
+      setError(e.message);
     } finally {
       setIsLoading(false);
     }
@@ -84,16 +91,28 @@ export function ReferenceManager() {
     setTimeout(() => setCopiedIndex(null), 2000);
     toast({
       title: "Copiado",
-      description: "La referencia se ha copiado al portapapeles.",
+      description: "Referencia copiada al portapapeles.",
+    });
+  };
+
+  const copyAll = () => {
+    if (!result) return;
+    const allText = result.formattedReferences.join('\n\n');
+    navigator.clipboard.writeText(allText);
+    setIsCopyingAll(true);
+    setTimeout(() => setIsCopyingAll(false), 2000);
+    toast({
+      title: "Copiado Masivo",
+      description: "Todas las referencias han sido copiadas.",
     });
   };
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
-      <Card className="shadow-md">
+      <Card className="shadow-xl border-none rounded-[2rem]">
         <CardHeader>
-          <CardTitle>Generador de Citas con IA</CardTitle>
-          <CardDescription>Pega datos sueltos, BibTeX o referencias mal formateadas.</CardDescription>
+          <CardTitle className="text-2xl">Generador de Citas con IA</CardTitle>
+          <CardDescription>Pega datos de BibTeX, RIS o texto desordenado.</CardDescription>
         </CardHeader>
         <CardContent>
           <Form {...form}>
@@ -103,13 +122,24 @@ export function ReferenceManager() {
                 name="references"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="font-bold">Contenido Bibliográfico</FormLabel>
+                    <div className="flex justify-between items-center mb-1">
+                       <FormLabel className="font-bold text-slate-700">Contenido Bibliográfico</FormLabel>
+                       <Button 
+                        type="button" 
+                        variant="ghost" 
+                        size="sm" 
+                        className="h-7 text-[10px] uppercase font-bold text-destructive hover:bg-destructive/10"
+                        onClick={() => form.setValue("references", "")}
+                       >
+                         <Trash2 className="h-3 w-3 mr-1" /> Limpiar
+                       </Button>
+                    </div>
                     <FormControl>
                       <Textarea
-                        placeholder="Pega aquí tus referencias o datos (Ej: Smith, J. 2023. El impacto de la IA...)"
+                        placeholder="Ej: @article{...} o simplemente 'Smith, J. (2020). Título del libro...'"
                         {...field}
-                        rows={10}
-                        className="text-sm rounded-xl focus:ring-primary/20"
+                        rows={12}
+                        className="text-sm rounded-2xl bg-slate-50 focus:bg-white transition-colors"
                       />
                     </FormControl>
                     <FormMessage />
@@ -122,14 +152,14 @@ export function ReferenceManager() {
                 name="targetFormat"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="font-bold">Formato de Salida</FormLabel>
+                    <FormLabel className="font-bold text-slate-700">Formato Académico</FormLabel>
                     <Select onValueChange={field.onChange} defaultValue={field.value}>
                       <FormControl>
-                        <SelectTrigger className="rounded-xl h-12">
-                          <SelectValue placeholder="Selecciona un formato" />
+                        <SelectTrigger className="rounded-2xl h-12 bg-slate-50">
+                          <SelectValue placeholder="Selecciona formato" />
                         </SelectTrigger>
                       </FormControl>
-                      <SelectContent>
+                      <SelectContent className="rounded-xl">
                         <SelectItem value="APA 7">APA 7ma Edición</SelectItem>
                         <SelectItem value="Vancouver">Vancouver</SelectItem>
                         <SelectItem value="IEEE">IEEE</SelectItem>
@@ -142,16 +172,16 @@ export function ReferenceManager() {
                 )}
               />
               
-              <Button type="submit" disabled={isLoading} className="w-full h-12 rounded-xl font-bold bg-primary hover:bg-primary/90 text-lg shadow-lg shadow-primary/20">
+              <Button type="submit" disabled={isLoading} className="w-full h-14 rounded-2xl font-bold bg-primary hover:bg-primary/90 text-lg shadow-lg shadow-primary/20">
                 {isLoading ? (
                   <>
                     <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                    Procesando con IA...
+                    Procesando Metadatos...
                   </>
                 ) : (
                   <>
                     <Wand2 className="mr-2 h-5 w-5" />
-                    Formatear Referencias
+                    Formatear con IA
                   </>
                 )}
               </Button>
@@ -159,35 +189,46 @@ export function ReferenceManager() {
           </Form>
 
           {error && (
-            <Alert variant="destructive" className="mt-6 rounded-xl">
-              <ServerCrash className="h-4 w-4" />
-              <AlertTitle>Fallo en el Procesamiento</AlertTitle>
+            <Alert variant="destructive" className="mt-6 rounded-2xl border-none bg-red-50 text-red-900">
+              <ServerCrash className="h-5 w-5" />
+              <AlertTitle className="font-bold">Error de Procesamiento</AlertTitle>
               <AlertDescription>{error}</AlertDescription>
             </Alert>
           )}
         </CardContent>
       </Card>
 
-      <div className="space-y-6">
-        {result ? (
-          <Card className="shadow-lg border-primary/20 overflow-hidden">
-            <CardHeader className="bg-primary/5 border-b">
+      <div className="space-y-6 sticky top-24">
+        {result && result.formattedReferences.length > 0 ? (
+          <Card className="shadow-2xl border-none overflow-hidden rounded-[2rem] bg-white ring-1 ring-primary/5">
+            <CardHeader className="bg-primary/5 border-b border-primary/10 px-8 py-6">
               <div className="flex items-center justify-between">
-                <CardTitle className="flex items-center gap-2">
-                  <Quote className="h-5 w-5 text-primary" />
+                <CardTitle className="flex items-center gap-3 text-primary">
+                  <Quote className="h-6 w-6" />
                   Referencias en {form.getValues("targetFormat")}
                 </CardTitle>
-                <CheckCircle className="h-5 w-5 text-green-600" />
+                <Button 
+                  onClick={copyAll} 
+                  variant="outline" 
+                  size="sm" 
+                  className={cn(
+                    "rounded-xl font-bold transition-all",
+                    isCopyingAll ? "bg-green-600 text-white border-green-600" : "bg-white border-primary/20 text-primary hover:bg-primary/5"
+                  )}
+                >
+                  {isCopyingAll ? <Check className="h-4 w-4 mr-2" /> : <ClipboardCopy className="h-4 w-4 mr-2" />}
+                  {isCopyingAll ? "¡Copiadas!" : "Copiar Todas"}
+                </Button>
               </div>
             </CardHeader>
-            <CardContent className="p-6 space-y-4">
+            <CardContent className="p-8 space-y-6">
               {result.formattedReferences.map((ref, index) => (
-                <div key={index} className="group relative p-4 bg-muted/50 rounded-xl border border-transparent hover:border-primary/30 transition-all">
-                  <p className="text-sm leading-relaxed pr-10">{ref}</p>
+                <div key={index} className="group relative p-5 bg-slate-50/80 rounded-2xl border border-slate-100 hover:border-primary/20 hover:bg-white hover:shadow-md transition-all">
+                  <p className="text-sm leading-relaxed pr-12 text-slate-800">{ref}</p>
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="absolute top-2 right-2 h-8 w-8 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity bg-white shadow-sm border"
+                    className="absolute top-4 right-4 h-9 w-9 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity bg-white shadow-sm border border-slate-100"
                     onClick={() => copyToClipboard(ref, index)}
                   >
                     {copiedIndex === index ? (
@@ -198,17 +239,22 @@ export function ReferenceManager() {
                   </Button>
                 </div>
               ))}
-              <div className="pt-4 flex justify-between items-center text-[10px] uppercase font-bold text-muted-foreground tracking-widest">
-                <span>Total: {result.count}</span>
-                <span className="text-primary">Generado por DataNexus IA</span>
+              <div className="pt-6 flex justify-between items-center border-t border-slate-100">
+                <div className="flex items-center gap-2">
+                  <span className="h-2 w-2 bg-green-500 rounded-full animate-pulse" />
+                  <span className="text-[10px] uppercase font-bold text-slate-400 tracking-widest">Total: {result.count}</span>
+                </div>
+                <span className="text-[9px] uppercase font-black text-primary/40 tracking-tighter italic">DataNexus Intelligence Engine</span>
               </div>
             </CardContent>
           </Card>
         ) : (
-          <Card className="border-dashed h-full min-h-[400px] flex flex-col items-center justify-center text-center p-8 bg-slate-50/50">
-            <Quote className="h-16 w-16 text-slate-200 mb-4" />
-            <h3 className="text-xl font-headline font-bold text-slate-400">Sin resultados aún</h3>
-            <p className="text-sm text-slate-400 max-w-xs mt-2">Introduce tus referencias a la izquierda para ver la magia de la IA aquí.</p>
+          <Card className="border-2 border-dashed h-full min-h-[500px] flex flex-col items-center justify-center text-center p-12 bg-slate-50/50 rounded-[2rem]">
+            <div className="bg-white p-8 rounded-[2.5rem] shadow-sm mb-6">
+              <Quote className="h-16 w-16 text-slate-200" />
+            </div>
+            <h3 className="text-2xl font-headline font-bold text-slate-400">Panel de Resultados</h3>
+            <p className="text-slate-400 max-w-xs mt-3 leading-relaxed">Pega tus datos bibliográficos y presiona el botón para ver las citas formateadas aquí.</p>
           </Card>
         )}
       </div>
