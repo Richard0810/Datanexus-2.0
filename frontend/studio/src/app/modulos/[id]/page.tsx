@@ -29,7 +29,8 @@ import {
   Database,
   Link as LinkIcon,
   CheckSquare,
-  ExternalLink
+  ExternalLink,
+  Presentation // PASO 1: Importar el nuevo icono
 } from "lucide-react";
 import Link from "next/link";
 import api from "@/lib/api";
@@ -96,7 +97,6 @@ interface Resource {
   tipo: string;
   formato: string;
 }
-
 interface Activity {
   _id?: any;
   titulo: string;
@@ -146,8 +146,11 @@ const getObjectId = (item: any): string => {
   return '';
 };
 
-function ResourcePreview({ url, title }: { url: string; title: string }) {
+// ✅ PASO 4: COMPONENTE DE PREVISUALIZACIÓN MODIFICADO
+function ResourcePreview({ url, title, tipo }: { url: string; title: string, tipo: string }) {
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
+  
+  const isPrezi = tipo === 'presentacion' || (url && url.includes('prezi.com'));
 
   useEffect(() => {
     if (url && url.startsWith('data:')) {
@@ -170,6 +173,24 @@ function ResourcePreview({ url, title }: { url: string; title: string }) {
     }
     return undefined;
   }, [url]);
+
+  // Si es Prezi, mostramos la tarjeta especial y no intentamos incrustar.
+  if (isPrezi) {
+    return (
+      <div className="w-full h-full flex flex-col items-center justify-center bg-[#0B172E] text-white p-8 text-center rounded-xl">
+        <div className="w-16 h-16 bg-[#00A6D6] rounded-full flex items-center justify-center text-3xl font-bold mb-4">P</div>
+        <h3 className="text-xl font-bold mb-2">Presentación Prezi</h3>
+        <Button asChild style={{ backgroundColor: '#00A6D6', color: 'white' }} className="rounded-lg font-bold">
+          <a href={url} target="_blank" rel="noopener noreferrer">
+            <ExternalLink className="mr-2 h-4 w-4" /> Abrir en Prezi
+          </a>
+        </Button>
+        <p className="text-xs text-slate-400 mt-4">
+          Se abre en una nueva pestaña por políticas de seguridad del navegador.
+        </p>
+      </div>
+    );
+  }
 
   const getEmbedUrl = (url: string) => {
     if (!url || !url.startsWith("http")) return null;
@@ -240,6 +261,7 @@ function ResourcePreview({ url, title }: { url: string; title: string }) {
   );
 }
 
+
 export default function ModuloDetallePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const { user } = useAuth();
@@ -292,6 +314,13 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
   const [assessmentForm, setAssessmentForm] = useState<Assessment>({
     titulo: "", descripcion: "", moduloId: id, preguntas: []
   });
+
+  // ✅ PASO 3: URL INTELIGENTE
+  useEffect(() => {
+    if (resourceForm.url.includes('prezi.com')) {
+      setResourceForm(prevForm => ({ ...prevForm, tipo: 'presentacion' }));
+    }
+  }, [resourceForm.url]);
 
   const fetchData = async () => {
     try {
@@ -550,7 +579,10 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                     )}
                     <CardHeader>
                       <div className="flex items-center gap-2 mb-2">
-                        {res.tipo === "video" ? <Video className="h-4 w-4 text-red-500" /> : <FileText className="h-4 w-4 text-blue-500" />}
+                        {/* ✅ LÓGICA DE ICONO Y BADGE ACTUALIZADA */}
+                        {res.tipo === "video" ? <Video className="h-4 w-4 text-red-500" /> : 
+                         res.tipo === "presentacion" ? <Presentation className="h-4 w-4 text-orange-500" /> :
+                         <FileText className="h-4 w-4 text-blue-500" />}
                         <Badge variant="outline" className="uppercase tracking-widest text-[9px] font-bold">{res.tipo}</Badge>
                       </div>
                       <CardTitle className="text-2xl font-bold">{res.titulo}</CardTitle>
@@ -558,7 +590,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                     </CardHeader>
                     <CardContent>
                       <div className="aspect-video rounded-xl overflow-hidden bg-black border shadow-inner">
-                        <ResourcePreview url={res.url} title={res.titulo} />
+                        <ResourcePreview url={res.url} title={res.titulo} tipo={res.tipo} />
                       </div>
                     </CardContent>
                   </Card>
@@ -657,6 +689,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
         )}
       </Tabs>
 
+      {/* ✅ PASO 2: DIÁLOGO DE AÑADIR/EDITAR RECURSO ACTUALIZADO */}
       <Dialog open={isResourceDialogOpen} onOpenChange={setIsResourceDialogOpen}>
         <DialogContent className="sm:max-w-[600px] p-0 overflow-hidden rounded-2xl">
           <div className="bg-[#1a2744] px-6 py-5 flex items-center justify-between text-white">
@@ -682,6 +715,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                 <SelectContent>
                   <SelectItem value="guia">Guía / Documento</SelectItem>
                   <SelectItem value="video">Video Tutorial</SelectItem>
+                  <SelectItem value="presentacion">Presentación (Prezi, etc.)</SelectItem>
                   <SelectItem value="enlace">Enlace Externo</SelectItem>
                 </SelectContent>
               </Select>
@@ -693,7 +727,12 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                 <TabsTrigger value="file">Subir Archivo</TabsTrigger>
               </TabsList>
               <TabsContent value="url">
-                <Input value={resourceForm.url} onChange={e => setResourceForm({...resourceForm, url: e.target.value})} placeholder="https://..." className="rounded-xl"/>
+                <Input 
+                  value={resourceForm.url} 
+                  onChange={e => setResourceForm({...resourceForm, url: e.target.value})} 
+                  placeholder="https://..." 
+                  className="rounded-xl"
+                />
               </TabsContent>
               <TabsContent value="file">
                  <div className="border-2 border-dashed rounded-2xl p-8 text-center cursor-pointer" onClick={() => document.getElementById('resFile')?.click()}>
