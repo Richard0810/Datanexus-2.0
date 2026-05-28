@@ -19,7 +19,7 @@ export const referenceFormatterFlow = ai.defineFlow(
   },
   async (input) => {
     const { output } = await ai.generate({
-      model: 'googleai/gemini-1.5-flash',
+      model: 'googleai/gemini-3.5-flash',
       input: {
         schema: ReferenceInputSchema,
         data: input,
@@ -45,7 +45,7 @@ export const referenceFormatterFlow = ai.defineFlow(
     });
 
     if (!output) {
-      throw new Error("La IA no pudo procesar las referencias. Intenta con un formato más claro.");
+      throw new Error("La IA no pudo procesar las referencias con el modelo 3.5 Flash. Intenta con un formato más claro.");
     }
 
     return {
