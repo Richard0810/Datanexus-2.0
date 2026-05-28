@@ -92,7 +92,7 @@ function ResourcePreview({ url, title, tipo }: { url: string; title: string, tip
       </div>
     );
   }
-  return <div className="relative w-full h-full"><iframe src={finalUrl ?? undefined} className="w-full h-full border-0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen></iframe></div>;
+  return <div className="relative w-full h-full"><iframe src={finalUrl ?? undefined} className="w-full h-full border-0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen /></div>;
 }
 
 export default function ModuloDetallePage({ params }: { params: Promise<{ id: string }> }) {
@@ -104,8 +104,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
   const [resources, setResources] = useState<Resource[]>([]);
   const [activities, setActivities] = useState<Activity[]>([]);
   const [assessments, setAssessments] = useState<Assessment[]>([]);
-  const [submissions, setSubmissions] = useState<Submission[]>([]); // FOR STUDENT'S OWN SUBMISSIONS
-  const [allSubmissions, setAllSubmissions] = useState<Submission[]>([]); // FOR ADMIN'S TRACKING PANEL
+  const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [loading, setLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
   
@@ -152,15 +151,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
       setResources(resResponse.data.filter((res: any) => [id, `Módulo ${id}`, `Unidad ${id}`].includes(res.unidad)));
       setActivities(actResponse.data.filter((act: any) => String(act.moduloId) === currentModuleId));
       setAssessments(assResponse.data.filter((ass: any) => String(ass.moduloId) === currentModuleId));
-
-      const allModuleSubmissions = subResponse.data.filter((sub: any) => String(sub.moduloId) === currentModuleId);
-
-      setSubmissions(allModuleSubmissions.filter((sub: any) => sub.usuarioEmail === user?.email));
-
-      if (isAdmin) {
-        setAllSubmissions(allModuleSubmissions);
-      }
-
+      setSubmissions(subResponse.data.filter((sub: any) => String(sub.moduloId) === currentModuleId && (isAdmin || sub.usuarioEmail === user?.email)));
     } catch (error) {
       console.error("Error fetching data:", error);
       toast({ title: "Error al cargar los datos", variant: "destructive" });
@@ -317,7 +308,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
       if (Array.isArray(parsed)) {
         return (
           <div className="space-y-3">
-            {parsed.map((item: any, idx: number) => (
+            {parsed.map((item: any, idx) => (
               <div key={idx} className="p-3 bg-muted rounded-md">
                 <p className="text-xs font-bold text-primary mb-1">{item.pregunta || `Pregunta Antigua`}</p>
                 <p className="text-sm">{String(item.respuesta)}</p>
@@ -337,10 +328,10 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                             <p className="text-xs font-bold text-primary mb-1">{questionText || `Pregunta ID: ${qId}`}</p>
                             <p className="text-sm">{String(answer)}</p>
                         </div>
-                    );
+                    )
                 })}
             </div>
-        );
+        )
       }
     } catch (e) { /* No es JSON, mostrar como texto plano */ }
     return <div className="p-4 bg-muted rounded-lg text-sm whitespace-pre-wrap">{detail}</div>;
@@ -431,7 +422,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
             activities.length > 0 ? (
                 <div className="grid md:grid-cols-2 gap-6">
                 {activities.map((act) => {
-                    const userSub = submissions.find(s => s.tituloContenido === act.titulo);
+                    const userSub = submissions.find(s => s.tituloContenido === act.titulo && s.usuarioEmail === user?.email);
                     return (
                     <Card key={getObjectId(act)} className="flex flex-col">
                         <CardHeader>
@@ -480,7 +471,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
             assessments.length > 0 ? (
                  <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {assessments.map((ass) => {
-                        const userSub = submissions.find(s => s.tituloContenido === ass.titulo);
+                        const userSub = submissions.find(s => s.tituloContenido === ass.titulo && s.usuarioEmail === user?.email);
                         return (
                             <Card key={getObjectId(ass)}>
                                 <CardHeader>
@@ -500,7 +491,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                                     <Button className="w-full" onClick={() => { setEditingAssessment(ass); setAssessmentForm(ass); setIsAssessmentDialogOpen(true); }}>{userSub ? 'Ver Resultados' : 'Realizar Evaluación'}</Button>
                                 </CardFooter>
                             </Card>
-                        );
+                        )
                     })}
                  </div>
             ) : <p className="text-center text-muted-foreground py-10 italic">No hay evaluaciones disponibles.</p>}
@@ -526,7 +517,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {allSubmissions.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).map((sub) => (
+                    {submissions.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).map((sub) => (
                       <TableRow key={sub._id}>
                         <TableCell className="font-medium">
                           <div className="flex flex-col">
@@ -564,7 +555,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                         </TableCell>
                       </TableRow>
                     ))}
-                    {allSubmissions.length === 0 && (
+                    {submissions.length === 0 && (
                       <TableRow><TableCell colSpan={6} className="text-center py-10 text-muted-foreground italic">Aún no hay envíos registrados.</TableCell></TableRow>
                     )}
                   </TableBody>
@@ -649,7 +640,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
 
       <Dialog open={isAssessmentDialogOpen} onOpenChange={setIsAssessmentDialogOpen}>
         <DialogContent className="sm:max-w-3xl">
-            <DialogHeader><DialogTitle>{editingAssessment ? 'Editar' : 'Realizar'} Evaluación</DialogTitle></Header>
+            <DialogHeader><DialogTitle>{editingAssessment ? 'Editar' : 'Realizar'} Evaluación</DialogTitle></DialogHeader>
              <div className="py-4">Contenido de la evaluación...</div>
         </DialogContent>
       </Dialog>
