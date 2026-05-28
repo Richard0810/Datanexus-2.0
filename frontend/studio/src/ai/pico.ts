@@ -1,7 +1,6 @@
 import { ai } from './genkit';
 import { z } from 'zod';
 
-// Esquema de entrada alineado con el formulario de Herramientas IA
 const PicoInputSchema = z.object({
   tema: z.string().optional(),
   poblacion: z.string(),
@@ -11,7 +10,6 @@ const PicoInputSchema = z.object({
   contexto: z.string().optional(),
 });
 
-// Esquema de salida requerido por el componente PicoPecoForm.tsx
 const PicoOutputSchema = z.object({
   preguntaPICO: z.string().describe("La pregunta de investigación formulada en formato PICO."),
   preguntaPECO: z.string().describe("La pregunta de investigación formulada en formato PECO."),
@@ -19,16 +17,13 @@ const PicoOutputSchema = z.object({
   keywords: z.array(z.string()).describe("Lista de palabras clave (Keywords) recomendadas."),
 });
 
-/**
- * Prompt especializado en metodología de investigación.
- */
 const generarPreguntaPico = ai.definePrompt({
   name: 'generarPreguntaPico',
-  model: 'googleai/gemini-1.5-flash',
+  model: 'gemini-1.5-flash',
   input: { schema: PicoInputSchema },
   output: { 
     schema: PicoOutputSchema,
-    format: 'json' // Garantiza que la salida sea un JSON válido para evitar errores de parseo
+    format: 'json'
   },
   prompt: `Eres un experto bibliotecario y especialista en revisiones sistemáticas. 
   A partir de los siguientes componentes, genera una pregunta de investigación en formato PICO (Población, Intervención, Comparación, Resultado) 
@@ -47,9 +42,6 @@ const generarPreguntaPico = ai.definePrompt({
   `,
 });
 
-/**
- * Flujo para la formulación de preguntas de investigación asistida por IA.
- */
 export const picoQuestionFlow = ai.defineFlow(
   { 
     name: 'picoQuestionFlow',
