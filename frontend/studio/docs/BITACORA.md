@@ -3,6 +3,11 @@
 
 ## 🚀 Hitos Técnicos
 
+### Gestión de Entregas y Seguimiento (Fix v3)
+- **Visibilidad Estudiante**: Se implementó el estado "Entregado (Editar)" en las tarjetas de actividades. Ahora el estudiante puede recuperar su texto y archivo enviado para corregirlo antes de la calificación.
+- **Sincronización de IDs**: Se estandarizó el uso de `String(moduloId)` para asegurar que el filtro de la base de datos no ignore registros en el panel de Seguimiento.
+- **Seguimiento Admin**: Reparada la tabla de calificaciones; ahora muestra correctamente el listado de todos los estudiantes que han entregado tareas o exámenes en el módulo actual.
+
 ### Gestor de Referencias (IA Power - v2)
 - **Motor de Citación Estabilizado**: Migración definitiva al modelo **`gemini-3.5-flash`** para asegurar disponibilidad y precisión en el formateo bibliográfico tras la descontinuación de versiones anteriores.
 - **Soporte BibTeX Avanzado**: Optimizada la detección de metadatos para entradas de LaTeX/BibTeX, convirtiéndolas instantáneamente a APA, IEEE, etc.
