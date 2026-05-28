@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useEffect, useState, use, useRef } from "react";
@@ -92,32 +93,30 @@ function ResourcePreview({ url, title }: { url: string; title: string }) {
 
     // Google Drive / Docs / Presentation (SOLUCIÓN "Necesitas acceso")
     if (url.includes("docs.google.com") || url.includes("drive.google.com")) {
-        if (url.includes("/preview") || url.includes("/embed")) return url;
-        const match = url.match(/\/d\/(.+?)(\/|$|#|\?)/);
+        // Soporte para enlaces directos con ID
+        const match = url.match(/\/d\/(.+?)(\/|$|#|\?)/) || url.match(/id=(.+?)(&|$)/);
         if (match) {
             const id = match[1];
             if (url.includes("/presentation")) return `https://docs.google.com/presentation/d/${id}/embed`;
             if (url.includes("/document")) return `https://docs.google.com/document/d/${id}/preview`;
+            if (url.includes("/spreadsheets")) return `https://docs.google.com/spreadsheets/d/${id}/preview`;
             return `https://drive.google.com/file/d/${id}/preview`;
         }
     }
 
-    // Prezi (Ventana nueva requerida)
-    if (url.includes("prezi.com")) return null;
-
     return url;
   };
 
-  // UI Especial para Prezi
+  // UI Especial para Prezi (Siempre fuera de iframe por seguridad)
   if (url && url.includes("prezi.com")) {
       return (
           <div className="w-full h-full flex flex-col items-center justify-center bg-[#050b1f] text-white p-8 text-center rounded-xl">
               <Monitor className="h-16 w-16 mb-4 text-primary animate-pulse" />
               <h3 className="text-xl font-headline font-bold mb-2">Presentación Interactiva</h3>
-              <p className="text-sm text-slate-400 mb-6 max-w-xs">Este contenido requiere abrirse en una ventana externa para una experiencia completa.</p>
+              <p className="text-sm text-slate-400 mb-6 max-w-xs">Este contenido de Prezi requiere abrirse en una ventana externa para una experiencia completa.</p>
               <Button asChild size="lg" className="rounded-2xl font-bold bg-primary hover:bg-primary/90 px-8 shadow-xl shadow-primary/20">
                   <a href={url} target="_blank" rel="noopener noreferrer">
-                      Abrir en Nueva Ventana <ExternalLink className="ml-2 h-5 w-5" />
+                      Abrir Presentación <ExternalLink className="ml-2 h-5 w-5" />
                   </a>
               </Button>
           </div>

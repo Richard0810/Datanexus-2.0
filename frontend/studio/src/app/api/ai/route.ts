@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import '@/ai/genkit';
 import { picoQuestionFlow } from '@/ai/pico';
+import { referenceFormatterFlow } from '@/ai/references';
 
 export async function POST(req: NextRequest) {
   try {
@@ -10,11 +11,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'flowId es requerido' }, { status: 400 });
     }
 
-    console.log(`[API] Ejecutando flujo directamente: ${flowId}`);
+    console.log(`[API] Ejecutando flujo: ${flowId}`);
 
     if (flowId === 'picoQuestionFlow') {
-      // Llamada directa a la función del flujo como recomienda Genkit v1
       const output = await picoQuestionFlow(input);
+      return NextResponse.json(output);
+    }
+
+    if (flowId === 'referenceFormatterFlow') {
+      const output = await referenceFormatterFlow(input);
       return NextResponse.json(output);
     }
 

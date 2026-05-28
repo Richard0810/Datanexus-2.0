@@ -1,10 +1,16 @@
+
 # Bitácora de Desarrollo - DataNexus
 
 ## 🚀 Hitos Técnicos
 
+### Gestor de Referencias (IA Power)
+- **Conversión de Estilos**: Implementado flujo de IA que convierte referencias a **APA 7, Vancouver, IEEE, Harvard y Chicago** de forma instantánea utilizando Gemini 3.5 Flash.
+- **Detección de Datos**: La IA ahora es capaz de extraer metadatos bibliográficos de texto sucio o mal formateado para reconstruir la cita correctamente.
+- **UX de Copiado**: Añadido sistema de copiado al portapapeles con retroalimentación visual para cada referencia generada.
+
 ### Multimedia y Previsualización
-- **Google Drive Patch**: Implementada la transformación automática de enlaces `view` a `/preview` para archivos de Google Drive/Docs. Esto soluciona el error "Necesitas acceso" y permite visualizar PDFs y documentos públicos directamente en la plataforma.
-- **Soporte para Prezi**: Restaurada la funcionalidad de apertura en ventana externa para presentaciones de Prezi, optimizando la experiencia de usuario al evitar restricciones de marcos (iframe) de terceros.
+- **Google Drive Patch**: Implementada la transformación automática de enlaces `view` y `open?id` a `/preview` para archivos de Google Drive/Docs. Esto soluciona el error "Necesitas acceso" y permite visualizar PDFs y documentos públicos directamente en la plataforma.
+- **Soporte para Prezi**: Restaurada la funcionalidad de apertura en ventana externa para presentaciones de Prezi con interfaz personalizada, optimizando la experiencia de usuario al evitar restricciones de marcos (iframe) de terceros.
 
 ### Inteligencia Artificial (Potenciación PICO/PECO)
 - **Actualización de Modelo**: Migración exitosa al modelo **`gemini-3.5-flash`**, asegurando respuestas ultra-rápidas y precisas siguiendo la última documentación de Google AI.
