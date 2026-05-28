@@ -105,43 +105,62 @@ export default function ModulosPage() {
     fetchModules();
   }, []);
 
-  // ✅ NUEVA LÓGICA AÑADIDA
-  // Este useEffect se ejecuta cada vez que la lista de módulos cambia.
+  // ✅ LÓGICA CORREGIDA
+  // Se ejecuta cuando los módulos se han cargado
   useEffect(() => {
-    // Si no hay módulos, no hay nada que hacer.
     if (modules.length === 0) return;
 
     const fetchAllLessonCounts = async () => {
-      // Usamos Promise.all para hacer todas las peticiones en paralelo, es más eficiente.
-      const promises = modules.map(module =>
-        api.get(`/modules/${module.id}/lessons`)
-          .then(response => ({
-            id: module.id,
-            count: Array.isArray(response.data) ? response.data.length : 0
-          }))
-          .catch(error => {
-            console.warn(`No se pudo obtener el conteo de lecciones para el módulo ${module.id}:`, error);
-            // Si hay un error, asignamos 0 para que no se quede cargando.
-            return { id: module.id, count: 0 };
-          })
-      );
+      try {
+        // 1. Pedir todos los recursos, actividades y evaluaciones en paralelo
+        const [resResponse, actResponse, assResponse] = await Promise.all([
+          api.get('/educational-resources'),
+          api.get('/activities'),
+          api.get('/assessments')
+        ]);
 
-      // Esperamos a que todas las promesas se resuelvan.
-      const results = await Promise.all(promises);
+        const resources = resResponse.data;
+        const activities = actResponse.data;
+        const assessments = assResponse.data;
 
-      // Creamos un nuevo objeto de conteos a partir de los resultados.
-      const newCounts = results.reduce((acc, result) => {
-        acc[result.id] = result.count;
-        return acc;
-      }, {} as Record<string, number>);
+        // 2. Calcular los totales para cada módulo mostrado
+        const newCounts = modules.reduce((acc, module) => {
+          const moduleId = String(module.id);
+          
+          // Contar recursos para este módulo
+          const resourceCount = resources.filter((res: any) => 
+            res.unidad === `Módulo ${moduleId}` || 
+            res.unidad === `Unidad ${moduleId}` || 
+            res.unidad === moduleId
+          ).length;
+          
+          // Contar actividades para este módulo
+          const activityCount = activities.filter((act: any) => String(act.moduloId) === moduleId).length;
+          
+          // Contar evaluaciones para este módulo
+          const assessmentCount = assessments.filter((ass: any) => String(ass.moduloId) === moduleId).length;
 
-      // Actualizamos el estado una sola vez con todos los nuevos conteos.
-      setLessonCounts(prevCounts => ({ ...prevCounts, ...newCounts }));
+          // 3. Sumar todo para obtener el total de "lecciones"
+          acc[moduleId] = resourceCount + activityCount + assessmentCount;
+          return acc;
+        }, {} as Record<string, number>);
+
+        // 4. Actualizar el estado para que la interfaz muestre los números
+        setLessonCounts(newCounts);
+
+      } catch (error) {
+        console.error("Error fetching lesson counts:", error);
+        // Si algo falla, poner todos los contadores a 0 para no dejar el loader infinito
+        const zeroCounts = modules.reduce((acc, module) => {
+          acc[module.id] = 0;
+          return acc;
+        }, {} as Record<string, number>);
+        setLessonCounts(zeroCounts);
+      }
     };
 
     fetchAllLessonCounts();
-  }, [modules]); // La dependencia [modules] es crucial.
-
+  }, [modules]); // Se ejecuta cada vez que la lista de módulos cambia
 
   const handleSeedDatabase = async () => {
     setIsSeeding(true);
@@ -194,7 +213,7 @@ export default function ModulosPage() {
 
   const filteredModules = useMemo(() => {
     if (!searchQuery) return modules;
-    const normalize = (str: string) => str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+    const normalize = (str: string) => str.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
     const normalizedQuery = normalize(searchQuery);
     return modules.filter(module => {
       const normalizedTitle = normalize(module.title);
