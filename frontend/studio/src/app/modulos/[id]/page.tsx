@@ -1,4 +1,4 @@
-'''"use client";
+"use client";
 import React from 'react';
 
 import { useEffect, useState, use, useRef } from "react";
@@ -680,4 +680,3 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
     </div>
   );
 }
-'''
