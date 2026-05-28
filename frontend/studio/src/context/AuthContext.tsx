@@ -49,6 +49,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const pathname = usePathname();
 
   useEffect(() => {
+    // Si auth no está inicializado (build time o error), marcar como no cargando
+    if (!auth) {
+      setLoading(false);
+      return;
+    }
+
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
       if (firebaseUser) {
         try {
@@ -99,6 +105,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [pathname]);
 
   const signInWithGoogle = async () => {
+    if (!auth) return;
     const provider = new GoogleAuthProvider();
     try {
       provider.setCustomParameters({ prompt: 'select_account' });
@@ -112,6 +119,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const registerWithEmail = async (name: string, email: string, password: string) => {
+    if (!auth) return;
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       await updateProfile(userCredential.user, { displayName: name });
@@ -121,6 +129,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signInWithEmail = async (email: string, password: string) => {
+    if (!auth) return;
     try {
       await signInWithEmailAndPassword(auth, email, password);
     } catch (error) {
@@ -129,6 +138,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signOut = async () => {
+    if (!auth) return;
     try {
       await firebaseSignOut(auth);
       setUser(null);

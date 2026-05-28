@@ -1,5 +1,5 @@
 import { initializeApp, getApps, getApp, type FirebaseApp } from "firebase/app";
-import { getAuth } from "firebase/auth";
+import { getAuth, Auth } from "firebase/auth";
 
 // Usamos variables de entorno para que el despliegue sea dinámico y seguro
 const firebaseConfig = {
@@ -11,20 +11,26 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID
 };
 
-let app: FirebaseApp;
+let app: FirebaseApp | undefined;
+let auth: Auth | undefined;
 
-try {
-  if (!getApps().length) {
-    app = initializeApp(firebaseConfig);
-    console.log("Firebase inicializado correctamente en producción.");
-  } else {
-    app = getApp();
+/**
+ * Protección de Inicialización (Initialization Guarding):
+ * Solo inicializamos Firebase si estamos en el cliente o si tenemos la API Key.
+ * Esto evita que el build de Vercel falle si las variables de entorno no están presentes en ese paso.
+ */
+if (typeof window !== 'undefined' || process.env.NEXT_PUBLIC_FIREBASE_API_KEY) {
+  try {
+    if (!getApps().length) {
+      app = initializeApp(firebaseConfig);
+      console.log("Firebase inicializado correctamente.");
+    } else {
+      app = getApp();
+    }
+    auth = getAuth(app);
+  } catch (error) {
+    console.error("Error al inicializar Firebase:", error);
   }
-} catch (error) {
-  console.error("Error al inicializar Firebase:", error);
-  throw error;
 }
-
-const auth = getAuth(app);
 
 export { app, auth };

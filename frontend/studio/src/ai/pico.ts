@@ -1,12 +1,9 @@
-
-// Importa la instancia 'ai' de nuestro archivo de configuración central
 import { ai } from './genkit';
-import * as z from 'zod';
+import { z } from 'zod';
 
-// 1. Esquema de Entrada (Input Schema)
-// Define la estructura de los datos que el usuario nos dará desde el frontend.
+// Esquema de entrada alineado con el formulario de Herramientas IA
 const PicoInputSchema = z.object({
-  tema: z.string(),
+  tema: z.string().optional(),
   poblacion: z.string(),
   intervencion: z.string(),
   comparacion: z.string(),
@@ -14,26 +11,33 @@ const PicoInputSchema = z.object({
   contexto: z.string().optional(),
 });
 
-// 2. Esquema de Salida (Output Schema)
-// Define la estructura JSON que QUEREMOS que la IA nos devuelva. Es nuestra garantía.
+// Esquema de salida requerido por el componente PicoPecoForm.tsx
 const PicoOutputSchema = z.object({
-  preguntaPico: z.string().describe("La pregunta de investigación formulada en español en formato PICO/PECO."),
-  preguntaIngles: z.string().describe("La pregunta de investigación traducida al inglés."),
-  ecuacionBusqueda: z.string().describe("La ecuación de búsqueda booleana avanzada para bases de datos académicas, en inglés."),
+  preguntaPICO: z.string().describe("La pregunta de investigación formulada en formato PICO."),
+  preguntaPECO: z.string().describe("La pregunta de investigación formulada en formato PECO."),
+  sugerencia: z.string().describe("Sugerencia de un experto bibliotecario para refinar la búsqueda."),
+  keywords: z.array(z.string()).describe("Lista de palabras clave (Keywords) recomendadas."),
 });
 
-// 3. El Prompt
-// Aquí es donde le decimos a la IA qué hacer. Usamos la instancia 'ai' importada.
+/**
+ * Prompt especializado en metodología de investigación.
+ */
 const generarPreguntaPico = ai.definePrompt({
   name: 'generarPreguntaPico',
-  model: 'googleai/gemini-1.5-flash', // Usamos un modelo moderno y eficiente
+  model: 'googleai/gemini-1.5-flash',
   input: { schema: PicoInputSchema },
   output: { 
     schema: PicoOutputSchema,
-    format: 'json' // ¡CRÍTICO! Forzamos la salida a JSON para evitar errores de parseo.
+    format: 'json' // Garantiza que la salida sea un JSON válido para evitar errores de parseo
   },
-  prompt: `Eres un experto bibliotecario y especialista en revisiones sistemáticas. A partir de los siguientes componentes PICO/PECO, genera una pregunta de investigación clara y concisa, su traducción al inglés y una ecuación de búsqueda booleana avanzada para usar en Scopus o Web of Science. 
+  prompt: `Eres un experto bibliotecario y especialista en revisiones sistemáticas. 
+  A partir de los siguientes componentes, genera una pregunta de investigación en formato PICO (Población, Intervención, Comparación, Resultado) 
+  y otra en formato PECO (Población, Exposición, Comparación, Resultado). 
+  
+  Además, proporciona una "Sugerencia del Experto" sobre cómo mejorar la búsqueda en bases de datos académicas 
+  y una lista de al menos 5 palabras clave (keywords) relevantes tanto en inglés como en español.
 
+  DATOS PROPORCIONADOS:
   Tema: {{{tema}}}
   Población (P): {{{poblacion}}}
   Intervención/Exposición (I/E): {{{intervencion}}}
@@ -43,8 +47,9 @@ const generarPreguntaPico = ai.definePrompt({
   `,
 });
 
-// 4. El Flujo (Flow)
-// Este es el endpoint que nuestro frontend llamará. Orquesta la lógica.
+/**
+ * Flujo para la formulación de preguntas de investigación asistida por IA.
+ */
 export const picoQuestionFlow = ai.defineFlow(
   { 
     name: 'picoQuestionFlow',
@@ -52,15 +57,12 @@ export const picoQuestionFlow = ai.defineFlow(
     outputSchema: PicoOutputSchema,
   },
   async (input) => {
-    // Llama al prompt con la entrada del usuario
     const { output } = await generarPreguntaPico(input);
 
-    // Validación: Nos aseguramos de que la IA no devolvió algo inesperado
     if (!output) {
       throw new Error("La IA no devolvió una respuesta en el formato esperado.");
     }
 
-    // Devolvemos la respuesta estructurada
     return output;
   }
 );

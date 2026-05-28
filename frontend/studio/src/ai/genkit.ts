@@ -1,23 +1,21 @@
-
-// Importa el constructor de Genkit y el plugin de Google AI
+// Importa el constructor de Genkit y el plugin unificado de Google AI
 import { genkit } from 'genkit';
-import { googleAI } from '@genkit-ai/googleai';
+import { googleAI } from '@genkit-ai/google-genai';
 
-// Carga las variables de entorno (necesario para la API Key)
+// Carga las variables de entorno
 import * as dotenv from 'dotenv';
 dotenv.config();
 
-// Crea y exporta la instancia de Genkit configurada
-// Esta es la instancia que todos los demás archivos importarán para definir flujos y prompts.
+/**
+ * Instancia centralizada de Genkit.
+ * Utilizamos el plugin @genkit-ai/google-genai para mayor estabilidad en producción.
+ */
 export const ai = genkit({
   plugins: [
-    // Configura el plugin de Google AI con la API Key desde las variables de entorno
     googleAI({
-      apiKey: process.env.GOOGLE_API_KEY, // Vercel debe tener esta variable configurada
+      apiKey: process.env.GOOGLE_API_KEY, // Aseguramos que la llave se pase explícitamente para Vercel
     }),
   ],
-  // Habilita el logging en desarrollo para una mejor depuración
   logLevel: 'debug',
-  // Deshabilita el tracing en producción para evitar dependencias opcionales (como Jaeger)
   enableTracingAndMetrics: false,
 });
