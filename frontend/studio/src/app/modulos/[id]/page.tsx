@@ -233,6 +233,20 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
 
   useEffect(() => { if (user) fetchData(); }, [id, user, isAdmin]);
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        setAttachedFile({
+          name: file.name,
+          data: event.target?.result as string
+        });
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleSaveResource = async () => {
     if (!resourceForm.titulo) return;
     setIsProcessing(true);
@@ -327,6 +341,12 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
         setAttachedFile(null);
       }
     }, 100);
+  };
+
+  const handleOpenGrading = (sub: Submission) => {
+    setSelectedSubmission(sub);
+    setGradingForm({ puntaje: sub.puntaje || 0, recomendaciones: sub.recomendaciones || "" });
+    setIsGradingDialogOpen(true);
   };
 
   const handleSaveGrade = async () => {

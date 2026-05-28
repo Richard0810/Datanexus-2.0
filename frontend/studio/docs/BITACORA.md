@@ -3,6 +3,11 @@
 
 ## 🚀 Hitos Técnicos
 
+### Estabilización de Módulos (Fix v6)
+- **Corrección de ReferenceError**: Se restauraron las funciones `handleFileChange` y `handleOpenGrading` que estaban faltando en el componente de detalle del módulo, eliminando la pantalla blanca al entrar a un módulo.
+- **Sincronización Docente**: Se habilitó correctamente la función `handleSaveGrade` para permitir la calificación de tareas sin errores de ejecución.
+- **Limpieza de UI**: Se verificó que todos los botones de administración (Editar/Eliminar) y de usuario (Entregar) estén vinculados a sus respectivos diálogos.
+
 ### Gestión de Entregas y Evaluaciones (Fix v5)
 - **Corrección de Entregas**: Se reparó la lógica de `handleSubmitActivity` que fallaba al guardar nuevas entregas. Ahora el sistema detecta si es una creación (POST) o actualización (PATCH) basándose en la existencia previa de una entrega del estudiante.
 - **Motor de Evaluaciones Estabilizado**: Se flexibilizó el filtro de `moduloId` en la carga de evaluaciones para asegurar que los exámenes aparezcan correctamente en la interfaz sin importar el tipo de dato en la DB.
