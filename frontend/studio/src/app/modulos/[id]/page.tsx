@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useEffect, useState, use, useRef } from "react";
@@ -55,7 +54,6 @@ const resourceTypes = [
   { id: 'video', label: 'Video', icon: Video },
   { id: 'guia', label: 'Guía', icon: FileText },
   { id: 'articulo', label: 'Artículo', icon: BookOpen },
-  { id: 'presentacion', label: 'Presentación', icon: LinkIcon },
   { id: 'otro', label: 'Otro', icon: LinkIcon },
 ];
 
@@ -208,6 +206,20 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
     finally { setIsProcessing(false); }
   };
 
+  const handleSaveGrade = async () => {
+    if (!selectedSubmission) return;
+    setIsProcessing(true);
+    try {
+      const subId = getObjectId(selectedSubmission);
+      await api.patch(`/performance-reports/${subId}`, {
+        ...gradingForm,
+        estado: "calificado"
+      });
+      setIsGradingDialogOpen(false); fetchData(); toast({ title: "Calificación guardada" });
+    } catch (e) { toast({ title: "Error al calificar", variant: "destructive" }); }
+    finally { setIsProcessing(false); }
+  };
+
   const handleSubmitTask = async () => {
     setIsProcessing(true);
     try {
@@ -248,10 +260,11 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
   };
 
   const handleDelete = async () => {
+    if (!itemToDelete) return;
     setIsProcessing(true);
     try {
       const endpoints: Record<string, string> = { 'recurso': 'educational-resources', 'actividad': 'activities', 'evaluacion': 'assessments' };
-      await api.delete(`/${endpoints[itemToDelete!.type]}/${itemToDelete!.id}`);
+      await api.delete(`/${endpoints[itemToDelete.type]}/${itemToDelete.id}`);
       fetchData(); setIsDeleteDialogOpen(false); toast({ title: "Eliminado con éxito" });
     } catch (e) { toast({ title: "Error al eliminar", variant: "destructive" }); }
     finally { setIsProcessing(false); }
