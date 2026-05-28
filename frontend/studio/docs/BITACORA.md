@@ -2,49 +2,25 @@
 
 ## 🚀 Hitos Técnicos
 
-### Red y Conectividad
-- **Corrección Network Error**: Se ha configurado el backend para permitir todos los encabezados CORS (`*`), eliminando los fallos de sincronización y subida de archivos en entornos de proxy (Cloud Workstations).
-- **API URL Dinámica**: Refinada la detección del backend en `api.ts` para mapear correctamente el puerto 3001 sin importar el prefijo del hostname.
+### Inteligencia Artificial (Potenciación PICO/PECO)
+- **Actualización de Modelo**: Migración exitosa al modelo **`gemini-3.5-flash`**, asegurando respuestas ultra-rápidas y precisas siguiendo la última documentación de Google AI.
+- **Refactorización Genkit v1**: Se eliminó el uso del método obsoleto `run()` en la API Route. Ahora los flujos se invocan directamente como funciones asíncronas, eliminando errores de ejecución y mejorando la estabilidad en producción.
+- **Enriquecimiento de Salida**: La IA ahora entrega un paquete completo de investigación: Pregunta PICO/PECO, Sugerencia del experto, y Palabras Clave (Keywords).
 
-### Gestión de Módulos (CRUD Completo)
-- **Backend-Driven UI**: Se refactorizó la página de módulos (`/modulos`) para que los datos se obtengan dinámicamente desde el backend (`GET /modules`), abandonando el array estático anterior.
-- **Función de "Seed" para Admin**: Se implementó una función para administradores que permite "sembrar" la base de datos con un conjunto inicial de 9 módulos, facilitando la configuración inicial y la recuperación de datos.
-- **CRUD Funcional**: Se implementaron las operaciones completas de Crear, Leer, Actualizar y Eliminar (CRUD) para los módulos:
-    - **Crear**: A través de la función de "seed".
-    - **Leer**: Carga y muestra de todos los módulos.
-    - **Actualizar**: Mediante un modal de edición.
-    - **Eliminar**: Con un diálogo de confirmación para evitar borrados accidentales.
-- **Modal de Edición Avanzado**: Se desarrolló un componente de modal (`EditModuleModal.tsx`) con dos métodos para actualizar la imagen del módulo:
-    1.  **Desde URL**: Pegando un enlace web directo.
-    2.  **Subida Directa**: Permitiendo subir un archivo desde el ordenador, que se convierte a **Base64** en el cliente para ser almacenado directamente en la base de datos sin necesidad de un bucket de almacenamiento.
-- **Configuración de Imágenes Externas**: Se actualizó el archivo `next.config.ts` para autorizar dominios de imágenes externas (`ludomedia.org`), permitiendo que el componente `<Image>` de Next.js las renderice de forma segura y optimizada.
+### Gestión de Módulos (OVA) y Estabilización
+- **Corrección de Error Crítico**: Resolución del fallo `handleSaveGrade is not defined` que provocaba pantallas blancas al entrar en el detalle de los módulos.
+- **Restauración de Herramientas Admin**: Se recuperaron los botones de **Editar** y **Eliminar** en Recursos, Actividades y Evaluaciones, permitiendo una gestión total del contenido desde la interfaz.
+- **Motor de Evaluaciones**: Se rediseñó la lógica para separar el "Modo Examen" (estudiante) del "Editor de Preguntas" (administrador), permitiendo crear y modificar exámenes dinámicamente sin errores de navegación.
+- **Entrega de Actividades**: Restaurado el sistema de entrega de tareas con editor de texto enriquecido y soporte para archivos adjuntos.
 
-### Gestión de Archivos y CRUD
-- **Estrategia Base64**: Implementada la conversión de archivos locales a Base64 en el cliente para evitar errores de red complejos y garantizar el almacenamiento en MongoDB.
-- **Visualización Universal**: 
-    - PDFs: Se visualizan mediante URLs de Blob temporales para eludir los bloqueos de seguridad de Chrome sobre cadenas `data:`.
-    - Office (PPTX/Word): Interfaz dedicada que utiliza Blobs dinámicos para apertura instantánea en visores externos.
-    - Multimedia: Soporte nativo para videos MP4 e imágenes Base64.
+### Red y Conectividad (Vercel & Render)
+- **Corrección ERESOLVE**: Se alinearon todas las dependencias de Genkit a la versión **`1.36.0`** en el `package.json`, resolviendo los conflictos de dependencias que bloqueaban el despliegue en Vercel.
+- **CORS Universal**: Se configuró el backend en NestJS para permitir peticiones desde cualquier origen (`origin: true`), eliminando el "Network Error" que impedía guardar datos desde el frontend desplegado.
+- **API URL Dinámica**: Refinada la detección del backend en `api.ts` para limpiar barras diagonales finales y manejar puertos dinámicos.
 
-### Reportes y Análisis
-- **Dashboard Dinámico**: Conexión total con `/performance-reports` con filtrado por rol (Admin ve global, Estudiante ve personal).
-- **Mantenimiento Robusto**:
-    - **Limpieza Automática**: Botón de limpieza global para eliminar registros no calificados.
-    - **Borrado con AlertDialog**: Migración de `confirm` nativo a diálogos de Shadcn para evitar bloqueos del navegador.
-    - **Normalización de IDs**: Función `getReportId` para manejar indistintamente IDs de MongoDB como strings u objetos `$oid`.
-- **Formateo Seguro**: Implementación de `safeFormatDate` y renderizado defensivo (`|| 'enviado'`) para prevenir errores de ejecución por datos nulos.
+### Seguridad y Roles
+- **Blindaje de Admin**: Implementada la sincronización forzada en el backend para el usuario `richardai200308@gmail.com`, garantizando que mantenga el rol de `admin` en MongoDB y en el estado de la aplicación de forma automática.
 
 ## 💡 Lecciones Aprendidas y Soluciones Reales
-
-
-## ⚙️ Configuración y Despliegue en Vercel
-
-- **Configuración de Repositorio Git**: Se inicializó el repositorio Git local y se conectó al repositorio remoto `https://github.com/Richard0810/Datanexus-2.0.git`. Se gestionaron `add`, `commit` y `push` para sincronizar los cambios.
-
-- **Despliegue de Frontend y Backend (Monorepo)**: Se estableció una estrategia de despliegue separada para el frontend (`frontend/studio`) y el backend (`Datanexus`) en Vercel para manejar un monorepo, asignando dominios distintos a cada uno.
-    - **Frontend (Next.js)**: Desplegado en `datanexus-2-0-frontend.vercel.app`
-    - **Backend (NestJS)**: Desplegado en `datanexus-2-0-backend.vercel.app`
-
-- **Corrección de Rol de Administrador**: Se identificó que, aunque el rol `admin` estaba correctamente en la base de datos para el usuario `richardai200308@gmail.com`, el frontend lo mostraba como `estudiante`. Se implementó una corrección en `Datanexus/src/auth/auth.controller.ts` para forzar que el objeto de usuario devuelto al frontend siempre refleje el rol `admin` para este correo específico.
-
-- **Corrección de Error de Despliegue (Backend)**: Se solucionó un error de compilación en Vercel (`Cannot find module 'class-validator'`). El problema se debió a que las dependencias `class-validator` y `class-transformer` no estaban en la lista de `dependencies` del `package.json` del backend. La solución fue añadirlas explícitamente, asegurando que Vercel las instale correctamente durante el proceso de `build`.
+- **Genkit v1**: Se aprendió que en la versión 1.x, los flujos deben tratarse como funciones estándar importadas, no invocarse por strings de ID.
+- **Protección de Inicialización**: La validación de `window` y `apiKey` en la configuración de Firebase es vital para que el proceso de "build" de Vercel no falle por falta de variables de entorno.
