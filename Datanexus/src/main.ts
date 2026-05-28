@@ -1,3 +1,4 @@
+
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
@@ -9,9 +10,9 @@ async function bootstrap() {
   app.use(json({ limit: '50mb' }));
   app.use(urlencoded({ extended: true, limit: '50mb' }));
 
-  // Configuración de CORS con origen y encabezados explícitos para Vercel
+  // Configuración de CORS permisiva para producción y desarrollo
   app.enableCors({
-    origin: ['https://datanexus-2-0.vercel.app', 'https://datanexus-2-0-vugv.vercel.app'],
+    origin: true, // Permite cualquier origen que envíe la petición (útil para despliegues dinámicos)
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     credentials: true,
     allowedHeaders: 'Content-Type, Accept, Authorization',

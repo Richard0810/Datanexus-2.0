@@ -1,3 +1,4 @@
+
 // Importa el constructor de Genkit y el plugin unificado de Google AI
 import { genkit } from 'genkit';
 import { googleAI } from '@genkit-ai/google-genai';
@@ -8,12 +9,12 @@ dotenv.config();
 
 /**
  * Instancia centralizada de Genkit.
- * Utilizamos el plugin @genkit-ai/google-genai para mayor estabilidad en producción.
+ * Pasamos explícitamente la API Key para asegurar compatibilidad en Vercel.
  */
 export const ai = genkit({
   plugins: [
     googleAI({
-      apiKey: process.env.GOOGLE_API_KEY, // Aseguramos que la llave se pase explícitamente para Vercel
+      apiKey: process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY, 
     }),
   ],
   logLevel: 'debug',

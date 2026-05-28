@@ -1,3 +1,4 @@
+
 import { initializeApp, getApps, getApp, type FirebaseApp } from "firebase/app";
 import { getAuth, Auth } from "firebase/auth";
 
@@ -16,10 +17,10 @@ let auth: Auth | undefined;
 
 /**
  * Protección de Inicialización (Initialization Guarding):
- * Solo inicializamos Firebase si estamos en el cliente o si tenemos la API Key.
- * Esto evita que el build de Vercel falle si las variables de entorno no están presentes en ese paso.
+ * Solo inicializamos Firebase si estamos en el cliente (window existe) 
+ * y tenemos la API Key. Esto evita que el build de Vercel falle.
  */
-if (typeof window !== 'undefined' || process.env.NEXT_PUBLIC_FIREBASE_API_KEY) {
+if (typeof window !== 'undefined' && firebaseConfig.apiKey) {
   try {
     if (!getApps().length) {
       app = initializeApp(firebaseConfig);

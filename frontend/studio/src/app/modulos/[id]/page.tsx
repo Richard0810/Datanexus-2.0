@@ -1,3 +1,4 @@
+
 "use client";
 import React from 'react';
 
@@ -52,7 +53,40 @@ const getObjectId = (item: any): string => {
   return '';
 };
 
+const resourceTypes = [
+  { id: 'video', label: 'Video', icon: Video },
+  { id: 'guia', label: 'Guía', icon: FileText },
+  { id: 'articulo', label: 'Artículo', icon: BookOpen },
+  { id: 'presentacion', label: 'Presentación', icon: Presentation },
+  { id: 'prezi', label: 'Prezi', icon: Presentation },
+  { id: 'otro', label: 'Otro', icon: LinkIcon },
+];
+
 function ResourcePreview({ url, title, tipo }: { url: string; title: string, tipo: string }) {
+  const [blobUrl, setBlobUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (url && url.startsWith('data:')) {
+      try {
+        const parts = url.split(',');
+        const mime = parts[0].match(/:(.*?);/)?.[1] || '';
+        const byteString = atob(parts[1]);
+        const ab = new ArrayBuffer(byteString.length);
+        const ia = new Uint8Array(ab);
+        for (let i = 0; i < byteString.length; i++) {
+          ia[i] = byteString.charCodeAt(i);
+        }
+        const blob = new Blob([ab], { type: mime });
+        const newUrl = URL.createObjectURL(blob);
+        setBlobUrl(newUrl);
+        return () => URL.revokeObjectURL(newUrl);
+      } catch (e) {
+        console.error("Error procesando Blob URL:", e);
+      }
+    }
+    return undefined;
+  }, [url]);
+
   const isPrezi = tipo?.toLowerCase() === 'prezi' || (url && url.includes('prezi.com'));
   const isEmbeddable = tipo?.toLowerCase() === 'video' || (url && (url.includes('youtube.com') || url.includes('youtu.be') || url.includes('gamma.app') || url.includes('docs.google.com/presentation')));
 
@@ -68,7 +102,7 @@ function ResourcePreview({ url, title, tipo }: { url: string; title: string, tip
     return url;
   };
 
-  const finalUrl = isEmbeddable ? getEmbedUrl(url) : null;
+  const finalUrl = blobUrl || (isEmbeddable ? getEmbedUrl(url) : null);
 
   if (!finalUrl && !isPrezi) {
     return (
@@ -123,7 +157,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
   const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
   const [selectedSubmission, setSelectedSubmission] = useState<Submission | null>(null);
   
-  const [resourceForm, setResourceForm] = useState<Resource>({ titulo: "", descripcion: "", url: "", unidad: `Módulo ${id}`, tipo: "video", formato: "URL" });
+  const [resourceForm, setResourceForm] = useState<Resource>({ titulo: "", descripcion: "", url: "", unidad: `Módulo ${id}`, tipo: "guia", formato: "URL" });
   const [activityForm, setActivityForm] = useState<Activity>({ titulo: "", descripcion: "", tipo: "individual", criterios_evaluacion: "", moduloId: id, archivoUrl: "" });
   const [assessmentForm, setAssessmentForm] = useState<Assessment>({ titulo: "", descripcion: "", moduloId: id, preguntas: [] });
   const [gradingForm, setGradingForm] = useState({ puntaje: 0, recomendaciones: "" });
@@ -305,46 +339,9 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
           </div>
         );
       }
-      if (Array.isArray(parsed)) {
-        return (
-          <div className="space-y-3">
-            {parsed.map((item: any, idx) => (
-              <div key={idx} className="p-3 bg-muted rounded-md">
-                <p className="text-xs font-bold text-primary mb-1">{item.pregunta || `Pregunta Antigua`}</p>
-                <p className="text-sm">{String(item.respuesta)}</p>
-              </div>
-            ))}
-          </div>
-        );
-      }
-      if(typeof parsed === 'object' && !Array.isArray(parsed)) {
-        const parentAssessment = assessments.find(a => a.titulo === selectedSubmission?.tituloContenido);
-        return (
-            <div className="space-y-3">
-                {Object.entries(parsed).map(([qId, answer]) => {
-                    const questionText = parentAssessment?.preguntas.find(p => p.id === qId)?.texto;
-                    return (
-                        <div key={qId} className="p-3 bg-muted rounded-md">
-                            <p className="text-xs font-bold text-primary mb-1">{questionText || `Pregunta ID: ${qId}`}</p>
-                            <p className="text-sm">{String(answer)}</p>
-                        </div>
-                    )
-                })}
-            </div>
-        )
-      }
-    } catch (e) { /* No es JSON, mostrar como texto plano */ }
+    } catch (e) {}
     return <div className="p-4 bg-muted rounded-lg text-sm whitespace-pre-wrap">{detail}</div>;
   };
-
-  const resourceTypes = [
-      { id: 'video', label: 'Video', icon: Video },
-      { id: 'guia', label: 'Guía', icon: FileText },
-      { id: 'articulo', label: 'Artículo', icon: BookOpen },
-      { id: 'presentacion', label: 'Presentación', icon: Presentation },
-      { id: 'prezi', label: 'Prezi', icon: Presentation },
-      { id: 'otro', label: 'Otro', icon: LinkIcon },
-  ];
 
   return (
     <div className="space-y-8">
@@ -370,7 +367,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
             {isAdmin && (
               <Button onClick={() => {
                   setEditingResource(null);
-                  setResourceForm({ titulo: "", descripcion: "", url: "", unidad: `Módulo ${id}`, tipo: "video", formato: "URL" });
+                  setResourceForm({ titulo: "", descripcion: "", url: "", unidad: `Módulo ${id}`, tipo: "guia", formato: "URL" });
                   setIsResourceDialogOpen(true);
               }} size="sm">
                 <PlusCircle className="mr-2 h-4 w-4" /> Añadir Recurso
@@ -566,29 +563,58 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
         )}
       </Tabs>
 
-       {/* --- DIÁLOGOS --- */}
       <Dialog open={isResourceDialogOpen} onOpenChange={setIsResourceDialogOpen}>
-        <DialogContent className="sm:max-w-2xl">
+        <DialogContent className="sm:max-w-2xl max-h-[90vh] flex flex-col">
             <DialogHeader><DialogTitle>{editingResource ? "Editar" : "Nuevo"} Recurso</DialogTitle></DialogHeader>
-            <Tabs value={sourceTab} onValueChange={(v) => setSourceTab(v as any)} className="pt-4">
-                <TabsList className="grid w-full grid-cols-2"><TabsTrigger value="url">URL Externa</TabsTrigger><TabsTrigger value="file">Subir Archivo</TabsTrigger></TabsList>
-                <TabsContent value="url" className="space-y-4 pt-4">
-                    <Input placeholder="Título del recurso" value={resourceForm.titulo} onChange={e => setResourceForm({...resourceForm, titulo: e.target.value})} />
-                    <Textarea placeholder="Descripción" value={resourceForm.descripcion} onChange={e => setResourceForm({...resourceForm, descripcion: e.target.value})} />
-                    <Input placeholder="https://..." value={resourceForm.url} onChange={e => setResourceForm({...resourceForm, url: e.target.value})} />
-                    <Select value={resourceForm.tipo} onValueChange={(v) => setResourceForm({...resourceForm, tipo: v})}><SelectTrigger><SelectValue placeholder="Tipo de recurso" /></SelectTrigger><SelectContent>{resourceTypes.map(t => <SelectItem key={t.id} value={t.id}>{t.label}</SelectItem>)}</SelectContent></Select>
-                </TabsContent>
-                <TabsContent value="file" className="space-y-4 pt-4">
-                    <Input placeholder="Título del recurso" value={resourceForm.titulo} onChange={e => setResourceForm({...resourceForm, titulo: e.target.value})} />
-                    <Textarea placeholder="Descripción" value={resourceForm.descripcion} onChange={e => setResourceForm({...resourceForm, descripcion: e.target.value})} />
-                    <div className="p-4 text-center border-2 border-dashed rounded-md cursor-pointer" onClick={() => document.getElementById('file-upload')?.click()}>
-                        <input type="file" id="file-upload" className="hidden" onChange={(e) => setUploadedFile(e.target.files?.[0] ?? null)} />
-                        <FileUp className="mx-auto h-8 w-8 text-muted-foreground"/>
-                        <p className="mt-2 text-sm">{uploadedFile ? uploadedFile.name : "Selecciona un archivo"}</p>
-                    </div>
-                </TabsContent>
-            </Tabs>
-            <DialogFooter><Button onClick={handleSaveResource} disabled={isProcessing}>{isProcessing ? <Loader2 className="animate-spin" /> : "Guardar Recurso"}</Button></DialogFooter>
+            <div className="flex-1 overflow-y-auto pr-2">
+                <Tabs value={sourceTab} onValueChange={(v) => setSourceTab(v as any)} className="pt-4">
+                    <TabsList className="grid w-full grid-cols-2"><TabsTrigger value="url">URL Externa</TabsTrigger><TabsTrigger value="file">Subir Archivo</TabsTrigger></TabsList>
+                    <TabsContent value="url" className="space-y-4 pt-4">
+                        <div className="space-y-2">
+                          <Label>Título del recurso</Label>
+                          <Input placeholder="Título" value={resourceForm.titulo} onChange={e => setResourceForm({...resourceForm, titulo: e.target.value})} />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Descripción</Label>
+                          <Textarea placeholder="Descripción" value={resourceForm.descripcion} onChange={e => setResourceForm({...resourceForm, descripcion: e.target.value})} />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>URL</Label>
+                          <Input placeholder="https://..." value={resourceForm.url} onChange={e => setResourceForm({...resourceForm, url: e.target.value})} />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Tipo de recurso</Label>
+                          <Select value={resourceForm.tipo} onValueChange={(v) => setResourceForm({...resourceForm, tipo: v})}>
+                            <SelectTrigger><SelectValue placeholder="Tipo" /></SelectTrigger>
+                            <SelectContent>{resourceTypes.map(t => <SelectItem key={t.id} value={t.id}>{t.label}</SelectItem>)}</SelectContent>
+                          </Select>
+                        </div>
+                    </TabsContent>
+                    <TabsContent value="file" className="space-y-4 pt-4">
+                        <div className="space-y-2">
+                          <Label>Título del recurso</Label>
+                          <Input placeholder="Título" value={resourceForm.titulo} onChange={e => setResourceForm({...resourceForm, titulo: e.target.value})} />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Descripción</Label>
+                          <Textarea placeholder="Descripción" value={resourceForm.descripcion} onChange={e => setResourceForm({...resourceForm, descripcion: e.target.value})} />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Tipo de recurso</Label>
+                          <Select value={resourceForm.tipo} onValueChange={(v) => setResourceForm({...resourceForm, tipo: v})}>
+                            <SelectTrigger><SelectValue placeholder="Tipo" /></SelectTrigger>
+                            <SelectContent>{resourceTypes.map(t => <SelectItem key={t.id} value={t.id}>{t.label}</SelectItem>)}</SelectContent>
+                          </Select>
+                        </div>
+                        <div className="p-4 text-center border-2 border-dashed rounded-md cursor-pointer" onClick={() => document.getElementById('file-upload')?.click()}>
+                            <input type="file" id="file-upload" className="hidden" onChange={(e) => setUploadedFile(e.target.files?.[0] ?? null)} />
+                            <FileUp className="mx-auto h-8 w-8 text-muted-foreground"/>
+                            <p className="mt-2 text-sm">{uploadedFile ? uploadedFile.name : "Selecciona un archivo"}</p>
+                        </div>
+                    </TabsContent>
+                </Tabs>
+            </div>
+            <DialogFooter className="pt-4"><Button onClick={handleSaveResource} disabled={isProcessing} className="w-full">{isProcessing ? <Loader2 className="animate-spin" /> : "Guardar Recurso"}</Button></DialogFooter>
         </DialogContent>
       </Dialog>
 
