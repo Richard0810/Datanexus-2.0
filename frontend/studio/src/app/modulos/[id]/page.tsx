@@ -29,7 +29,8 @@ import {
   ExternalLink,
   Monitor,
   Plus,
-  SquareCheck
+  SquareCheck,
+  Check
 } from "lucide-react";
 import Link from "next/link";
 import api from "@/lib/api";
@@ -379,6 +380,10 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
   };
 
   const addAssessmentQuestion = () => {
+    if (!currentQuestion.texto || !currentQuestion.respuestaCorrecta) {
+      toast({ title: "Debes completar la pregunta y seleccionar la respuesta correcta", variant: "destructive" });
+      return;
+    }
     setAssessmentForm({ ...assessmentForm, preguntas: [...assessmentForm.preguntas, { ...currentQuestion, id: Math.random().toString(36).substr(2, 9) }] });
     setCurrentQuestion({ id: "", texto: "", tipo: "opcion-multiple", opciones: ["", ""], respuestaCorrecta: "" });
   };
@@ -589,17 +594,17 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
 
       <Dialog open={isResourceDialogOpen} onOpenChange={setIsResourceDialogOpen}>
         <DialogContent className="sm:max-w-[600px] rounded-[2rem] border-none shadow-2xl p-0 overflow-hidden">
-          <div className="bg-slate-50 border-b p-8">
+          <div className="bg-slate-50 border-b p-6">
             <DialogTitle className="text-2xl font-headline font-bold">Gestión de Recurso</DialogTitle>
             <DialogDescription>Configura los detalles del material educativo.</DialogDescription>
           </div>
-          <div className="p-8 space-y-6">
-             <div className="space-y-2"><Label className="font-bold text-slate-700">Título</Label><Input value={resourceForm.titulo} onChange={e => setResourceForm({...resourceForm, titulo: e.target.value})} className="rounded-xl h-12 bg-slate-50/50" /></div>
-             <div className="space-y-2"><Label className="font-bold text-slate-700">Descripción</Label><Textarea value={resourceForm.descripcion} onChange={e => setResourceForm({...resourceForm, descripcion: e.target.value})} className="rounded-xl min-h-[100px] bg-slate-50/50" /></div>
+          <div className="p-6 space-y-6">
+             <div className="space-y-2"><Label className="font-bold text-slate-700">Título</Label><Input value={resourceForm.titulo} onChange={e => setResourceForm({...resourceForm, titulo: e.target.value})} className="rounded-xl h-11 bg-slate-50/50" /></div>
+             <div className="space-y-2"><Label className="font-bold text-slate-700">Descripción</Label><Textarea value={resourceForm.descripcion} onChange={e => setResourceForm({...resourceForm, descripcion: e.target.value})} className="rounded-xl min-h-[80px] bg-slate-50/50" /></div>
              <div className="space-y-2">
                 <Label className="font-bold text-slate-700">Tipo de Recurso</Label>
                 <Select value={resourceForm.tipo} onValueChange={v => setResourceForm({...resourceForm, tipo: v})}>
-                  <SelectTrigger className="rounded-xl h-12 bg-slate-50/50"><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="rounded-xl h-11 bg-slate-50/50"><SelectValue /></SelectTrigger>
                   <SelectContent className="rounded-xl">
                     <SelectItem value="guia">Guía / Documento</SelectItem>
                     <SelectItem value="video">Video Tutorial</SelectItem>
@@ -609,23 +614,23 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                 </Select>
              </div>
              <Tabs value={sourceTab} onValueChange={(v: any) => setSourceTab(v)} className="w-full">
-                <TabsList className="grid w-full grid-cols-2 bg-slate-100 rounded-xl h-11 p-1">
-                  <TabsTrigger value="url" className="rounded-lg">URL Enlace</TabsTrigger>
-                  <TabsTrigger value="file" className="rounded-lg">Subir Archivo</TabsTrigger>
+                <TabsList className="grid w-full grid-cols-2 bg-slate-100 rounded-xl h-10 p-1">
+                  <TabsTrigger value="url" className="rounded-lg text-xs">URL Enlace</TabsTrigger>
+                  <TabsTrigger value="file" className="rounded-lg text-xs">Subir Archivo</TabsTrigger>
                 </TabsList>
-                <TabsContent value="url" className="pt-4"><Input value={resourceForm.url} onChange={e => setResourceForm({...resourceForm, url: e.target.value})} placeholder="https://..." className="rounded-xl h-12" /></TabsContent>
-                <TabsContent value="file" className="pt-4">
-                  <div className="border-2 border-dashed p-10 text-center rounded-2xl cursor-pointer hover:bg-slate-50 transition-colors border-slate-200" onClick={() => document.getElementById('res-f')?.click()}>
+                <TabsContent value="url" className="pt-2"><Input value={resourceForm.url} onChange={e => setResourceForm({...resourceForm, url: e.target.value})} placeholder="https://..." className="rounded-xl h-11" /></TabsContent>
+                <TabsContent value="file" className="pt-2">
+                  <div className="border-2 border-dashed p-6 text-center rounded-2xl cursor-pointer hover:bg-slate-50 transition-colors border-slate-200" onClick={() => document.getElementById('res-f')?.click()}>
                     <input id="res-f" type="file" className="hidden" onChange={e => setUploadedFile(e.target.files?.[0] || null)} />
-                    <Upload className="h-10 w-10 mx-auto mb-3 text-slate-300" />
-                    <p className="text-xs font-bold text-slate-500">{uploadedFile ? uploadedFile.name : "Seleccionar PDF, Video o Imagen"}</p>
+                    <Upload className="h-8 w-8 mx-auto mb-2 text-slate-300" />
+                    <p className="text-[10px] font-bold text-slate-500">{uploadedFile ? uploadedFile.name : "Seleccionar PDF, Video o Imagen"}</p>
                   </div>
                 </TabsContent>
              </Tabs>
           </div>
-          <div className="p-8 pt-0 flex gap-3">
-             <Button variant="ghost" onClick={() => setIsResourceDialogOpen(false)} className="h-12 rounded-xl flex-1 font-bold">Cancelar</Button>
-             <Button onClick={handleSaveResource} disabled={isProcessing} className="h-12 rounded-xl flex-[2] font-bold bg-primary shadow-lg shadow-primary/20">
+          <div className="p-6 pt-0 flex gap-3">
+             <Button variant="ghost" onClick={() => setIsResourceDialogOpen(false)} className="h-11 rounded-xl flex-1 font-bold">Cancelar</Button>
+             <Button onClick={handleSaveResource} disabled={isProcessing} className="h-11 rounded-xl flex-[2] font-bold bg-primary shadow-lg shadow-primary/20">
                {isProcessing ? <Loader2 className="animate-spin mr-2 h-4 w-4" /> : <Save className="mr-2 h-4 w-4" />} Guardar Recurso
              </Button>
           </div>
@@ -660,13 +665,43 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
              <div className="p-6 border rounded-[2rem] bg-slate-50/50 space-y-6">
                 <h4 className="font-black text-slate-800 uppercase text-xs tracking-widest flex items-center gap-2"><Plus className="h-4 w-4" /> Diseñar Pregunta</h4>
                 <div className="space-y-4">
-                   <div className="space-y-2"><Label className="text-xs font-bold text-slate-500 uppercase">Texto de la pregunta</Label><Input placeholder="¿Qué es una base de datos relacional?" value={currentQuestion.texto} onChange={e => setCurrentQuestion({...currentQuestion, texto: e.target.value})} className="rounded-xl h-12" /></div>
-                   <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2"><Label className="text-xs font-bold text-slate-500 uppercase">Opción A</Label><Input value={currentQuestion.opciones[0]} onChange={e => { const op = [...currentQuestion.opciones]; op[0] = e.target.value; setCurrentQuestion({...currentQuestion, opciones: op}); }} className="rounded-xl" /></div>
-                      <div className="space-y-2"><Label className="text-xs font-bold text-slate-500 uppercase">Opción B</Label><Input value={currentQuestion.opciones[1]} onChange={e => { const op = [...currentQuestion.opciones]; op[1] = e.target.value; setCurrentQuestion({...currentQuestion, opciones: op}); }} className="rounded-xl" /></div>
+                   <div className="space-y-2">
+                      <Label className="text-xs font-bold text-slate-500 uppercase">Texto de la pregunta</Label>
+                      <Input placeholder="¿Qué es una base de datos relacional?" value={currentQuestion.texto} onChange={e => setCurrentQuestion({...currentQuestion, texto: e.target.value})} className="rounded-xl h-12" />
                    </div>
-                   <div className="space-y-2"><Label className="text-xs font-bold text-slate-500 uppercase">Respuesta Correcta</Label><Input placeholder="Ej: Opción A" value={currentQuestion.respuestaCorrecta} onChange={e => setCurrentQuestion({...currentQuestion, respuestaCorrecta: e.target.value})} className="rounded-xl" /></div>
-                   <Button variant="outline" size="lg" onClick={addAssessmentQuestion} className="w-full rounded-xl border-primary/20 text-primary hover:bg-primary/5 font-bold h-12"><Plus className="h-4 w-4 mr-2" /> Añadir Pregunta al Banco</Button>
+                   <div className="grid grid-cols-1 gap-4">
+                      {currentQuestion.opciones.map((opcion, idx) => (
+                        <div key={idx} className="flex items-center gap-3">
+                           <div className="flex-1 space-y-1">
+                              <Label className="text-[10px] font-bold text-slate-400 uppercase">Opción {idx === 0 ? 'A' : 'B'}</Label>
+                              <div className="flex items-center gap-2">
+                                <Input 
+                                  value={opcion} 
+                                  onChange={e => {
+                                    const op = [...currentQuestion.opciones];
+                                    op[idx] = e.target.value;
+                                    setCurrentQuestion({...currentQuestion, opciones: op});
+                                  }} 
+                                  className="rounded-xl h-11" 
+                                />
+                                <Button 
+                                  type="button"
+                                  variant={currentQuestion.respuestaCorrecta === opcion ? "default" : "outline"}
+                                  className={cn(
+                                    "h-11 w-11 rounded-xl shrink-0 transition-all",
+                                    currentQuestion.respuestaCorrecta === opcion ? "bg-green-600 hover:bg-green-700 text-white" : "border-slate-200 text-slate-300"
+                                  )}
+                                  onClick={() => setCurrentQuestion({...currentQuestion, respuestaCorrecta: opcion})}
+                                  title="Marcar como respuesta correcta"
+                                >
+                                  {currentQuestion.respuestaCorrecta === opcion ? <CheckCircle2 className="h-6 w-6" /> : <Check className="h-5 w-5 opacity-20" />}
+                                </Button>
+                              </div>
+                           </div>
+                        </div>
+                      ))}
+                   </div>
+                   <Button variant="outline" size="lg" onClick={addAssessmentQuestion} className="w-full rounded-xl border-primary/20 text-primary hover:bg-primary/5 font-bold h-12 mt-4"><Plus className="h-4 w-4 mr-2" /> Añadir Pregunta al Banco</Button>
                 </div>
              </div>
              <div className="space-y-3">
@@ -674,7 +709,10 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                 <div className="grid grid-cols-1 gap-2">
                   {assessmentForm.preguntas.map((q, i) => (
                     <div key={i} className="text-xs p-4 bg-white ring-1 ring-slate-100 rounded-xl flex justify-between items-center shadow-sm">
-                      <span className="font-semibold text-slate-700">P{i+1}: {q.texto}</span>
+                      <div className="flex flex-col gap-1">
+                        <span className="font-semibold text-slate-700">P{i+1}: {q.texto}</span>
+                        <span className="text-[9px] text-green-600 font-bold uppercase">✓ Correcta: {q.respuestaCorrecta}</span>
+                      </div>
                       <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:bg-red-50" onClick={() => setAssessmentForm({...assessmentForm, preguntas: assessmentForm.preguntas.filter((_, idx) => idx !== i)}) }><Trash2 className="h-4 w-4" /></Button>
                     </div>
                   ))}
