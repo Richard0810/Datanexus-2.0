@@ -1,5 +1,5 @@
 import { genkit } from 'genkit';
-import { googleAI } from '@genkit-ai/google-genai';
+import { googleAI } from '@genkit-ai/googleai'; // Corregido: Usar el paquete correcto para la v1.8.0
 
 export const ai = genkit({
   plugins: [
