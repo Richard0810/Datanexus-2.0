@@ -10,9 +10,9 @@ async function bootstrap() {
   app.use(json({ limit: '50mb' }));
   app.use(urlencoded({ extended: true, limit: '50mb' }));
 
-  // Configuración de CORS permisiva para producción y desarrollo
+  // Configuración de CORS universal para evitar errores en despliegues dinámicos de Vercel
   app.enableCors({
-    origin: true, // Permite cualquier origen que envíe la petición (útil para despliegues dinámicos)
+    origin: true,
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     credentials: true,
     allowedHeaders: 'Content-Type, Accept, Authorization',
@@ -30,6 +30,7 @@ async function bootstrap() {
   const port = process.env.PORT || 3001;
 
   try {
+    // Escuchar en todas las interfaces para compatibilidad con Render
     await app.listen(port, '0.0.0.0');
     console.log(`Backend de DataNexus corriendo exitosamente en el puerto: ${port}`);
   } catch (error: any) {
