@@ -28,7 +28,8 @@ import {
   Underline,
   ExternalLink,
   Monitor,
-  Plus
+  Plus,
+  SquareCheck
 } from "lucide-react";
 import Link from "next/link";
 import api from "@/lib/api";
@@ -669,7 +670,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                 </div>
              </div>
              <div className="space-y-3">
-                <Label className="font-bold text-slate-700 flex items-center gap-2"><CheckSquare className="h-4 w-4" /> Banco de Preguntas ({assessmentForm.preguntas.length})</Label>
+                <Label className="font-bold text-slate-700 flex items-center gap-2"><SquareCheck className="h-4 w-4" /> Banco de Preguntas ({assessmentForm.preguntas.length})</Label>
                 <div className="grid grid-cols-1 gap-2">
                   {assessmentForm.preguntas.map((q, i) => (
                     <div key={i} className="text-xs p-4 bg-white ring-1 ring-slate-100 rounded-xl flex justify-between items-center shadow-sm">
@@ -729,7 +730,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
           <div className="p-8 border-t bg-slate-50/30 flex gap-3">
             <Button variant="ghost" onClick={() => setIsSubmitActivityOpen(false)} className="rounded-2xl h-14 flex-1 font-bold">Cancelar</Button>
             <Button onClick={handleSubmitActivity} disabled={isProcessing} className="bg-primary hover:bg-primary/90 h-14 px-10 rounded-2xl font-bold flex-[2] shadow-xl shadow-primary/20 text-lg">
-              {isProcessing ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <Save className="mr-2 h-5 w-5"/>} 
+              {isProcessing ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <Save className="mr-2 h-4 w-4" />} 
               {editingSubmissionId ? "Actualizar Mi Entrega" : "Enviar Entrega Final"}
             </Button>
           </div>
@@ -777,7 +778,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
           <div className="p-8 border-t bg-slate-50/50 flex gap-3">
             <Button variant="ghost" onClick={() => setIsGradingDialogOpen(false)} className="rounded-2xl h-14 flex-1 font-bold text-slate-500">Volver</Button>
             <Button onClick={handleSaveGrade} disabled={isProcessing} className="flex-[2] h-14 rounded-2xl font-bold bg-primary hover:bg-primary/90 shadow-xl shadow-primary/20 text-lg">
-              {isProcessing ? <Loader2 className="animate-spin mr-2 h-5 w-5" /> : <Save className="mr-2 h-5 w-5" />}
+              {isProcessing ? <Loader2 className="animate-spin mr-2 h-5 w-5" /> : <Save className="mr-2 h-4 w-4" />}
               Publicar Calificación
             </Button>
           </div>
