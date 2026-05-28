@@ -1,9 +1,12 @@
 
 
-
 # Bitácora de Desarrollo - DataNexus
 
 ## 🚀 Hitos Técnicos
+
+### Flexibilidad en Evaluaciones y UX (Fix v14)
+- **Editor de Evaluaciones Dinámico**: Se añadió la capacidad de agregar múltiples opciones de respuesta en el diseñador de preguntas y eliminar las innecesarias, permitiendo exámenes más complejos.
+- **Autoajuste de Recursos**: Se refinó el diálogo de gestión de recursos para que se autoajuste verticalmente de forma fluida, eliminando espacios muertos al cambiar entre pestañas de carga.
 
 ### Optimización UX y Flujos Administrativos (Fix v13)
 - **Autoajuste de Diálogos**: Se corrigió el diseño de los modales de gestión de recursos para que se ajusten dinámicamente al contenido, eliminando espacios vacíos.

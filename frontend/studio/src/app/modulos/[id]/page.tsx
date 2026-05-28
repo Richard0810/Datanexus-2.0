@@ -207,7 +207,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
   const [resourceForm, setResourceForm] = useState<Resource>({ titulo: "", descripcion: "", url: "", unidad: `Módulo ${id}`, tipo: "guia", formato: "URL" });
   const [activityForm, setActivityForm] = useState<Activity>({ titulo: "", descripcion: "", tipo: "individual", criterios_evaluacion: "", moduloId: id, archivoUrl: "" });
   const [assessmentForm, setAssessmentForm] = useState<Assessment>({ titulo: "", descripcion: "", moduloId: id, preguntas: [] });
-  const [currentQuestion, setCurrentQuestion] = useState<Question>({ id: "", texto: "", tipo: "opcion-multiple", opciones: ["", ""], respuestaCorrecta: "" });
+  const [currentQuestion, setCurrentQuestion] = useState<Question>({ id: "", texto: "", tipo: "opcion-multiple", opciones: ["Opción 1", "Opción 2"], respuestaCorrecta: "" });
 
   const getObjectId = (item: any): string => {
     if (!item) return '';
@@ -385,7 +385,26 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
       return;
     }
     setAssessmentForm({ ...assessmentForm, preguntas: [...assessmentForm.preguntas, { ...currentQuestion, id: Math.random().toString(36).substr(2, 9) }] });
-    setCurrentQuestion({ id: "", texto: "", tipo: "opcion-multiple", opciones: ["", ""], respuestaCorrecta: "" });
+    setCurrentQuestion({ id: "", texto: "", tipo: "opcion-multiple", opciones: ["Opción 1", "Opción 2"], respuestaCorrecta: "" });
+  };
+
+  const addOptionToCurrentQuestion = () => {
+    const nextNum = currentQuestion.opciones.length + 1;
+    setCurrentQuestion({
+      ...currentQuestion,
+      opciones: [...currentQuestion.opciones, `Opción ${nextNum}`]
+    });
+  };
+
+  const removeOptionFromCurrentQuestion = (idx: number) => {
+    if (currentQuestion.opciones.length <= 2) return;
+    const newOptions = currentQuestion.opciones.filter((_, i) => i !== idx);
+    const wasCorrect = currentQuestion.respuestaCorrecta === currentQuestion.opciones[idx];
+    setCurrentQuestion({
+      ...currentQuestion,
+      opciones: newOptions,
+      respuestaCorrecta: wasCorrect ? "" : currentQuestion.respuestaCorrecta
+    });
   };
 
   const formatSubmissionDetail = (detail: string) => {
@@ -543,7 +562,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
         </TabsContent>
 
         {isAdmin && (
-          <TabsContent value="seguimiento">
+          <TabsContent value="seguimiento" className="space-y-6">
             <Card className="shadow-2xl border-none overflow-hidden rounded-[2.5rem] bg-white ring-1 ring-slate-100">
               <Table>
                 <TableHeader className="bg-slate-50/50">
@@ -593,7 +612,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
       </Tabs>
 
       <Dialog open={isResourceDialogOpen} onOpenChange={setIsResourceDialogOpen}>
-        <DialogContent className="sm:max-w-[600px] rounded-[2rem] border-none shadow-2xl p-0 overflow-hidden">
+        <DialogContent className="sm:max-w-[600px] rounded-[2rem] border-none shadow-2xl p-0 overflow-hidden h-auto">
           <div className="bg-slate-50 border-b p-6">
             <DialogTitle className="text-2xl font-headline font-bold">Gestión de Recurso</DialogTitle>
             <DialogDescription>Configura los detalles del material educativo.</DialogDescription>
@@ -673,7 +692,19 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                       {currentQuestion.opciones.map((opcion, idx) => (
                         <div key={idx} className="flex items-center gap-3">
                            <div className="flex-1 space-y-1">
-                              <Label className="text-[10px] font-bold text-slate-400 uppercase">Opción {idx === 0 ? 'A' : 'B'}</Label>
+                              <div className="flex justify-between items-center px-1">
+                                 <Label className="text-[10px] font-bold text-slate-400 uppercase">Opción {String.fromCharCode(65 + idx)}</Label>
+                                 {currentQuestion.opciones.length > 2 && (
+                                   <Button 
+                                    variant="ghost" 
+                                    size="icon" 
+                                    className="h-5 w-5 text-destructive hover:bg-destructive/10" 
+                                    onClick={() => removeOptionFromCurrentQuestion(idx)}
+                                   >
+                                     <X className="h-3 w-3" />
+                                   </Button>
+                                 )}
+                              </div>
                               <div className="flex items-center gap-2">
                                 <Input 
                                   value={opcion} 
@@ -700,6 +731,15 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                            </div>
                         </div>
                       ))}
+                      <Button 
+                        type="button" 
+                        variant="ghost" 
+                        size="sm" 
+                        className="w-fit text-[11px] font-black uppercase text-primary hover:bg-primary/10 mt-1" 
+                        onClick={addOptionToCurrentQuestion}
+                      >
+                        <Plus className="h-3 w-3 mr-1" /> Añadir Opción
+                      </Button>
                    </div>
                    <Button variant="outline" size="lg" onClick={addAssessmentQuestion} className="w-full rounded-xl border-primary/20 text-primary hover:bg-primary/5 font-bold h-12 mt-4"><Plus className="h-4 w-4 mr-2" /> Añadir Pregunta al Banco</Button>
                 </div>
