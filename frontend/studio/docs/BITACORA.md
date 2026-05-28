@@ -1,7 +1,17 @@
 
+
 # Bitácora de Desarrollo - DataNexus
 
 ## 🚀 Hitos Técnicos
+
+### Solución de Errores Críticos (Fix v9)
+- **Corrección de Dependencias**: Se reinstalaron y sincronizaron las dependencias de Genkit (`@genkit-ai/google-genai`) para resolver el error de `Module not found` que bloqueaba el flujo de búsqueda académica y el gestor de referencias.
+- **Prezi CRUD Fix**: Se restauró la opción "Presentación Prezi" en el modal de creación de recursos, asegurando que el docente pueda clasificar correctamente este tipo de contenido.
+- **Drive Embed Pro**: Se robusteció la función `getEmbedUrl` para transformar automáticamente cualquier enlace de Google Drive (Docs, Sheets, Slides) en modo previsualización, eliminando el error de permisos "Necesitas acceso".
+
+### Restauración de Opciones Multimedia (Fix v8)
+- **Soporte Prezi Recuperado**: Se restauró la opción "Presentación Prezi" en el selector de tipo de recurso del CRUD, permitiendo al docente clasificar correctamente este contenido.
+- **UX de Previsualización**: Se verificó que el motor de previsualización siga manejando la lógica de apertura externa para Prezi, garantizando una carga fluida y sin bloqueos de seguridad.
 
 ### Restauración de Vista de Calificación (Fix v7)
 - **Corrección de Visualización**: Se implementó la función `formatSubmissionDetail` para permitir que el docente vea tanto el texto enriquecido como los archivos adjuntos (PDF/Imágenes) en el diálogo de calificación.
