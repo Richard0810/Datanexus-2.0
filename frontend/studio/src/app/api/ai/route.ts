@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import '@/ai/genkit';
 import { picoQuestionFlow } from '@/ai/pico';
 import { referenceFormatterFlow } from '@/ai/references';
+import { naturalLanguageAcademicSearchFlow } from '@/ai/flows/ai-assisted-academic-search';
 
 export async function POST(req: NextRequest) {
   try {
@@ -20,6 +21,11 @@ export async function POST(req: NextRequest) {
 
     if (flowId === 'referenceFormatterFlow') {
       const output = await referenceFormatterFlow(input);
+      return NextResponse.json(output);
+    }
+
+    if (flowId === 'naturalLanguageAcademicSearchFlow') {
+      const output = await naturalLanguageAcademicSearchFlow(input);
       return NextResponse.json(output);
     }
 
