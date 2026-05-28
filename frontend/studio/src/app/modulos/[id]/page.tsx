@@ -92,7 +92,7 @@ function ResourcePreview({ url, title, tipo }: { url: string; title: string, tip
       </div>
     );
   }
-  return <div className="relative w-full h-full"><iframe src={finalUrl ?? undefined} className="w-full h-full border-0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen /></div>;
+  return <div className="relative w-full h-full"><iframe src={finalUrl ?? undefined} className="w-full h-full border-0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen></iframe></div>;
 }
 
 export default function ModuloDetallePage({ params }: { params: Promise<{ id: string }> }) {
@@ -317,7 +317,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
       if (Array.isArray(parsed)) {
         return (
           <div className="space-y-3">
-            {parsed.map((item: any, idx) => (
+            {parsed.map((item: any, idx: number) => (
               <div key={idx} className="p-3 bg-muted rounded-md">
                 <p className="text-xs font-bold text-primary mb-1">{item.pregunta || `Pregunta Antigua`}</p>
                 <p className="text-sm">{String(item.respuesta)}</p>
@@ -337,10 +337,10 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                             <p className="text-xs font-bold text-primary mb-1">{questionText || `Pregunta ID: ${qId}`}</p>
                             <p className="text-sm">{String(answer)}</p>
                         </div>
-                    )
+                    );
                 })}
             </div>
-        )
+        );
       }
     } catch (e) { /* No es JSON, mostrar como texto plano */ }
     return <div className="p-4 bg-muted rounded-lg text-sm whitespace-pre-wrap">{detail}</div>;
@@ -500,7 +500,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                                     <Button className="w-full" onClick={() => { setEditingAssessment(ass); setAssessmentForm(ass); setIsAssessmentDialogOpen(true); }}>{userSub ? 'Ver Resultados' : 'Realizar Evaluación'}</Button>
                                 </CardFooter>
                             </Card>
-                        )
+                        );
                     })}
                  </div>
             ) : <p className="text-center text-muted-foreground py-10 italic">No hay evaluaciones disponibles.</p>}
