@@ -19,7 +19,7 @@ const PicoOutputSchema = z.object({
 
 const generarPreguntaPico = ai.definePrompt({
   name: 'generarPreguntaPico',
-  model: 'gemini-1.5-flash',
+  model: 'googleai/gemini-3.5-flash',
   input: { schema: PicoInputSchema },
   output: { 
     schema: PicoOutputSchema,
