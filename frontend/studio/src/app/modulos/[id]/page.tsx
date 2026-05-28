@@ -153,13 +153,10 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
       setActivities(actResponse.data.filter((act: any) => String(act.moduloId) === currentModuleId));
       setAssessments(assResponse.data.filter((ass: any) => String(ass.moduloId) === currentModuleId));
 
-      // Correctly separate submission data for students and admins
       const allModuleSubmissions = subResponse.data.filter((sub: any) => String(sub.moduloId) === currentModuleId);
 
-      // This state is for the current user (student) to see their own submissions
       setSubmissions(allModuleSubmissions.filter((sub: any) => sub.usuarioEmail === user?.email));
 
-      // If the user is an admin, populate the dedicated state for the tracking panel
       if (isAdmin) {
         setAllSubmissions(allModuleSubmissions);
       }
