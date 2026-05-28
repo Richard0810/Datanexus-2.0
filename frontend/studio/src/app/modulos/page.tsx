@@ -105,6 +105,44 @@ export default function ModulosPage() {
     fetchModules();
   }, []);
 
+  // ✅ NUEVA LÓGICA AÑADIDA
+  // Este useEffect se ejecuta cada vez que la lista de módulos cambia.
+  useEffect(() => {
+    // Si no hay módulos, no hay nada que hacer.
+    if (modules.length === 0) return;
+
+    const fetchAllLessonCounts = async () => {
+      // Usamos Promise.all para hacer todas las peticiones en paralelo, es más eficiente.
+      const promises = modules.map(module =>
+        api.get(`/modules/${module.id}/lessons`)
+          .then(response => ({
+            id: module.id,
+            count: Array.isArray(response.data) ? response.data.length : 0
+          }))
+          .catch(error => {
+            console.warn(`No se pudo obtener el conteo de lecciones para el módulo ${module.id}:`, error);
+            // Si hay un error, asignamos 0 para que no se quede cargando.
+            return { id: module.id, count: 0 };
+          })
+      );
+
+      // Esperamos a que todas las promesas se resuelvan.
+      const results = await Promise.all(promises);
+
+      // Creamos un nuevo objeto de conteos a partir de los resultados.
+      const newCounts = results.reduce((acc, result) => {
+        acc[result.id] = result.count;
+        return acc;
+      }, {} as Record<string, number>);
+
+      // Actualizamos el estado una sola vez con todos los nuevos conteos.
+      setLessonCounts(prevCounts => ({ ...prevCounts, ...newCounts }));
+    };
+
+    fetchAllLessonCounts();
+  }, [modules]); // La dependencia [modules] es crucial.
+
+
   const handleSeedDatabase = async () => {
     setIsSeeding(true);
     try {
@@ -156,7 +194,7 @@ export default function ModulosPage() {
 
   const filteredModules = useMemo(() => {
     if (!searchQuery) return modules;
-    const normalize = (str: string) => str.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+    const normalize = (str: string) => str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
     const normalizedQuery = normalize(searchQuery);
     return modules.filter(module => {
       const normalizedTitle = normalize(module.title);
