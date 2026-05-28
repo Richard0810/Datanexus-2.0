@@ -1,14 +1,16 @@
 
 'use client';
 
+import { useEffect, useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { ArrowRight, Database, Lightbulb, PlayCircle, GraduationCap, Search, BrainCircuit, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
-import placeholderImages from "../lib/placeholder-images.json";
 import { useAuth } from "@/context/AuthContext";
+import { api } from '@/lib/api';
+import type { Module } from '@/lib/api';
 
 interface QuickAccessItem {
   title: string;
@@ -22,7 +24,7 @@ interface LearningActivityItem {
   href: string;
   icon: React.ElementType;
   description: string;
-  imageData: typeof placeholderImages.images[0];
+  imageUrl: string;
 }
 
 const quickAccessItems: QuickAccessItem[] = [
@@ -32,41 +34,50 @@ const quickAccessItems: QuickAccessItem[] = [
   { title: "IA en Búsqueda", href: "/modulos/5", icon: BrainCircuit, description: "Aprende a optimizar búsquedas con IA." },
 ];
 
-const learningActivities: LearningActivityItem[] = [
-  { 
-    title: "Módulo 1: Fundamentos", 
-    href: "/modulos/1", 
-    icon: Database, 
-    description: "Conceptos básicos de bases de datos e investigación.",
-    imageData: placeholderImages.images.find(img => img.id === "online-learning")!
-  },
-  { 
-    title: "Módulo 4: Estrategias", 
-    href: "/modulos/4", 
-    icon: PlayCircle, 
-    description: "Operadores booleanos y búsqueda avanzada.",
-    imageData: placeholderImages.images.find(img => img.id === "study-guide")!
-  },
-  { 
-    title: "Módulo 5: IA Académica", 
-    href: "/modulos/5", 
-    icon: BrainCircuit, 
-    description: "Uso de herramientas de IA en la investigación.",
-    imageData: placeholderImages.images.find(img => img.id === "ai-ethics")!
-  },
-  { 
-    title: "Módulo 8: Ética e IA", 
-    href: "/modulos/8", 
-    icon: ShieldCheck, 
-    description: "Principios éticos y uso responsable de información.",
-    imageData: placeholderImages.images.find(img => img.id === "data-search")!
-  },
-];
+const iconMap: { [key: string]: React.ElementType } = {
+  "Módulo 1: Fundamentos": Database,
+  "Módulo 4: Estrategias": PlayCircle,
+  "Módulo 5: IA Académica": BrainCircuit,
+  "Módulo 8: Ética e IA": ShieldCheck,
+};
 
 export default function HomePage() {
   const { user } = useAuth();
   const userName = user?.name || "Estudiante";
   const progressLevel = 35;
+  const [learningActivities, setLearningActivities] = useState<LearningActivityItem[]>([]);
+
+  useEffect(() => {
+    const fetchHomePageModules = async () => {
+      try {
+        const response = await api.getModules();
+        const allModules: Module[] = response.data;
+        
+        const requiredModuleTitles = [
+          "Módulo 1: Fundamentos",
+          "Módulo 4: Estrategias",
+          "Módulo 5: IA Académica",
+          "Módulo 8: Ética e IA"
+        ];
+
+        const homePageModules = allModules
+          .filter(module => requiredModuleTitles.includes(module.title))
+          .map((module): LearningActivityItem => ({
+            title: module.title,
+            href: `/modulos/${module.title.split(' ')[1].replace(':', '')}`,
+            description: module.description,
+            icon: iconMap[module.title] || Lightbulb,
+            imageUrl: module.imageUrl,
+          }));
+
+        setLearningActivities(homePageModules);
+      } catch (error) {
+        console.error("Error fetching modules for home page:", error);
+      }
+    };
+
+    fetchHomePageModules();
+  }, []);
 
   return (
     <div className="space-y-8">
@@ -118,12 +129,11 @@ export default function HomePage() {
             <Card key={activity.title} className="overflow-hidden hover:shadow-xl transition-all duration-300 border-none group">
               <div className="relative h-48 w-full overflow-hidden">
                 <Image
-                  src={activity.imageData.url}
+                  src={activity.imageUrl}
                   alt={activity.title}
                   fill
                   style={{ objectFit: 'cover' }}
                   className="group-hover:scale-105 transition-transform duration-500"
-                  data-ai-hint={activity.imageData.aiHint}
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
                 <div className="absolute bottom-4 left-4 text-white">
