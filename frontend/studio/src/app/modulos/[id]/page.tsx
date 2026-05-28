@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useState, use, useRef } from "react";
@@ -30,7 +29,8 @@ import {
   Monitor,
   Plus,
   SquareCheck,
-  Check
+  Check,
+  MessageSquareQuote
 } from "lucide-react";
 import Link from "next/link";
 import api from "@/lib/api";
@@ -190,7 +190,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
   const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
   const [selectedSubmission, setSelectedSubmission] = useState<Submission | null>(null);
   const [editingSubmissionId, setEditingSubmissionId] = useState<string | null>(null);
-  const [gradingForm, setGradingForm] = useState({ puntaje: 0, recomendaciones: "" });
+  const [gradingForm, setGradingForm] = useState({ puntaje: "" as any, recomendaciones: "" });
   
   const editorRef = useRef<HTMLDivElement>(null);
   const [attachedFile, setAttachedFile] = useState<{ name: string, data: string } | null>(null);
@@ -350,15 +350,28 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
 
   const handleOpenGrading = (sub: Submission) => {
     setSelectedSubmission(sub);
-    setGradingForm({ puntaje: sub.puntaje || 0, recomendaciones: sub.recomendaciones || "" });
+    // Para que esté "en blanco", ponemos string vacío si no hay puntaje previo
+    setGradingForm({ 
+      puntaje: sub.puntaje !== undefined ? sub.puntaje : "", 
+      recomendaciones: sub.recomendaciones || "" 
+    });
     setIsGradingDialogOpen(true);
   };
 
   const handleSaveGrade = async () => {
     if (!selectedSubmission) return;
+    const finalScore = parseFloat(gradingForm.puntaje);
+    if (isNaN(finalScore) || finalScore < 0 || finalScore > 5) {
+      toast({ title: "La nota debe ser un número entre 0 y 5.0", variant: "destructive" });
+      return;
+    }
     setIsProcessing(true);
     try {
-      await api.patch(`/performance-reports/${getObjectId(selectedSubmission)}`, { ...gradingForm, estado: "calificado" });
+      await api.patch(`/performance-reports/${getObjectId(selectedSubmission)}`, { 
+        ...gradingForm, 
+        puntaje: finalScore,
+        estado: "calificado" 
+      });
       setIsGradingDialogOpen(false);
       fetchData();
       toast({ title: "Calificación registrada satisfactoriamente" });
@@ -511,6 +524,8 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             {activities.map((act) => {
               const userSub = submissions.find(s => s.tituloContenido === act.titulo && s.usuarioEmail === user?.email);
+              const isGraded = userSub?.estado === 'calificado';
+              
               return (
                 <Card key={getObjectId(act)} className="relative flex flex-col shadow-xl border-none rounded-[2.5rem] bg-white group hover:shadow-2xl transition-all duration-500 overflow-hidden ring-1 ring-slate-100">
                    {isAdmin && (
@@ -520,13 +535,29 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                     </div>
                   )}
                   <CardHeader className="p-8 pb-4">
-                    <Badge variant="secondary" className="w-fit mb-3 bg-primary/5 text-primary border-none text-[9px] font-bold px-4 py-1.5 rounded-full">{act.tipo.toUpperCase()}</Badge>
+                    <div className="flex justify-between items-start mb-3">
+                       <Badge variant="secondary" className="bg-primary/5 text-primary border-none text-[9px] font-bold px-4 py-1.5 rounded-full">{act.tipo.toUpperCase()}</Badge>
+                       {isGraded && (
+                         <Badge className={cn("rounded-lg px-3 py-1 font-black shadow-sm", userSub.puntaje >= 3.5 ? "bg-green-600 text-white" : "bg-amber-500 text-white")}>
+                           Nota: {Number(userSub.puntaje).toFixed(1)} / 5.0
+                         </Badge>
+                       )}
+                    </div>
                     <CardTitle className="text-2xl font-bold leading-tight">{act.titulo}</CardTitle>
                     <CardDescription className="text-sm mt-3 leading-relaxed line-clamp-3">{act.descripcion}</CardDescription>
+                    
+                    {isGraded && userSub.recomendaciones && (
+                      <div className="mt-6 p-4 bg-muted/50 rounded-2xl border-l-4 border-primary">
+                        <p className="text-[10px] font-black uppercase text-primary tracking-widest flex items-center gap-2 mb-1">
+                          <MessageSquareQuote className="h-3 w-3" /> Comentarios del Docente
+                        </p>
+                        <p className="text-xs italic text-slate-600">{userSub.recomendaciones}</p>
+                      </div>
+                    )}
                   </CardHeader>
                   <CardFooter className="p-8 pt-0 gap-3 mt-auto">
                     {act.archivoUrl && <Button variant="outline" className="flex-1 h-12 rounded-2xl font-bold border-slate-200" asChild><a href={act.archivoUrl} target="_blank"><Download className="mr-2 h-4 w-4" /> Guía PDF</a></Button>}
-                    {!isAdmin && (userSub ? <Button variant="secondary" className="flex-[2] h-12 rounded-2xl font-bold bg-green-50 text-green-700 border border-green-100 hover:bg-green-100" onClick={() => handleOpenSubmission(act)}><CheckCircle2 className="mr-2 h-4 w-4" /> Entregado (Editar)</Button> : <Button className="flex-[2] h-12 rounded-2xl font-bold bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20" onClick={() => handleOpenSubmission(act)}><Upload className="mr-2 h-4 w-4" /> Entregar Tarea</Button>)}
+                    {!isAdmin && (userSub ? <Button variant="secondary" className="flex-[2] h-12 rounded-2xl font-bold bg-green-50 text-green-700 border border-green-100 hover:bg-green-100" onClick={() => handleOpenSubmission(act)}><CheckCircle2 className="mr-2 h-4 w-4" /> {isGraded ? "Ver Mi Entrega" : "Entregado (Editar)"}</Button> : <Button className="flex-[2] h-12 rounded-2xl font-bold bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20" onClick={() => handleOpenSubmission(act)}><Upload className="mr-2 h-4 w-4" /> Entregar Tarea</Button>)}
                   </CardFooter>
                 </Card>
               );
@@ -586,7 +617,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                       <TableCell className="text-xs font-semibold text-slate-600">{sub.tituloContenido}</TableCell>
                       <TableCell>
                         <Badge variant="outline" className={cn("rounded-lg px-3 py-1 font-black", Number(sub.puntaje) >= 3.5 ? "border-green-200 text-green-700 bg-green-50" : "border-amber-200 text-amber-700 bg-amber-50")}>
-                          {Number(sub.puntaje).toFixed(1)} / 5.0
+                          {sub.puntaje !== undefined && sub.puntaje !== null ? `${Number(sub.puntaje).toFixed(1)} / 5.0` : "S/N"}
                         </Badge>
                       </TableCell>
                       <TableCell>
@@ -837,16 +868,18 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                     step="0.1" 
                     min="0" 
                     max="5" 
+                    placeholder="Escribe la nota aquí..."
                     className="flex h-16 w-full rounded-2xl border-2 border-slate-100 bg-slate-50 px-4 py-2 text-3xl font-black text-center text-primary focus:border-primary/50 focus:ring-4 focus:ring-primary/5 transition-all outline-none"
                     value={gradingForm.puntaje} 
-                    onChange={e => setGradingForm({...gradingForm, puntaje: parseFloat(e.target.value) || 0})} 
+                    onChange={e => setGradingForm({...gradingForm, puntaje: e.target.value})} 
                   />
+                  <p className="text-[10px] text-center text-slate-400 italic">Rango permitido: 0 a 5</p>
                 </div>
                 <div className="space-y-3">
                   <Label className="font-black text-[10px] uppercase text-slate-400 tracking-widest">Retroalimentación / Recomendaciones</Label>
                   <Textarea 
                     className="rounded-2xl min-h-[120px] resize-none bg-slate-50 border-2 border-slate-100 focus:border-primary/50 transition-all p-4 text-sm"
-                    placeholder="Escribe aquí los comentarios para el estudiante sobre su desempeño..."
+                    placeholder="Comentarios adicionales para el estudiante..."
                     value={gradingForm.recomendaciones} 
                     onChange={e => setGradingForm({...gradingForm, recomendaciones: e.target.value})} 
                   />
