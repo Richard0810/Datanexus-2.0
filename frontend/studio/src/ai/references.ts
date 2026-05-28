@@ -33,11 +33,16 @@ export const referenceFormatterFlow = ai.defineFlow(
       TAREA:
       Convierte el siguiente contenido bibliográfico al formato: ${input.targetFormat}.
       
-      INSTRUCCIONES CRÍTICAS:
-      1. Si el texto es BibTeX (@article, @book, etc.), extrae todos los campos y genera la cita completa.
-      2. Si el texto es desordenado, reconstruye la cita con los datos disponibles (Autor, Año, Título, Fuente).
-      3. Mantén el orden alfabético si hay múltiples referencias.
-      4. Devuelve UN ARREGLO de strings, donde cada string es una referencia formateada lista para publicar.
+      INSTRUCCIONES CRÍTICAS DE FORMATO:
+      1. NO USES NINGÚN TIPO DE FORMATO MARKDOWN. 
+      2. ESTÁ TOTALMENTE PROHIBIDO usar asteriscos (*), guiones bajos (_) o cualquier símbolo de estilo para cursivas o negritas.
+      3. Devuelve el texto como TEXTO PLANO LIMPIO. Por ejemplo, en lugar de "*Science*", devuelve simplemente Science.
+      
+      REGLAS DE PROCESAMIENTO:
+      1. Si el texto es BibTeX, extrae todos los campos y genera la cita completa.
+      2. Si el texto es desordenado, reconstruye la cita con los datos disponibles.
+      3. Mantén el orden alfabético.
+      4. Devuelve UN ARREGLO de strings con las citas limpias.
       
       REFERENCIAS A PROCESAR:
       ${input.references}
@@ -45,7 +50,7 @@ export const referenceFormatterFlow = ai.defineFlow(
     });
 
     if (!output) {
-      throw new Error("La IA no pudo procesar las referencias con el modelo 3.5 Flash. Intenta con un formato más claro.");
+      throw new Error("La IA no pudo procesar las referencias con el modelo 3.5 Flash.");
     }
 
     return {
