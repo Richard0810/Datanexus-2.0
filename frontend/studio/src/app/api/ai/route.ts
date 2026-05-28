@@ -1,6 +1,6 @@
 
 import { NextRequest, NextResponse } from 'next/server';
-import { run } from '@genkit-ai/core/experimental';
+import { run } from '@genkit-ai/core'; // CORREGIDO: 'run' se importa desde el core, no desde 'experimental'
 
 // Importar la configuración de la IA (esto inicializa Genkit y los plugins)
 import '@/ai/genkit';
