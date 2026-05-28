@@ -130,7 +130,7 @@ function ResourcePreview({ url, title, tipo }: { url: string; title: string, tip
     }
     if (url.includes("gamma.app/docs/")) return url.replace("gamma.app/docs/", "gamma.app/embed/");
     if (url.includes("docs.google.com/presentation")) {
-        const match = url.match(/\\/d\\/(.+?)(\\/|$)/);
+        const match = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
         if (match) return `https://docs.google.com/presentation/d/${match[1]}/embed`;
     }
     return url;
@@ -504,7 +504,7 @@ export default function ModuloDetallePage({ params }: { params: Promise<{ id: st
                                         <Button variant="outline" size="sm" onClick={() => { setEditingAssessment(ass); setAssessmentForm(ass); setIsAssessmentDialogOpen(true); }}><Pencil className="mr-2 h-4 w-4" /> Editar</Button>
                                         <Button variant="destructive" size="sm" onClick={() => { setItemToDelete({ id: assId, type: 'assessment' }); setIsDeleteDialogOpen(true); }}><Trash2 className="mr-2 h-4 w-4" /> Eliminar</Button>
                                     </div>
-                                )}\
+                                )}
                             </CardFooter>
                         </Card>
                     )}
