@@ -3,6 +3,11 @@
 
 ## 🚀 Hitos Técnicos
 
+### Gestión de Entregas y Evaluaciones (Fix v5)
+- **Corrección de Entregas**: Se reparó la lógica de `handleSubmitActivity` que fallaba al guardar nuevas entregas. Ahora el sistema detecta si es una creación (POST) o actualización (PATCH) basándose en la existencia previa de una entrega del estudiante.
+- **Motor de Evaluaciones Estabilizado**: Se flexibilizó el filtro de `moduloId` en la carga de evaluaciones para asegurar que los exámenes aparezcan correctamente en la interfaz sin importar el tipo de dato en la DB.
+- **Editor Enriquecido**: Restaurado el editor de texto enriquecido para las entregas de actividades, permitiendo formato negrita, cursiva y subrayado.
+
 ### Multimedia y Filtros (Fix v4)
 - **Filtro de Unidades Estabilizado**: Se actualizó el motor de búsqueda de recursos para permitir coincidencias exactas con el ID del módulo (ej. coincidir "1" con el Módulo 1), solucionando el problema de recursos que no se renderizaban.
 - **Drive & Prezi Patch**: Restaurada la funcionalidad de apertura para Prezi en ventana externa y la transformación automática de enlaces de Google Drive a modo previsualización para evitar errores de permisos.
