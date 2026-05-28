@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -9,22 +8,32 @@ import { ArrowRight, Database, Lightbulb, PlayCircle, GraduationCap, Search, Bra
 import Link from "next/link";
 import Image from "next/image";
 import { useAuth } from "@/context/AuthContext";
-import { api } from '@/lib/api';
-import type { Module } from '@/lib/api';
+import api from '@/lib/api';
 
-interface QuickAccessItem {
-  title: string;
-  href: string;
-  icon: React.ElementType;
-  description: string;
+// Interfaz que refleja la API del backend (español)
+interface ModuleFromAPI {
+  id: string;
+  titulo: string;
+  descripcion: string;
+  imageUrl: string;
+  [key: string]: any; // Permite otras propiedades
 }
 
+// Interfaz para el uso en el componente (inglés)
 interface LearningActivityItem {
   title: string;
   href: string;
   icon: React.ElementType;
   description: string;
   imageUrl: string;
+}
+
+
+interface QuickAccessItem {
+  title: string;
+  href: string;
+  icon: React.ElementType;
+  description: string;
 }
 
 const quickAccessItems: QuickAccessItem[] = [
@@ -34,11 +43,11 @@ const quickAccessItems: QuickAccessItem[] = [
   { title: "IA en Búsqueda", href: "/modulos/5", icon: BrainCircuit, description: "Aprende a optimizar búsquedas con IA." },
 ];
 
-const iconMap: { [key: string]: React.ElementType } = {
-  "Módulo 1: Fundamentos": Database,
-  "Módulo 4: Estrategias": PlayCircle,
-  "Módulo 5: IA Académica": BrainCircuit,
-  "Módulo 8: Ética e IA": ShieldCheck,
+const iconMap: { [key: number]: React.ElementType } = {
+  1: Database,
+  4: PlayCircle,
+  5: BrainCircuit,
+  8: ShieldCheck,
 };
 
 export default function HomePage() {
@@ -50,23 +59,24 @@ export default function HomePage() {
   useEffect(() => {
     const fetchHomePageModules = async () => {
       try {
-        const response = await api.getModules();
-        const allModules: Module[] = response.data;
+        const response = await api.get('/modules'); // Usamos el método genérico de api
+        const allModules: ModuleFromAPI[] = response.data;
         
-        const requiredModuleTitles = [
-          "Módulo 1: Fundamentos",
-          "Módulo 4: Estrategias",
-          "Módulo 5: IA Académica",
-          "Módulo 8: Ética e IA"
-        ];
+        const requiredModuleNumbers = [1, 4, 5, 8];
 
         const homePageModules = allModules
-          .filter(module => requiredModuleTitles.includes(module.title))
+          .map(module => {
+            // Extraer el número del módulo del título, ej: "Módulo 1: ..." -> 1
+            const match = module.titulo.match(/^Módulo (\d+):/);
+            const moduleNumber = match ? parseInt(match[1], 10) : null;
+            return { ...module, moduleNumber };
+          })
+          .filter(module => module.moduleNumber !== null && requiredModuleNumbers.includes(module.moduleNumber))
           .map((module): LearningActivityItem => ({
-            title: module.title,
-            href: `/modulos/${module.title.split(' ')[1].replace(':', '')}`,
-            description: module.description,
-            icon: iconMap[module.title] || Lightbulb,
+            title: module.titulo, // Mapeo de `titulo` a `title`
+            href: `/modulos/${module.moduleNumber}`,
+            description: module.descripcion, // Mapeo de `descripcion` a `description`
+            icon: iconMap[module.moduleNumber!] || Lightbulb,
             imageUrl: module.imageUrl,
           }));
 
